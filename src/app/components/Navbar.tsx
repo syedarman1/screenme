@@ -20,6 +20,7 @@ const DynamicNavbar = () => {
         setIsScrolled(false);
       }
     };
+
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
@@ -51,12 +52,12 @@ const DynamicNavbar = () => {
       `}
     >
       <div className="container mx-auto px-6 flex justify-between items-center h-full">
-        {/* Logo */}
-        <Link href="/#home" className="text-2xl font-bold text-[var(--accent)]">
-          YourLogo
+        {/* Updated Logo using an image */}
+        <Link href="/#home" className="pt-2">
+          <img src="/logo.png" alt="ScreenMe Logo" className="h-36 auto" />
         </Link>
 
-        {/* Navigation Links + Right Section */}
+        {/* Navigation Links and Right Section */}
         <div className="space-x-8 flex items-center">
           <Link
             href="/#home"
@@ -76,8 +77,8 @@ const DynamicNavbar = () => {
           >
             Pricing
           </Link>
-
           {user ? (
+            // If user is signed in, display their profile picture with a hover dropdown
             <div className="relative group">
               <img
                 src={user.user_metadata?.avatar_url || "/pfp-placeholder.png"}

@@ -1,10 +1,11 @@
-// TEST: This is a change to see if Git detects modifications.
 
 "use client";
 
 import React, { useEffect, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
+
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -46,7 +47,7 @@ export default function DashboardPage() {
           {userEmail} Dashboard
         </h1>
         <p className="text-lg md:text-xl text-gray-300 max-w-2xl mx-auto">
-          You’re now inside your Ultimate =Toolkit, no more guesswork on your
+          You’re now inside your Ultimate All in one Toolkit, no more guesswork on your
           resume, GitHub, or portfolio.
         </p>
       </header>
@@ -61,9 +62,11 @@ export default function DashboardPage() {
               Upload or paste your resume. Our AI checks ATS readiness & offers
               actionable feedback.
             </p>
-            <button className="mt-4 py-2 bg-[var(--accent)] text-black font-semibold rounded hover:opacity-90 transition">
+            <Link href="/resume">
+            <button className="mt-4 px-6 py-3 w-full bg-[var(--accent)] text-black font-semibold rounded hover:opacity-90 transition">
               Scan Resume
             </button>
+            </Link>
           </div>
 
           {/* GitHub Screener */}
