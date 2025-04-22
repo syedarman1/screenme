@@ -25,7 +25,7 @@ Return **ONLY** valid JSON:
 Rules
 • Each issue is a single sentence naming the exact problem (cite text if helpful).
 • Each action is a full rewritten bullet following X‑Y‑Z:
-  – Starts with a strong past‑tense verb.  
+  – Starts with a strong past‑tense action verb.  
   – Contains **at least one numeric metric** (%, $, #, x).  
   – Ends with the business/result impact.
 • No bullet symbols, no markdown, no extra keys, no trailing dashes.
