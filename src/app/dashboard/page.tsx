@@ -78,14 +78,15 @@ export default function DashboardPage() {
             </Link>
           </div>
 
-          {/* Portfolio Review */}
+          {/* Cover Letter Generator */}
           <div className="bg-[#2a2a2a] rounded-xl p-4 flex flex-col hover:shadow-lg transition">
-            <h2 className="text-2xl font-semibold mb-3">Portfolio Review</h2>
+            <h2 className="text-2xl font-semibold mb-3">Cover Letter Generator</h2>
             <p className="text-gray-300 flex-grow">
-              Paste your portfolio URL. Get instant layout & copy feedback.
-              Impress potential employers.
+              Cover Letter .
             </p>
-            <button className={fancyBtn}>Analyze Portfolio</button>
+            <Link href="/coverLetter">
+            <button className={fancyBtn}>Cover Letter Generator</button>
+            </Link>
           </div>
 
           {/* LinkedIn Critique */}
