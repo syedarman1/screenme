@@ -1,83 +1,103 @@
-// app/api/interviewPrep/route.ts
+// src/app/api/interviewPrep/route.ts
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
-import type { ChatCompletionMessageParam } from "openai/resources/chat/completions";
 import { z } from "zod";
 
-const InterviewPrepSchema = z.object({
-  questions: z
-    .array(
-      z.object({
-        question: z.string().min(10),
-        modelAnswer: z.string().min(20),
-      })
-    )
-    .min(5)
-    .max(10),
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
 });
-type InterviewPrep = z.infer<typeof InterviewPrepSchema>;
 
-const SYSTEM_PROMPT = `
-You are a seasoned technical interview coach. 
-Given a JOB DESCRIPTION (and optional ROLE/COMPANY context), return **ONLY** valid JSON matching this schema:
+// ─── Schemas ─────────────────────────────────────
+const RequestSchema = z.object({
+  job:     z.string().min(1),
+  context: z.string().optional(),
+});
+type RequestData = z.infer<typeof RequestSchema>;
 
-{
-  "questions": [
-    {
-      "question": "<a tailored behavioral or technical question>",
-      "modelAnswer": "<a concise bullet‑point style model answer>"
-    },
-    …
-  ]
-}
+const Question = z.object({
+  question:    z.string(),
+  modelAnswer: z.string(),
+});
+const ResponseSchema = z.object({
+  questions: z.array(Question).min(1),
+});
+type ResponseData = z.infer<typeof ResponseSchema>;
 
-Rules:
-- Produce between 5 and 10 question/answer pairs.
-- Questions should include both behavioral (e.g. teamwork, leadership) and tech (e.g. system design, coding) aspects relevant to the JD.
-- Model answers are 2–4 bullet points, each under 120 chars.
-- No extra keys or text outside the JSON.
-`.trim();
-
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-
+// ─── Handler ─────────────────────────────────────
 export async function POST(req: Request) {
-  const { job, context } = await req.json();
-  if (typeof job !== "string" || !job.trim()) {
-    return NextResponse.json({ error: "Missing job description" }, { status: 400 });
-  }
-
-  const messages: ChatCompletionMessageParam[] = [
-    { role: "system", content: SYSTEM_PROMPT },
-    { role: "user", content: `JOB DESCRIPTION:\n${job}` },
-  ];
-  if (typeof context === "string" && context.trim()) {
-    messages.push({ role: "user", content: `ROLE/COMPANY CONTEXT:\n${context}` });
-  }
-
-  // Call GPT
-  const completion = await openai.chat.completions.create({
-    model: "gpt-4o-mini",
-    temperature: 0.3,
-    messages,
-  });
-
-  const raw = completion.choices[0]?.message?.content ?? "";
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(raw);
-  } catch {
-    console.error("Invalid JSON from GPT:", raw);
-    return NextResponse.json({ error: "GPT returned invalid JSON", raw }, { status: 500 });
-  }
-
-  const result = InterviewPrepSchema.safeParse(parsed);
-  if (!result.success) {
-    console.error("Schema validation failed:", result.error.issues);
+  // 1) parse & validate input
+  const body = await req.json();
+  const parsedReq = RequestSchema.safeParse(body);
+  if (!parsedReq.success) {
     return NextResponse.json(
-      { error: "Schema mismatch", details: result.error.issues, raw },
+      { error: "Job description is required." },
+      { status: 400 }
+    );
+  }
+  const { job, context } = parsedReq.data as RequestData;
+
+  // 2) build messages array using the exact param type
+  type Msg =
+    Parameters<typeof openai.chat.completions.create>[0]["messages"][number];
+
+  const messages: Msg[] = [
+    {
+      role:    "system",
+      content: `You are an expert technical recruiter.
+Given a job description (and optional context), generate 5–7 tailored interview questions and model answers.
+Return ONLY JSON in the format:
+{ "questions": [ { "question": "...", "modelAnswer": "..." }, ... ] }`,
+    },
+    {
+      role:    "user",
+      content: `Job Description:
+${job}
+
+Context:
+${context ?? ""}`,
+    },
+  ];
+
+  // 3) call the API
+  let raw: string;
+  try {
+    const chat = await openai.chat.completions.create({
+      model:       "gpt-4",
+      temperature: 0.7,
+      messages,
+    });
+    raw = chat.choices[0]?.message?.content ?? "";
+  } catch (err: any) {
+    return NextResponse.json(
+      { error: err.message || "AI request failed" },
       { status: 500 }
     );
   }
 
-  return NextResponse.json(result.data as InterviewPrep);
+  // 4) parse & validate the response
+  let json: unknown;
+  try {
+    json = JSON.parse(raw);
+  } catch {
+    return NextResponse.json(
+      { error: "AI returned invalid JSON", raw },
+      { status: 500 }
+    );
+  }
+
+  const parsedRes = ResponseSchema.safeParse(json);
+  if (!parsedRes.success) {
+    return NextResponse.json(
+      {
+        error:   "Unexpected response format",
+        details: parsedRes.error.issues,
+        raw,
+      },
+      { status: 500 }
+    );
+  }
+
+  // 5) return well‐typed data
+  const data = parsedRes.data as ResponseData;
+  return NextResponse.json(data);
 }

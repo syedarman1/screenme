@@ -1,78 +1,79 @@
 // app/api/coverLetter/route.ts
-import { NextResponse } from 'next/server';
-import OpenAI from 'openai';
-import { z } from 'zod';
-
-const InputSchema = z.object({
-  resume: z.string().min(1),
-  jobDesc: z.string().min(1),
-  hook: z.string().optional(),
-});
-type Input = z.infer<typeof InputSchema>;
-
-const OutputSchema = z.object({
-  coverLetter: z.string().min(1),
-});
-type Output = z.infer<typeof OutputSchema>;
+import { NextResponse } from "next/server";
+import OpenAI from "openai";
 
 const SYSTEM_PROMPT = `
-You are an expert cover-letter writer. Given the candidate's résumé text, a job description, and an optional personal hook, produce a concise, 3-paragraph cover letter:
+You are a professional cover-letter ghostwriter. Follow these steps:
+0) Add this to the TOP
 
-1) Opening: Address the hiring manager, mention the role & hook.
-2) Body: Highlight 2–3 achievements from the résumé that map to the JD.
-3) Closing: Express enthusiasm & call to action.
+Your Name  
+Your Address  
+City, State ZIP  
+Email • Phone  
+Date  
 
-Return ONLY valid JSON:
-{"coverLetter":"Dear …\\n\\n…\\n\\nSincerely, …"}
+Hiring Manager Name  
+{{company}}  
+Company Address  
+City, State ZIP  
+1) From the resume text I provide, automatically select the 3–5 most impressive accomplishments or metrics.
+2) Craft a narrative-style cover letter with:
+   • An engaging opening paragraph that mentions the company name and why you admire their mission.
+   • Two body paragraphs weaving in those extracted accomplishments (no bullet points, just prose).
+   • A confident closing paragraph with a call to action.
+3) Use the “Tone” I specify (e.g., Professional, Enthusiastic, Concise).
+4) Do NOT include placeholders or repeat the resume verbatim; transform the content into a cohesive story.
+
+Output only the cover letter text—no JSON wrapper, no extra commentary.
 `.trim();
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY! });
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-export async function POST(req: Request) {
-  const json = await req.json();
-  const inParse = InputSchema.safeParse(json);
-  if (!inParse.success) {
-    return NextResponse.json({ error: 'Invalid input' }, { status: 400 });
-  }
-  const { resume, jobDesc, hook } = inParse.data;
+export async function POST(request: Request) {
+  const { resume, jobTitle, company, jobDesc, tone } = await request.json();
 
-  // build a strongly-typed message array
-  const messages = [
-    { role: 'system' as const, content: SYSTEM_PROMPT },
-    { role: 'user' as const, content: `RÉSUMÉ:\n${resume}` },
-    { role: 'user' as const, content: `JOB DESCRIPTION:\n${jobDesc}` },
-  ];
-
-  if (hook) {
-    messages.push({ role: 'user' as const, content: `PERSONAL HOOK:\n${hook}` });
+  if (
+    typeof resume !== "string" ||
+    typeof jobTitle !== "string" ||
+    typeof company !== "string" ||
+    typeof tone !== "string"
+  ) {
+    return NextResponse.json(
+      { error: "Missing one of: resume, jobTitle, company, tone" },
+      { status: 400 }
+    );
   }
 
-  let raw: string;
+  const userContent = `
+Resume Text:
+${resume}
+
+Role: ${jobTitle}
+Company: ${company}
+Job Description:
+${jobDesc || "(none provided)"}
+
+Tone: ${tone}
+`.trim();
+
+  let coverLetter: string;
   try {
-    const resp = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
-      temperature: 0.3,
-      messages,
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o",
+      temperature: 0.7,
+      messages: [
+        { role: "system", content: SYSTEM_PROMPT },
+        { role: "user", content: userContent },
+      ],
     });
-    raw = resp.choices[0]?.message?.content ?? '';
-  } catch (err) {
-    console.error(err);
-    return NextResponse.json({ error: 'OpenAI request failed' }, { status: 500 });
+    coverLetter = completion.choices[0].message?.content?.trim() || "";
+  } catch (err: any) {
+    console.error("OpenAI error:", err);
+    return NextResponse.json(
+      { error: "Failed to generate cover letter" },
+      { status: 500 }
+    );
   }
 
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(raw);
-  } catch {
-    console.error('Non-JSON from AI:', raw);
-    return NextResponse.json({ error: 'Invalid JSON from AI', raw }, { status: 500 });
-  }
-
-  const outParse = OutputSchema.safeParse(parsed);
-  if (!outParse.success) {
-    console.error('Output schema mismatch:', outParse.error);
-    return NextResponse.json({ error: 'AI output mismatch', raw }, { status: 500 });
-  }
-
-  return NextResponse.json(outParse.data);
+  return NextResponse.json({ coverLetter });
 }
