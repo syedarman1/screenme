@@ -1,4 +1,3 @@
-
 import React from 'react';
 
 const FeaturesSection = () => {
@@ -6,31 +5,36 @@ const FeaturesSection = () => {
     <section id="features" className="py-20 bg-[#212121]">
       <div className="container mx-auto px-6">
         <h2 className="text-3xl md:text-4xl font-bold text-white text-center mb-12 leading-tight tracking-tight">
-          Why Choose Our Service?
+          Why Choose ScreenMe?
         </h2>
         <div className="grid md:grid-cols-3 gap-8">
+          {/* Resume Analysis */}
           <div className="bg-[var(--accent)] p-6 rounded-lg shadow-md">
             <h3 className="text-xl font-semibold text-black mb-3 leading-snug tracking-tight">
               AI-Powered Resume Analysis
             </h3>
             <p className="text-black">
-              Get an ATS-optimized review of your resume with actionable metrics and tailored suggestions.
+              Get an ATS-optimized scan of your resume with a clear readiness score and tailored suggestions.
             </p>
           </div>
+
+          {/* Cover Letter Generator */}
           <div className="bg-[var(--accent)] p-6 rounded-lg shadow-md">
             <h3 className="text-xl font-semibold text-black mb-3 leading-snug tracking-tight">
-              Comprehensive GitHub & Portfolio Review
+              Cover Letter Generator
             </h3>
             <p className="text-black">
-              Showcase your projects with clarity—highlight your strengths and uncover opportunities for improvement.
+              Instantly craft a narrative-style cover letter—choose your tone, edit in place, and download.
             </p>
           </div>
+
+          {/* Interview Prep */}
           <div className="bg-[var(--accent)] p-6 rounded-lg shadow-md">
             <h3 className="text-xl font-semibold text-black mb-3 leading-snug tracking-tight">
-              LinkedIn & Job-Match Critique
+              Interview Prep
             </h3>
             <p className="text-black">
-              Compare your profile against job descriptions and get personalized insights to land your dream role.
+              Practice with AI-generated questions and model answers tailored to your target role.
             </p>
           </div>
         </div>
