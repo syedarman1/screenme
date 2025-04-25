@@ -3,24 +3,31 @@ import React, { useState, useMemo, useCallback } from "react";
 import ResumeUploader from "../components/ResumeUploader";
 
 type MatchResult = {
-  matchScore:    number;
+  matchScore: number;
   matchedSkills: string[];
   missingSkills: string[];
-  gaps:          string[];
-  actions:       string[];
+  gaps: string[];
+  actions: string[];
 };
 
 const MIN_INPUT_LENGTH = 50;
 const STOP_WORDS = new Set([
-  "with", "that", "the", "and", "for", "you", "will", "from", /* etc… */
+  "with",
+  "that",
+  "the",
+  "and",
+  "for",
+  "you",
+  "will",
+  "from" /* etc… */,
 ]);
 
 export default function JobMatchPage() {
   const [resumeTxt, setResumeTxt] = useState("");
-  const [jdTxt,     setJdTxt]     = useState("");
-  const [result,    setResult]    = useState<MatchResult | null>(null);
-  const [loading,   setLoading]   = useState(false);
-  const [error,     setError]     = useState<string | null>(null);
+  const [jdTxt, setJdTxt] = useState("");
+  const [result, setResult] = useState<MatchResult | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   // memoize resumeWords (for future highlighting features)
   const resumeWords = useMemo(() => {
@@ -29,7 +36,7 @@ export default function JobMatchPage() {
         resumeTxt
           .toLowerCase()
           .split(/\W+/)
-          .filter(w => w.length > 3 && !STOP_WORDS.has(w))
+          .filter((w) => w.length > 3 && !STOP_WORDS.has(w))
       )
     );
   }, [resumeTxt]);
@@ -51,7 +58,9 @@ export default function JobMatchPage() {
       return;
     }
     if (jdTxt.trim().length < MIN_INPUT_LENGTH) {
-      setError(`Job description must be at least ${MIN_INPUT_LENGTH} characters.`);
+      setError(
+        `Job description must be at least ${MIN_INPUT_LENGTH} characters.`
+      );
       return;
     }
 
@@ -104,18 +113,20 @@ export default function JobMatchPage() {
       : "Low"
     : null;
 
-  const barColor = tier === "High"
-    ? "bg-green-500"
-    : tier === "Medium"
-    ? "bg-yellow-400"
-    : "bg-red-500";
+  const barColor =
+    tier === "High"
+      ? "bg-green-500"
+      : tier === "Medium"
+      ? "bg-yellow-400"
+      : "bg-red-500";
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-white pt-28 pb-16 px-6">
       <header className="text-center mb-12 max-w-3xl mx-auto">
         <h1 className="text-4xl md:text-5xl font-bold">Job-Match Scanner</h1>
         <p className="mt-2 text-gray-400">
-          Upload your resume <span aria-hidden="true">•</span> or paste it, then paste the job description to see your match.
+          Upload your resume <span aria-hidden="true">•</span> or paste it, then
+          paste the job description to see your match.
         </p>
       </header>
 
@@ -124,13 +135,12 @@ export default function JobMatchPage() {
         className="max-w-3xl mx-auto bg-[#2a2a2a] rounded-xl p-8 space-y-6"
         aria-labelledby="jobmatch-form"
       >
-        <h2 id="jobmatch-form" className="sr-only">Job Match Form</h2>
+        <h2 id="jobmatch-form" className="sr-only">
+          Job Match Form
+        </h2>
 
         {/* Résumé uploader */}
-        <ResumeUploader
-          onResumeSubmit={setResumeTxt}
-          simple={true}
-        />
+        <ResumeUploader onResumeSubmit={setResumeTxt} simple={true} />
 
         {/* Job description */}
         <div>
@@ -187,17 +197,29 @@ export default function JobMatchPage() {
           aria-labelledby="results-heading"
           className="max-w-3xl mx-auto mt-10 bg-[#2a2a2a] rounded-xl p-8 space-y-8"
         >
-          <h2 id="results-heading" className="sr-only">Job Match Results</h2>
+          <h2 id="results-heading" className="sr-only">
+            Job Match Results
+          </h2>
 
           {/* Score bar */}
           <div>
             <div className="flex justify-between mb-1">
               <span className="font-medium text-gray-200">{tier} Match</span>
-              <span className="font-medium text-gray-200">{result.matchScore}%</span>
+              <span className="font-medium text-gray-200">
+                {result.matchScore}%
+              </span>
             </div>
-            <div className="w-full bg-gray-700 h-3 rounded overflow-hidden" role="progressbar"
-                 aria-valuenow={result.matchScore} aria-valuemin={0} aria-valuemax={100}>
-              <div className={`${barColor} h-3`} style={{ width: `${result.matchScore}%` }} />
+            <div
+              className="w-full bg-gray-700 h-3 rounded overflow-hidden"
+              role="progressbar"
+              aria-valuenow={result.matchScore}
+              aria-valuemin={0}
+              aria-valuemax={100}
+            >
+              <div
+                className={`${barColor} h-3`}
+                style={{ width: `${result.matchScore}%` }}
+              />
             </div>
           </div>
 
@@ -255,9 +277,11 @@ function RenderList({
     <div>
       <h3 className={`text-lg font-medium ${colour} mb-2`}>{title}</h3>
       <ul className="list-disc list-inside space-y-1 text-gray-300">
-        {items.length
-          ? items.map((t, i) => <li key={i}>{t}</li>)
-          : <li className="italic">{emptyText}</li>}
+        {items.length ? (
+          items.map((t, i) => <li key={i}>{t}</li>)
+        ) : (
+          <li className="italic">{emptyText}</li>
+        )}
       </ul>
     </div>
   );
