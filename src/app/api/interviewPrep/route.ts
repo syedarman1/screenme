@@ -1,11 +1,10 @@
 // src/app/api/interviewPrep/route.ts
-import { NextResponse } from "next/server";
-import OpenAI from "openai";
-import { z } from "zod";
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
+import OpenAI from "openai";
+
+const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 // ─── Schemas ─────────────────────────────────────
 const RequestSchema = z.object({
@@ -23,33 +22,30 @@ const ResponseSchema = z.object({
 });
 type ResponseData = z.infer<typeof ResponseSchema>;
 
-// ─── Handler ─────────────────────────────────────
-export async function POST(req: Request) {
-  // 1) parse & validate input
-  const body = await req.json();
-  const parsedReq = RequestSchema.safeParse(body);
-  if (!parsedReq.success) {
+// ─── POST handler ─────────────────────────────────
+export async function POST(request: NextRequest) {
+  const body = await request.json();
+  const parsed = RequestSchema.safeParse(body);
+  if (!parsed.success) {
     return NextResponse.json(
       { error: "Job description is required." },
       { status: 400 }
     );
   }
-  const { job, context } = parsedReq.data as RequestData;
+  const { job, context } = parsed.data as RequestData;
 
-  // 2) build messages array using the exact param type
-  type Msg =
-    Parameters<typeof openai.chat.completions.create>[0]["messages"][number];
-
+  // Build the prompt messages
+  type Msg = Parameters<typeof openai.chat.completions.create>[0]["messages"][number];
   const messages: Msg[] = [
     {
-      role:    "system",
+      role: "system",
       content: `You are an expert technical recruiter.
 Given a job description (and optional context), generate 5–7 tailored interview questions and model answers.
 Return ONLY JSON in the format:
-{ "questions": [ { "question": "...", "modelAnswer": "..." }, ... ] }`,
+{ "questions": [ { "question": "...", "modelAnswer": "..." }, … ] }`,
     },
     {
-      role:    "user",
+      role: "user",
       content: `Job Description:
 ${job}
 
@@ -58,7 +54,7 @@ ${context ?? ""}`,
     },
   ];
 
-  // 3) call the API
+  // Call OpenAI
   let raw: string;
   try {
     const chat = await openai.chat.completions.create({
@@ -74,7 +70,7 @@ ${context ?? ""}`,
     );
   }
 
-  // 4) parse & validate the response
+  // Parse & validate JSON response
   let json: unknown;
   try {
     json = JSON.parse(raw);
@@ -97,7 +93,7 @@ ${context ?? ""}`,
     );
   }
 
-  // 5) return well‐typed data
+  // Return validated questions
   const data = parsedRes.data as ResponseData;
-  return NextResponse.json(data);
+  return NextResponse.json(data, { status: 200 });
 }
