@@ -107,7 +107,8 @@ export async function POST(req: NextRequest) {
             const chatResp = await openai.chat.completions.create({
                 model: "gpt-4o-mini", // or your preferred model
                 messages: history.map((m) => ({ role: m.who === 'ai' ? 'assistant' : m.who, content: m.text })) as any, // Map role correctly
-                // temperature: 0.7 // Adjust as needed
+                temperature: 0.75, // Adjust as needed
+                max_tokens: 100
             });
             reply = chatResp.choices[0]?.message?.content?.trim() ?? "";
             console.log("GPT Reply Successful:", reply);

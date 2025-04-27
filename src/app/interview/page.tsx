@@ -368,7 +368,7 @@ export default function InterviewPrepPage() {
       <section className="w-full max-w-5xl mx-auto mt-16 px-6 space-y-6">
         {/* Title */}
         <h2 className="text-xl font-semibold text-[var(--gray-200)] text-center md:text-left">
-          Speak to the AI
+          Speak to AI (BETA)
         </h2>
 
         {/* AudioChat component is now a direct child, removing the max-w-3xl constraint */}
