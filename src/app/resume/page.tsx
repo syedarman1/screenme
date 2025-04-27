@@ -47,9 +47,9 @@ interface Audit {
 }
 
 const badgeColor = {
-  low: "bg-green-900 text-green-300 border-green-700",
-  medium: "bg-yellow-900 text-yellow-300 border-yellow-700",
-  high: "bg-red-900 text-red-300 border-red-700",
+  low: "bg-[var(--green-900)] text-[var(--green-300)] border-[var(--green-800)]",
+  medium: "bg-[var(--yellow-900)] text-[var(--yellow-300)] border-[var(--yellow-800)]",
+  high: "bg-[var(--red-900)] text-[var(--red-300)] border-[var(--red-800)]",
 } as const;
 
 const sectionIcons = {
@@ -123,10 +123,10 @@ export default function ResumeScreen() {
   };
 
   const getScoreColor = (score: number) => {
-    if (score >= 85) return "#4ADE80"; // green
-    if (score >= 70) return "#FACC15"; // yellow
-    if (score >= 50) return "#FB923C"; // orange
-    return "#F87171"; // red
+    if (score >= 85) return "var(--score-excellent)";
+    if (score >= 70) return "var(--score-good)";
+    if (score >= 50) return "var(--score-average)";
+    return "var(--score-needs-work)";
   };
 
   const getScoreLabel = (score: number) => {
@@ -141,7 +141,7 @@ export default function ResumeScreen() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-white pt-16 pb-16">
+    <div className="min-h-screen bg-[var(--background)] text-[var(--foreground)] pt-16 pb-16">
       {/* Header */}
       <header className="max-w-5xl mx-auto text-center mb-8 px-6">
         <div className="flex justify-center mb-4">
@@ -155,7 +155,6 @@ export default function ResumeScreen() {
               xmlns="http://www.w3.org/2000/svg"
             >
               <path d="M4 2h10l6 6v14H4V2z" />
-
               <path d="M14 2v6h6" />
             </svg>
           </div>
@@ -163,7 +162,7 @@ export default function ResumeScreen() {
         <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-[var(--accent)]">
           Resume Scanner
         </h1>
-        <p className="mt-3 text-lg text-gray-300 max-w-2xl mx-auto">
+        <p className="mt-3 text-lg text-[var(--gray-300)] max-w-2xl mx-auto">
           Get expert feedback on your resume with our AI-powered analysis tool.
           Optimize your resume to stand out from the competition.
         </p>
@@ -172,9 +171,9 @@ export default function ResumeScreen() {
       {/* Quick Tips */}
       {showTips && (
         <div className="max-w-5xl mx-auto mb-8 px-6">
-          <div className="bg-neutral-800/30 border border-neutral-700 rounded-xl p-4 relative">
+          <div className="bg-[var(--neutral-800)]/30 border border-[var(--neutral-700)] rounded-xl p-4 relative">
             <button
-              className="absolute top-2 right-2 text-gray-400 hover:text-white"
+              className="absolute top-2 right-2 text-[var(--gray-400)] hover:text-[var(--foreground)]"
               onClick={() => setShowTips(false)}
             >
               <svg
@@ -191,24 +190,24 @@ export default function ResumeScreen() {
                 />
               </svg>
             </button>
-            <h3 className="text-lg font-medium text-yellow-300 mb-2">
+            <h3 className="text-lg font-medium text-[var(--yellow-300)] mb-2">
               Quick Resume Tips
             </h3>
-            <ul className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm text-gray-300">
+            <ul className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm text-[var(--gray-300)]">
               <li className="flex items-start gap-2">
-                <span className="text-yellow-300 flex-shrink-0">✓</span>
+                <span className="text-[var(--yellow-300)] flex-shrink-0">✓</span>
                 <span>Use strong action verbs and quantify achievements</span>
               </li>
               <li className="flex items-start gap-2">
-                <span className="text-yellow-300 flex-shrink-0">✓</span>
+                <span className="text-[var(--yellow-300)] flex-shrink-0">✓</span>
                 <span>Tailor your resume to the specific job description</span>
               </li>
               <li className="flex items-start gap-2">
-                <span className="text-yellow-300 flex-shrink-0">✓</span>
+                <span className="text-[var(--yellow-300)] flex-shrink-0">✓</span>
                 <span>Keep formatting consistent and easy to scan</span>
               </li>
               <li className="flex items-start gap-2">
-                <span className="text-yellow-300 flex-shrink-0">✓</span>
+                <span className="text-[var(--yellow-300)] flex-shrink-0">✓</span>
                 <span>Include keywords relevant to your industry</span>
               </li>
             </ul>
@@ -218,8 +217,8 @@ export default function ResumeScreen() {
 
       {/* Uploader */}
       <section className="w-full max-w-5xl mx-auto px-6">
-        <div className="bg-neutral-800 rounded-xl border border-neutral-700 p-6 shadow-xl">
-          <h2 className="text-xl font-semibold text-gray-200 mb-4">
+        <div className="bg-[var(--neutral-800)] rounded-xl border border-[var(--neutral-700)] p-6 shadow-xl">
+          <h2 className="text-xl font-semibold text-[var(--gray-200)] mb-4">
             Upload Your Resume
           </h2>
           <ResumeUploader onResumeSubmit={sendToApi} />
@@ -238,23 +237,23 @@ export default function ResumeScreen() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
-              className="p-8 bg-neutral-800 rounded-xl border border-neutral-700 shadow-xl flex flex-col items-center gap-4"
+              className="p-8 bg-[var(--neutral-800)] rounded-xl border border-[var(--neutral-700)] shadow-xl flex flex-col items-center gap-4"
             >
               <div className="relative w-20 h-20">
-                <div className="absolute inset-0 border-4 border-t-[var(--accent)] border-r-[var(--accent)] border-b-neutral-700 border-l-neutral-700 rounded-full animate-spin" />
+                <div className="absolute inset-0 border-4 border-t-[var(--accent)] border-r-[var(--accent)] border-b-[var(--neutral-700)] border-l-[var(--neutral-700)] rounded-full animate-spin" />
               </div>
               <div className="text-center">
-                <h3 className="text-xl font-medium text-gray-200">
+                <h3 className="text-xl font-medium text-[var(--gray-200)]">
                   Analyzing your resume...
                 </h3>
-                <p className="text-gray-400 mt-2">
+                <p className="text-[var(--gray-400)] mt-2">
                   Our AI is reviewing your resume for improvements
                 </p>
               </div>
               {controller && (
                 <button
                   onClick={() => controller.abort()}
-                  className="mt-2 px-4 py-2 bg-red-900/50 hover:bg-red-800 text-red-300 rounded-lg border border-red-800 transition-colors"
+                  className="mt-2 px-4 py-2 bg-[var(--red-900)]/50 hover:bg-[var(--red-800)] text-[var(--red-300)] rounded-lg border border-[var(--red-800)] transition-colors"
                 >
                   Cancel Analysis
                 </button>
@@ -268,7 +267,7 @@ export default function ResumeScreen() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
-              className="p-4 bg-red-900/30 border border-red-800 text-red-300 rounded-lg flex items-center justify-center mt-8"
+              className="p-4 bg-[var(--red-900)]/30 border border-[var(--red-800)] text-[var(--red-300)] rounded-lg flex items-center justify-center mt-8"
               role="alert"
             >
               <svg
@@ -298,9 +297,9 @@ export default function ResumeScreen() {
             animate={{ opacity: 1, y: 0, transition: { delay: 0.2 } }}
             className="w-full max-w-5xl mx-auto mt-8 px-6"
           >
-            <div className="bg-neutral-800 rounded-xl border border-neutral-700 shadow-xl overflow-hidden">
+            <div className="bg-[var(--neutral-800)] rounded-xl border border-[var(--neutral-700)] shadow-xl overflow-hidden">
               {/* Header with Score */}
-              <div className="bg-neutral-700/50 p-6 border-b border-neutral-700">
+              <div className="bg-[var(--neutral-700)]/50 p-6 border-b border-[var(--neutral-700)]">
                 <div className="flex flex-col md:flex-row gap-6 items-center">
                   {/* Score Circle */}
                   <div ref={scoreRef} className="w-36 h-36 flex-shrink-0">
@@ -311,14 +310,14 @@ export default function ResumeScreen() {
                         textSize: "24px",
                         pathColor: getScoreColor(audit.score),
                         textColor: getScoreColor(audit.score),
-                        trailColor: "#374151",
+                        trailColor: "var(--trail-color)",
                       })}
                     />
                   </div>
                   {/* Summary */}
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-2">
-                      <h2 className="text-2xl font-bold text-gray-100">
+                      <h2 className="text-2xl font-bold text-[var(--gray-100)]">
                         Resume Score
                       </h2>
                       <span
@@ -332,11 +331,11 @@ export default function ResumeScreen() {
                       </span>
                     </div>
                     {audit.summary ? (
-                      <p className="text-gray-300 leading-relaxed">
+                      <p className="text-[var(--gray-300)] leading-relaxed">
                         {audit.summary}
                       </p>
                     ) : (
-                      <p className="text-gray-300 leading-relaxed">
+                      <p className="text-[var(--gray-300)] leading-relaxed">
                         {audit.score >= 85
                           ? "Excellent work! Your resume appears to be well-optimized."
                           : audit.score >= 70
@@ -351,13 +350,13 @@ export default function ResumeScreen() {
               </div>
 
               {/* Tabs */}
-              <div className="border-b border-neutral-700">
+              <div className="border-b border-[var(--neutral-700)]">
                 <div className="flex overflow-x-auto">
                   <button
                     className={`px-6 py-3 text-sm font-medium whitespace-nowrap ${
                       activeTab === "issues"
                         ? "border-b-2 border-[var(--accent)] text-[var(--accent)]"
-                        : "text-gray-400 hover:text-gray-300"
+                        : "text-[var(--gray-400)] hover:text-[var(--gray-300)]"
                     }`}
                     onClick={() => setActiveTab("issues")}
                   >
@@ -367,7 +366,7 @@ export default function ResumeScreen() {
                     className={`px-6 py-3 text-sm font-medium whitespace-nowrap ${
                       activeTab === "strengths"
                         ? "border-b-2 border-[var(--accent)] text-[var(--accent)]"
-                        : "text-gray-400 hover:text-gray-300"
+                        : "text-[var(--gray-400)] hover:text-[var(--gray-300)]"
                     }`}
                     onClick={() => setActiveTab("strengths")}
                   >
@@ -377,7 +376,7 @@ export default function ResumeScreen() {
                     className={`px-6 py-3 text-sm font-medium whitespace-nowrap ${
                       activeTab === "keywords"
                         ? "border-b-2 border-[var(--accent)] text-[var(--accent)]"
-                        : "text-gray-400 hover:text-gray-300"
+                        : "text-[var(--gray-400)] hover:text-[var(--gray-300)]"
                     }`}
                     onClick={() => setActiveTab("keywords")}
                   >
@@ -391,7 +390,7 @@ export default function ResumeScreen() {
                 {activeTab === "issues" && (
                   <>
                     {audit.issues.length === 0 ? (
-                      <div className="p-6 bg-green-900/20 border border-green-800 text-green-300 rounded-lg text-center">
+                      <div className="p-6 bg-[var(--green-900)]/20 border border-[var(--green-800)] text-[var(--green-300)] rounded-lg text-center">
                         <svg
                           className="h-12 w-12 mx-auto mb-3"
                           fill="none"
@@ -405,7 +404,7 @@ export default function ResumeScreen() {
                             d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
                           />
                         </svg>
-                        <h3 className="text-xl font-medium text-green-300 mb-1">
+                        <h3 className="text-xl font-medium text-[var(--green-300)] mb-1">
                           No issues found!
                         </h3>
                         <p>
@@ -420,8 +419,8 @@ export default function ResumeScreen() {
                             role="listitem"
                             className="animate-fadeIn"
                           >
-                            <details className="group border border-neutral-700 rounded-lg">
-                              <summary className="cursor-pointer flex items-center gap-3 p-4 bg-neutral-900 hover:bg-neutral-800 transition-colors">
+                            <details className="group border border-[var(--neutral-700)] rounded-lg">
+                              <summary className="cursor-pointer flex items-center gap-3 p-4 bg-[var(--neutral-900)] hover:bg-[var(--neutral-800)] transition-colors">
                                 <span
                                   className={`px-2 py-1 text-xs rounded-full border ${
                                     badgeColor[issue.severity]
@@ -430,20 +429,20 @@ export default function ResumeScreen() {
                                   {issue.severity.toUpperCase()}
                                 </span>
                                 <span className="flex items-center gap-2">
-                                  <span className="text-gray-400">
+                                  <span className="text-[var(--gray-400)]">
                                     {sectionIcons[
                                       issue.section as keyof typeof sectionIcons
                                     ] || "📄"}
                                   </span>
-                                  <span className="font-medium text-gray-200">
+                                  <span className="font-medium text-[var(--gray-200)]">
                                     {issue.section}
                                   </span>
                                 </span>
-                                <span className="text-gray-300 truncate flex-1">
+                                <span className="text-[var(--gray-300)] truncate flex-1">
                                   {issue.text}
                                 </span>
                                 <svg
-                                  className="w-5 h-5 text-gray-500 group-open:rotate-180 transition-transform"
+                                  className="w-5 h-5 text-[var(--gray-500)] group-open:rotate-180 transition-transform"
                                   fill="none"
                                   viewBox="0 0 24 24"
                                   stroke="currentColor"
@@ -456,32 +455,32 @@ export default function ResumeScreen() {
                                   />
                                 </svg>
                               </summary>
-                              <div className="p-4 space-y-4 bg-neutral-900 border-t border-neutral-700">
+                              <div className="p-4 space-y-4 bg-[var(--neutral-900)] border-t border-[var(--neutral-700)]">
                                 {issue.line && (
-                                  <div className="bg-neutral-700/50 p-3 rounded border border-neutral-700">
-                                    <p className="text-gray-400 text-sm mb-1">
+                                  <div className="bg-[var(--neutral-700)]/50 p-3 rounded border border-[var(--neutral-700)]">
+                                    <p className="text-[var(--gray-400)] text-sm mb-1">
                                       Original text:
                                     </p>
-                                    <p className="text-gray-300 italic">
+                                    <p className="text-[var(--gray-300)] italic">
                                       "{issue.line}"
                                     </p>
                                   </div>
                                 )}
                                 <div>
-                                  <p className="text-gray-400 text-sm mb-1">
+                                  <p className="text-[var(--gray-400)] text-sm mb-1">
                                     Issue:
                                   </p>
-                                  <p className="text-gray-300">{issue.text}</p>
+                                  <p className="text-[var(--gray-300)]">{issue.text}</p>
                                   {issue.reason && (
-                                    <p className="mt-2 text-gray-400 text-sm">
+                                    <p className="mt-2 text-[var(--gray-400)] text-sm">
                                       {issue.reason}
                                     </p>
                                   )}
                                 </div>
                                 {audit.actions[i] && (
-                                  <div className="mt-4 bg-neutral-800 p-4 rounded-lg border border-neutral-700">
+                                  <div className="mt-4 bg-[var(--neutral-800)] p-4 rounded-lg border border-[var(--neutral-700)]">
                                     <div className="flex justify-between items-center mb-2">
-                                      <h4 className="text-gray-300 font-medium">
+                                      <h4 className="text-[var(--gray-300)] font-medium">
                                         Suggested Improvement
                                       </h4>
                                       <button
@@ -490,11 +489,11 @@ export default function ResumeScreen() {
                                             audit.actions[i].rewrite
                                           )
                                         }
-                                        className="p-1 hover:bg-neutral-700 rounded-lg transition-colors"
+                                        className="p-1 hover:bg-[var(--neutral-700)] rounded-lg transition-colors"
                                         aria-label="Copy suggested action"
                                       >
                                         <svg
-                                          className="h-5 w-5 text-gray-400"
+                                          className="h-5 w-5 text-[var(--gray-400)]"
                                           fill="none"
                                           stroke="currentColor"
                                           viewBox="0 0 24 24"
@@ -508,12 +507,12 @@ export default function ResumeScreen() {
                                         </svg>
                                       </button>
                                     </div>
-                                    <p className="text-gray-200 leading-relaxed">
+                                    <p className="text-[var(--gray-200)] leading-relaxed">
                                       {audit.actions[i].rewrite}
                                     </p>
                                     {audit.actions[i].improvement && (
-                                      <p className="mt-2 text-gray-400 text-sm">
-                                        <span className="text-yellow-300">
+                                      <p className="mt-2 text-[var(--gray-400)] text-sm">
+                                        <span className="text-[var(--yellow-300)]">
                                           Why this works:
                                         </span>{" "}
                                         {audit.actions[i].improvement}
@@ -533,8 +532,8 @@ export default function ResumeScreen() {
                 {activeTab === "strengths" && (
                   <>
                     {!audit.strengths || audit.strengths.length === 0 ? (
-                      <div className="p-6 bg-neutral-800/30 border border-neutral-700 rounded-lg text-center">
-                        <p className="text-gray-400">
+                      <div className="p-6 bg-[var(--neutral-800)]/30 border border-[var(--neutral-700)] rounded-lg text-center">
+                        <p className="text-[var(--gray-400)]">
                           No specific strengths were identified in your resume.
                         </p>
                       </div>
@@ -543,7 +542,7 @@ export default function ResumeScreen() {
                         {audit.strengths.map((strength, i) => (
                           <li
                             key={i}
-                            className="bg-green-900/20 border border-green-800/40 rounded-lg p-4"
+                            className="bg-[var(--green-900)]/20 border border-[var(--green-800)]/40 rounded-lg p-4"
                           >
                             <div className="flex items-center gap-2 mb-2">
                               <span className="text-xl">
@@ -551,15 +550,15 @@ export default function ResumeScreen() {
                                   strength.section as keyof typeof sectionIcons
                                 ] || "📄"}
                               </span>
-                              <h4 className="font-medium text-green-400">
+                              <h4 className="font-medium text-[var(--green-400)]">
                                 {strength.section}
                               </h4>
                             </div>
-                            <p className="text-gray-200 mb-2">
+                            <p className="text-[var(--gray-200)] mb-2">
                               {strength.text}
                             </p>
-                            <p className="text-gray-400 text-sm">
-                              <span className="text-green-400">
+                            <p className="text-[var(--gray-400)] text-sm">
+                              <span className="text-[var(--green-400)]">
                                 Why this works:{" "}
                               </span>
                               {strength.reason}
@@ -574,8 +573,8 @@ export default function ResumeScreen() {
                 {activeTab === "keywords" && (
                   <>
                     {!audit.keywords || audit.keywords.length === 0 ? (
-                      <div className="p-6 bg-neutral-800/30 border border-neutral-700 rounded-lg text-center">
-                        <p className="text-gray-400">
+                      <div className="p-6 bg-[var(--neutral-800)]/30 border border-[var(--neutral-700)] rounded-lg text-center">
+                        <p className="text-[var(--gray-400)]">
                           No keyword analysis is available for your resume.
                         </p>
                       </div>
@@ -584,21 +583,21 @@ export default function ResumeScreen() {
                         {audit.keywords.map((keyword, i) => (
                           <div
                             key={i}
-                            className="border border-neutral-700 rounded-lg overflow-hidden"
+                            className="border border-[var(--neutral-700)] rounded-lg overflow-hidden"
                           >
-                            <div className="bg-neutral-700/50 p-3 font-medium text-gray-200">
+                            <div className="bg-[var(--neutral-700)]/50 p-3 font-medium text-[var(--gray-200)]">
                               {keyword.category}
                             </div>
                             <div className="p-4">
                               <div className="mb-4">
-                                <h4 className="text-sm text-gray-400 mb-2">
+                                <h4 className="text-sm text-[var(--gray-400)] mb-2">
                                   Found Keywords
                                 </h4>
                                 <div className="flex flex-wrap gap-2">
                                   {keyword.terms.map((term, j) => (
                                     <span
                                       key={j}
-                                      className="px-2 py-1 bg-neutral-700/30 text-gray-200 rounded border border-neutral-600 text-sm"
+                                      className="px-2 py-1 bg-[var(--neutral-700)]/30 text-[var(--gray-200)] rounded border border-[var(--neutral-600)] text-sm"
                                     >
                                       {term}
                                     </span>
@@ -608,14 +607,14 @@ export default function ResumeScreen() {
                               {keyword.missing &&
                                 keyword.missing.length > 0 && (
                                   <div>
-                                    <h4 className="text-sm text-gray-400 mb-2">
+                                    <h4 className="text-sm text-[var(--gray-400)] mb-2">
                                       Suggested Keywords
                                     </h4>
                                     <div className="flex flex-wrap gap-2">
                                       {keyword.missing.map((term, j) => (
                                         <span
                                           key={j}
-                                          className="px-2 py-1 bg-yellow-900/20 text-yellow-400 rounded border border-yellow-800/40 text-sm"
+                                          className="px-2 py-1 bg-[var(--yellow-900)]/20 text-[var(--yellow-400)] rounded border border-[var(--yellow-800)]/40 text-sm"
                                         >
                                           {term}
                                         </span>
@@ -633,8 +632,8 @@ export default function ResumeScreen() {
               </div>
 
               {/* Footer with tip */}
-              <div className="border-t border-neutral-700 p-4 bg-neutral-900/50">
-                <p className="text-gray-400 text-sm text-center">
+              <div className="border-t border-[var(--neutral-700)] p-4 bg-[var(--neutral-900)]/50">
+                <p className="text-[var(--gray-400)] text-sm text-center">
                   <span className="text-[var(--accent)]">Pro Tip:</span>{" "}
                   Recruiters spend an average of just 6–7 seconds scanning your
                   resume. Make every word count!
