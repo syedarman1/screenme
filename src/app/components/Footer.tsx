@@ -3,7 +3,7 @@ import React from 'react';
 
 const Footer = () => {
   return (
-    <footer className="bg-[#212121] py-6">
+    <footer className="bg-[#111111] py-6">
       <div className="container mx-auto px-6 text-center">
         <div className="mb-3 flex justify-center space-x-6">
           <a href="#" className="text-gray-100 hover:text-[var(--accent)] transition duration-200">About</a>
