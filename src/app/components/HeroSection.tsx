@@ -8,17 +8,17 @@ import { motion } from "framer-motion";
 const DEMOS = [
   {
     title: "Resume Scanner",
-    src: "/resume2.mp4",
+    src: "/resume.mp4",
     description: "Score your resume for ATS compatibility and keywords", // Kept for potential future use, but not displayed
   },
   {
     title: "Cover Letter Gen",
-    src: "/CoverLetter.mp4",
+    src: "/cover.mp4",
     description: "Craft tailored, editable cover letters instantly", // This will be filtered out
   },
   {
     title: "Job-Match Scanner",
-    src: "/JobMatch.mp4",
+    src: "/job.mp4",
     description: "Compare your skills to job postings", // Kept for potential future use, but not displayed
   },
 ] as const;
@@ -84,7 +84,7 @@ export default function HeroSection() {
           initial="hidden"
           animate="visible"
         >
-          ScreenMe: Apply Smarter, Get Hired Faster
+          Apply Smarter, Get Hired Faster
         </motion.h1>
 
         {/* Subtitle */}
