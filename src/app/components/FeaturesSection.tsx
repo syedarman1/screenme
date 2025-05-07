@@ -39,7 +39,7 @@ const FEATURES_DATA: Feature[] = [
     description: "Practice with AI-generated questions and model answers tailored to your target role.",
     Icon: PlaceholderIconChat,
   },
-  // Add more features as needed
+  
 ];
 
 /* ---------- Anim variants (Reused from Testimonials) ---------- */

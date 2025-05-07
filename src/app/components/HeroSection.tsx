@@ -12,19 +12,19 @@ const DEMOS = [
     description: "Score your resume for ATS compatibility and keywords", // Kept for potential future use, but not displayed
   },
   {
-    title: "Cover Letter Gen",
-    src: "/cover.mp4",
+    title: "Job-Match Scanner",
+    src: "/job.mp4",
     description: "Craft tailored, editable cover letters instantly", // This will be filtered out
   },
   {
-    title: "Job-Match Scanner",
-    src: "/job.mp4",
+    title: "Cover Letter Gen",
+    src: "/cover.mp4",
     description: "Compare your skills to job postings", // Kept for potential future use, but not displayed
   },
 ] as const;
 
 // Filter out the "Cover Letter Gen" demo
-const filteredDemos = DEMOS.filter(demo => demo.title !== "Cover Letter Gen");
+const filteredDemos = DEMOS.filter(demo => demo.title !== "Job-Match Scanner");
 
 export default function HeroSection() {
   // Explicitly type the ref as an array of HTMLVideoElement | null

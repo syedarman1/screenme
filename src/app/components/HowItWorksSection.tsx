@@ -1,4 +1,7 @@
-// No React import needed generally
+"use client";
+
+import React, { useRef } from "react";
+import { motion } from "framer-motion";
 
 // --- Data Definition for Steps ---
 type HowItWorksStep = {
@@ -12,7 +15,7 @@ const STEPS_DATA: HowItWorksStep[] = [
     stepNumber: 1,
     title: "Submit Your Information",
     description:
-      "Upload your resume, connect your GitHub and LinkedIn, and provide the job description.",
+      "Upload your resume, connect your information, and provide the job description.",
   },
   {
     stepNumber: 2,
@@ -28,20 +31,22 @@ const STEPS_DATA: HowItWorksStep[] = [
   },
 ];
 
+// --- Video Demo Data ---
+const VIDEO_DEMO = {
+  title: "Cover Letter Gen",
+  src: "/job.mp4",
+};
+
 // --- Reusable Step Card Component ---
 const StepCard = ({ step }: { step: HowItWorksStep }) => (
-  // Use CSS variables for background, text, and hover states
   <div className="text-center p-6 bg-[var(--neutral-800)] rounded-md transition-transform transform hover:scale-105 hover:bg-[var(--neutral-700)] hover:shadow-lg">
-    {/* Step Number */}
     <div className="text-4xl font-bold text-[var(--accent)] mb-4">
       {step.stepNumber}
     </div>
-    {/* Step Title */}
-    <h3 className="text-xl font-semibold text-[var(--foreground)] mb-3"> {/* Use foreground */}
+    <h3 className="text-xl font-semibold text-[var(--foreground)] mb-3">
       {step.title}
     </h3>
-    {/* Step Description */}
-    <p className="text-[var(--gray-300)] text-sm"> {/* Use variable, maybe smaller text */}
+    <p className="text-[var(--gray-300)] text-sm">
       {step.description}
     </p>
   </div>
@@ -49,21 +54,76 @@ const StepCard = ({ step }: { step: HowItWorksStep }) => (
 
 // --- Main How It Works Section Component ---
 const HowItWorksSection = () => {
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+
+  const handleMouseEnter = () => {
+    if (videoRef.current) {
+      videoRef.current.play().catch(error => console.error("Video play failed:", error));
+    }
+  };
+
+  const handleMouseLeave = () => {
+    if (videoRef.current) {
+      videoRef.current.pause();
+      videoRef.current.currentTime = 0;
+    }
+  };
+
+  // Animation variants for entrance effects
+  const cardContainerVariants = {
+    hidden: { opacity: 0 },
+    visible: { opacity: 1, transition: { staggerChildren: 0.2 } },
+  };
+
+  const cardItemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: { opacity: 1, y: 0, transition: { duration: 0.6, ease: "easeOut" } },
+  };
+
+  const videoVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: { opacity: 1, y: 0, transition: { duration: 0.8, delay: 0.5 } },
+  };
+
   return (
-    // Use CSS variable for section background
-    <section id="how-it-works" className="py-20 bg-[var(--background)]]"> {/* Use variable */}
+    <section id="how-it-works" className="py-20 bg-[var(--background)]">
       <div className="container mx-auto px-6">
-        {/* Use CSS variable for title color */}
         <h2 className="text-3xl md:text-4xl font-bold text-[var(--foreground)] text-center mb-12">
           How It Works
         </h2>
-        {/* Grid for steps */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          {/* Map over the data to render step cards */}
+        <motion.div
+          className="grid grid-cols-1 md:grid-cols-3 gap-8"
+          variants={cardContainerVariants}
+          initial="hidden"
+          animate="visible"
+        >
           {STEPS_DATA.map((step) => (
-            <StepCard key={step.stepNumber} step={step} />
+            <motion.div key={step.stepNumber} variants={cardItemVariants}>
+              <StepCard step={step} />
+            </motion.div>
           ))}
-        </div>
+        </motion.div>
+        {/* Video Demo Section */}
+        <motion.div
+          className="mt-20 flex justify-center"
+          variants={videoVariants}
+          initial="hidden"
+          animate="visible"
+        >
+          <div className="relative group w-full max-w-6xl">
+            <video
+              ref={videoRef}
+              src={VIDEO_DEMO.src}
+              muted
+              loop
+              playsInline
+              className="w-full rounded-xl shadow-lg group-hover:shadow-[var(--accent)]/40 transition-shadow duration-300 aspect-video object-cover"
+              onMouseEnter={handleMouseEnter}
+              onMouseLeave={handleMouseLeave}
+              preload="metadata"
+            />
+          </div>
+        </motion.div>
       </div>
     </section>
   );
