@@ -6,31 +6,148 @@ import { type User } from "@supabase/supabase-js";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
+interface Plan {
+  title: string;
+  price: string;
+  period?: string;
+  features: string[];
+  buttonText: string;
+  priceId?: string;
+  isCurrent?: boolean;
+}
+
 export default function DashboardPage() {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedPriceId, setSelectedPriceId] = useState<string | null>(null);
+  const [currentPlan, setCurrentPlan] = useState<string | null>(null);
 
-  // Auth check
+  // auth check
   useEffect(() => {
-    const checkUser = async () => {
+    const checkUserAndPlan = async () => {
       try {
-        const { data, error } = await supabase.auth.getUser();
-        if (error) throw new Error("Failed to fetch user");
+        const { data, error: authError } = await supabase.auth.getUser();
+        if (authError) throw new Error("Failed to fetch user");
         if (!data?.user) {
-          router.push("/login");
+          setError("Please log in to access your dashboard.");
+          setLoading(false);
           return;
         }
         setUser(data.user);
+
+        // Check if user has a plan otherwidse throww err
+        const { data: planData, error: planError } = await supabase
+          .from("user_plans")
+          .select("plan")
+          .eq("user_id", data.user.id)
+          .single();
+        if (planError && planError.code === "PGRST116") {
+          await supabase
+            .from("user_plans")
+            .insert({ user_id: data.user.id, plan: "free" });
+        } else if (planError) throw planError;
+        setCurrentPlan(planData?.plan || "free");
+
+        const subscription = supabase
+          .channel("user_plans_changes")
+          .on(
+            "postgres_changes",
+            {
+              event: "UPDATE",
+              schema: "public",
+              table: "user_plans",
+              filter: `user_id=eq.${data.user.id}`,
+            },
+            (payload) => {
+              setCurrentPlan(payload.new.plan);
+            }
+          )
+          .subscribe();
+
+        const priceId = localStorage.getItem("selectedPriceId");
+        setSelectedPriceId(priceId);
+
+        return () => {
+          supabase.removeChannel(subscription);
+        };
       } catch (e: any) {
         setError(e.message || "An error occurred while loading your dashboard");
       } finally {
         setLoading(false);
       }
     };
-    checkUser();
+    checkUserAndPlan();
   }, [router]);
+
+  const handlePlanSelection = async (planType: "free" | "pro") => {
+    if (loading) return;
+
+    const userId = user?.id;
+    if (!userId) {
+      setError("Please log in to select a plan.");
+      return;
+    }
+
+    if (planType === "free") {
+      await supabase
+        .from("user_plans")
+        .upsert({ user_id: userId, plan: "free" }, { onConflict: "user_id" });
+      localStorage.removeItem("selectedPriceId");
+      setSelectedPriceId(null);
+      setCurrentPlan("free");
+    } else if (planType === "pro" && process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO) {
+      try {
+        const response = await fetch("/api/stripe/checkout", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO,
+            userId,
+          }),
+        });
+        const { url } = await response.json();
+        if (url) {
+          window.location.href = url;
+          localStorage.removeItem("selectedPriceId");
+        }
+      } catch (error) {
+        console.error("Error initiating checkout:", error);
+        setError("Failed to initiate Pro plan checkout");
+      }
+    }
+  };
+
+  const plans: Plan[] = [
+    {
+      title: "Free",
+      price: "$0",
+      period: "/mo",
+      features: [
+        "2× Resume scans",
+        "1× Cover letter",
+        "1× Job-match analysis",
+        "Email support",
+      ],
+      buttonText: currentPlan === "free" ? "Current Plan" : "Stay Free",
+      isCurrent: currentPlan === "free",
+    },
+    {
+      title: "Pro",
+      price: "$15",
+      period: "/mo",
+      features: [
+        "Unlimited resume scans",
+        "Unlimited cover letters",
+        "Unlimited job-match analysis",
+        "Unlimited interview prep",
+      ],
+      buttonText: currentPlan === "pro" ? "Current Plan" : "Upgrade to Pro",
+      priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO,
+      isCurrent: currentPlan === "pro",
+    },
+  ];
 
   if (loading) {
     return (
@@ -62,13 +179,10 @@ export default function DashboardPage() {
 
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#0a0a0a] text-white">
-        <div
-          className="p-4 bg-red-900 bg-opacity-50 text-red-300 rounded-lg flex items-center"
-          role="alert"
-        >
+      <div className="min-h-screen bg-gradient-to-br from-[#0a0a0a] to-[#1a1a1a] flex items-center justify-center text-white">
+        <div className="p-6 max-w-md text-center">
           <svg
-            className="h-5 w-5 mr-2"
+            className="w-16 h-16 mx-auto mb-4 text-red-500"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -81,7 +195,16 @@ export default function DashboardPage() {
               d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
             />
           </svg>
-          {error}
+          <h2 className="text-2xl font-semibold mb-4 text-gray-100">
+            Access Required
+          </h2>
+          <p className="text-gray-400 mb-6">{error}</p>
+          <Link
+            href="/login"
+            className="block w-full px-4 py-2 bg-[var(--accent)] text-black font-medium rounded-lg hover:bg-yellow-500 transition text-center"
+          >
+            Login/Signup
+          </Link>
         </div>
       </div>
     );
@@ -91,111 +214,201 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-white flex flex-col items-center">
-      <header className="pt-28 pb-12 px-6 text-center">
-        <h1 className="text-4xl md:text-5xl font-bold tracking-tight">
+      <header className="pt-16 pb-8 px-6 text-center w-full max-w-4xl">
+        <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-2">
           Welcome, {userEmail}
         </h1>
-        <p className="mt-3 text-lg text-gray-400 max-w-2xl mx-auto">
-          Your all-in-one toolkit for job success—no more guesswork on resumes, portfolios, or interviews.
+        <p className="text-lg text-gray-400">
+          Your all-in-one toolkit for job success—no more guesswork.
         </p>
       </header>
 
       <main className="pb-16 px-6 w-full max-w-4xl">
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {/* Resume Scanner */}
-          <div className="bg-[#2a2a2a] rounded-xl p-6 flex flex-col hover:shadow-xl transition-shadow shadow-lg">
-            <h2 className="text-2xl font-semibold text-gray-200 mb-3">Resume Scanner</h2>
-            <p className="text-gray-300 flex-grow mb-4">
-              Check ATS readiness & get instant feedback.
-            </p>
-            <Link
-              href="/resume"
-              className="w-full px-6 py-3 bg-[var(--accent)] text-black font-medium rounded-lg transition transform duration-200 ease-out hover:-translate-y-1 hover:shadow-xl hover:opacity-90 active:translate-y-0 active:scale-95 focus:ring-2 focus:ring-[var(--accent)] text-center"
-              aria-label="Go to Resume Scanner"
-            >
-              Scan Resume
-            </Link>
+        <section className="mb-12">
+          <h2 className="text-3xl font-semibold text-gray-200 mb-6 text-center">
+            Choose Your Plan
+          </h2>
+          <div className="grid sm:grid-cols-2 gap-6">
+            {plans.map((plan) => (
+              <div
+                key={plan.title}
+                className={`
+                  bg-[#2a2a2a] p-6 rounded-xl shadow-lg flex flex-col
+                  border-2 ${
+                    plan.isCurrent
+                      ? "border-[var(--accent)]"
+                      : "border-transparent"
+                  }
+                  transition-all duration-200 hover:shadow-xl
+                `}
+              >
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-xl font-semibold text-gray-200">
+                    {plan.title}
+                  </h3>
+                  {plan.isCurrent && (
+                    <span className="bg-[var(--accent)] text-black text-xs font-semibold px-2 py-1 rounded-full">
+                      Current
+                    </span>
+                  )}
+                </div>
+                <p className="text-3xl font-bold text-gray-100 mb-4">
+                  {plan.price}
+                  {plan.period && (
+                    <span className="text-sm font-normal text-gray-400">
+                      {plan.period}
+                    </span>
+                  )}
+                </p>
+                <ul className="text-gray-300 mb-6 space-y-2 text-sm flex-grow">
+                  {plan.features.map((feature, i) => (
+                    <li key={i} className="flex items-start gap-2">
+                      <svg
+                        className="h-4 w-4 text-[var(--accent)] flex-shrink-0 mt-0.5"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                        strokeWidth={3}
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="M5 13l4 4L19 7"
+                        />
+                      </svg>
+                      <span>{feature}</span>
+                    </li>
+                  ))}
+                </ul>
+                <button
+                  onClick={() =>
+                    handlePlanSelection(
+                      plan.title.toLowerCase() as "free" | "pro"
+                    )
+                  }
+                  disabled={plan.isCurrent}
+                  className={`
+                    w-full px-6 py-2 rounded-lg font-medium transition duration-200
+                    ${
+                      plan.isCurrent
+                        ? "bg-gray-700 text-gray-400 cursor-not-allowed"
+                        : plan.title === "Free"
+                        ? "bg-green-600 text-white hover:bg-green-700"
+                        : "bg-[var(--accent)] text-black hover:opacity-90"
+                    }
+                  `}
+                >
+                  {plan.buttonText}
+                </button>
+              </div>
+            ))}
           </div>
+        </section>
 
-          {/* Job-Match Analysis */}
-          <div className="bg-[#2a2a2a] rounded-xl p-6 flex flex-col hover:shadow-xl transition-shadow shadow-lg">
-            <h2 className="text-2xl font-semibold text-gray-200 mb-3">Job-Match Analyzer</h2>
-            <p className="text-gray-300 flex-grow mb-4">
-              Compare your resume vs. job description skill-fit.
-            </p>
-            <Link
-              href="/jobmatch"
-              className="w-full px-6 py-3 bg-[var(--accent)] text-black font-medium rounded-lg transition transform duration-200 ease-out hover:-translate-y-1 hover:shadow-xl hover:opacity-90 active:translate-y-0 active:scale-95 focus:ring-2 focus:ring-[var(--accent)] text-center"
-              aria-label="Go to Job-Match Analyzer"
-            >
-              Analyze Match
-            </Link>
-          </div>
+        <section>
+          <h2 className="text-3xl font-semibold text-gray-200 mb-6 text-center">
+            Your Tools
+          </h2>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="bg-[#2a2a2a] rounded-xl p-6 flex flex-col shadow-lg hover:shadow-xl transition-shadow">
+              <h3 className="text-xl font-semibold text-gray-200 mb-2">
+                Resume Scanner
+              </h3>
+              <p className="text-gray-400 text-sm flex-grow mb-4">
+                Check ATS readiness & get instant feedback.
+              </p>
+              <Link
+                href="/resume"
+                className="w-full px-6 py-2 bg-[var(--accent)] text-black font-medium rounded-lg transition transform duration-200 hover:opacity-90 text-center"
+                aria-label="Go to Resume Scanner"
+              >
+                Scan Resume
+              </Link>
+            </div>
 
-          {/* Cover Letter Generator */}
-          <div className="bg-[#2a2a2a] rounded-xl p-6 flex flex-col hover:shadow-xl transition-shadow shadow-lg">
-            <h2 className="text-2xl font-semibold text-gray-200 mb-3">Cover Letter</h2>
-            <p className="text-gray-300 flex-grow mb-4">
-              Auto-write a personalized cover letter.
-            </p>
-            <Link
-              href="/coverLetter"
-              className="w-full px-6 py-3 bg-[var(--accent)] text-black font-medium rounded-lg transition transform duration-200 ease-out hover:-translate-y-1 hover:shadow-xl hover:opacity-90 active:translate-y-0 active:scale-95 focus:ring-2 focus:ring-[var(--accent)] text-center"
-              aria-label="Go to Cover Letter Generator"
-            >
-              Write Cover Letter
-            </Link>
-          </div>
+            <div className="bg-[#2a2a2a] rounded-xl p-6 flex flex-col shadow-lg hover:shadow-xl transition-shadow">
+              <h3 className="text-xl font-semibold text-gray-200 mb-2">
+                Job-Match Analyzer
+              </h3>
+              <p className="text-gray-400 text-sm flex-grow mb-4">
+                Compare your resume vs. job description skill-fit.
+              </p>
+              <Link
+                href="/jobmatch"
+                className="w-full px-6 py-2 bg-[var(--accent)] text-black font-medium rounded-lg transition transform duration-200 hover:opacity-90 text-center"
+                aria-label="Go to Job-Match Analyzer"
+              >
+                Analyze Match
+              </Link>
+            </div>
 
-          {/* Interview Prep */}
-          <div className="bg-[#2a2a2a] rounded-xl p-6 flex flex-col hover:shadow-xl transition-shadow shadow-lg">
-            <h2 className="text-2xl font-semibold text-gray-200 mb-3">Interview Prep</h2>
-            <p className="text-gray-300 flex-grow mb-4">
-              Generate tailored Q&A from your job description.
-            </p>
-            <Link
-              href="/interview"
-              className="w-full px-6 py-3 bg-[var(--accent)] text-black font-medium rounded-lg transition transform duration-200 ease-out hover:-translate-y-1 hover:shadow-xl hover:opacity-90 active:translate-y-0 active:scale-95 focus:ring-2 focus:ring-[var(--accent)] text-center"
-              aria-label="Go to Interview Prep"
-            >
-              Start Prep
-            </Link>
-          </div>
+            <div className="bg-[#2a2a2a] rounded-xl p-6 flex flex-col shadow-lg hover:shadow-xl transition-shadow">
+              <h3 className="text-xl font-semibold text-gray-200 mb-2">
+                Cover Letter
+              </h3>
+              <p className="text-gray-400 text-sm flex-grow mb-4">
+                Auto-write a personalized cover letter.
+              </p>
+              <Link
+                href="/coverLetter"
+                className="w-full px-6 py-2 bg-[var(--accent)] text-black font-medium rounded-lg transition transform duration-200 hover:opacity-90 text-center"
+                aria-label="Go to Cover Letter Generator"
+              >
+                Write Cover Letter
+              </Link>
+            </div>
 
-          {/* LinkedIn Critique */}
-          <div className="bg-[#2a2a2a] rounded-xl p-6 flex flex-col hover:shadow-xl transition-shadow shadow-lg">
-            <h2 className="text-2xl font-semibold text-gray-200 mb-3">
-              LinkedIn Critique (Premium)
-            </h2>
-            <p className="text-gray-300 flex-grow mb-4">
-              Fine-tune your LinkedIn profile. Coming soon!
-            </p>
-            <button
-              disabled
-              className="w-full px-6 py-3 bg-gray-700 text-gray-400 font-medium rounded-lg cursor-not-allowed opacity-50"
-              aria-disabled="true"
-              aria-label="LinkedIn Critique coming soon"
-            >
-              Stay Tuned
-            </button>
-          </div>
+            <div className="bg-[#2a2a2a] rounded-xl p-6 flex flex-col shadow-lg hover:shadow-xl transition-shadow">
+              <h3 className="text-xl font-semibold text-gray-200 mb-2">
+                Interview Prep
+              </h3>
+              <p className="text-gray-400 text-sm flex-grow mb-4">
+                Generate tailored Q&A from your job description.
+              </p>
+              <Link
+                href="/interview"
+                className="w-full px-6 py-2 bg-[var(--accent)] text-black font-medium rounded-lg transition transform duration-200 hover:opacity-90 text-center"
+                aria-label="Go to Interview Prep"
+              >
+                Start Prep
+              </Link>
+            </div>
 
-          {/* Coming Soon */}
-          <div className="bg-[#2a2a2a] rounded-xl p-6 flex flex-col hover:shadow-xl transition-shadow shadow-lg">
-            <h2 className="text-2xl font-semibold text-gray-200 mb-3">Coming Soon</h2>
-            <p className="text-gray-300 flex-grow mb-4">
-              More AI-driven tools to elevate your job hunt.
-            </p>
-            <button
-              disabled
-              className="w-full px-6 py-3 bg-gray-700 text-gray-400 font-medium rounded-lg cursor-not-allowed opacity-50"
-              aria-disabled="true"
-              aria-label="More tools coming soon"
-            >
-              Stay Tuned
-            </button>
+            <div className="bg-[#2a2a2a] rounded-xl p-6 flex flex-col shadow-lg hover:shadow-xl transition-shadow">
+              <h3 className="text-xl font-semibold text-gray-200 mb-2">
+                LinkedIn Critique (Premium)
+              </h3>
+              <p className="text-gray-400 text-sm flex-grow mb-4">
+                Fine-tune your LinkedIn profile. Coming soon!
+              </p>
+              <button
+                disabled
+                className="w-full px-6 py-2 bg-gray-700 text-gray-400 font-medium rounded-lg cursor-not-allowed opacity-50"
+                aria-disabled="true"
+                aria-label="LinkedIn Critique coming soon"
+              >
+                Stay Tuned
+              </button>
+            </div>
+
+            <div className="bg-[#2a2a2a] rounded-xl p-6 flex flex-col shadow-lg hover:shadow-xl transition-shadow">
+              <h3 className="text-xl font-semibold text-gray-200 mb-2">
+                Coming Soon
+              </h3>
+              <p className="text-gray-400 text-sm flex-grow mb-4">
+                More AI-driven tools to elevate your job hunt.
+              </p>
+              <button
+                disabled
+                className="w-full px-6 py-2 bg-gray-700 text-gray-400 font-medium rounded-lg cursor-not-allowed opacity-50"
+                aria-disabled="true"
+                aria-label="More tools coming soon"
+              >
+                Stay Tuned
+              </button>
+            </div>
           </div>
-        </div>
+        </section>
       </main>
     </div>
   );

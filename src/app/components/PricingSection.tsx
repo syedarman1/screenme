@@ -1,6 +1,8 @@
 "use client";
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { supabase } from '../lib/supabaseClient';
 
 type PricingPlan = {
   title: string;
@@ -9,7 +11,7 @@ type PricingPlan = {
   features: string[];
   buttonText: string;
   isFeatured?: boolean;
-  priceId?: string;
+  priceId?: string; // Optional, only for plans requiring payment
   onClick?: () => void;
 };
 
@@ -25,7 +27,7 @@ const PRICING_PLANS: PricingPlan[] = [
       "Email support"
     ],
     buttonText: "Get Started",
-    priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_FREE,
+    // No priceId for Free plan since it's $0 and doesn't require checkout
   },
   {
     title: "Pro",
@@ -54,32 +56,36 @@ const PRICING_PLANS: PricingPlan[] = [
 ];
 
 const PricingCard = ({ plan }: { plan: PricingPlan }) => {
-  const handleCheckout = async () => {
-    if (!plan.priceId) {
-      // For Enterprise plan, redirect to a contact page
-      window.location.href = "/contact";
+  const router = useRouter();
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      setIsAuthenticated(!!session);
+    };
+    checkAuth();
+  }, []);
+
+  const handleCheckoutRedirect = () => {
+    if (isAuthenticated === null) {
+      return; // Still loading auth state
+    }
+
+    if (!isAuthenticated) {
+      // Store priceId if it exists (for Pro plan), then redirect to login
+      if (plan.priceId) {
+        localStorage.setItem('selectedPriceId', plan.priceId);
+      }
+      router.push('/login');
       return;
     }
 
-    try {
-      const response = await fetch('/api/stripe/checkout', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          priceId: plan.priceId,
-          userId: "user_123", // Replace with actual user ID from your auth system
-        }),
-      });
-
-      const { url } = await response.json();
-      if (url) {
-        window.location.href = url; // Redirect directly to Stripe Checkout
-      }
-    } catch (error) {
-      console.error('Error initiating checkout:', error);
+    // Authenticated users go to dashboard
+    if (plan.priceId) {
+      localStorage.setItem('selectedPriceId', plan.priceId);
     }
+    router.push('/dashboard');
   };
 
   return (
@@ -122,7 +128,7 @@ const PricingCard = ({ plan }: { plan: PricingPlan }) => {
       </ul>
 
       <button
-        onClick={handleCheckout}
+        onClick={handleCheckoutRedirect}
         className="
           mt-auto bg-[var(--accent)] text-black font-semibold px-6 py-2 rounded-lg
           relative overflow-hidden transition-all duration-300
