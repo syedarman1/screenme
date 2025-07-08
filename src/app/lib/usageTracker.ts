@@ -1,4 +1,3 @@
-// src/lib/usageTracker.ts
 
 import { supabase } from './supabaseClient';
 
@@ -11,63 +10,90 @@ export interface UsageCheckResult {
   plan: 'free' | 'pro';
 }
 
+interface UserUsageData {
+  resume_scans: number;
+  cover_letters: number;
+  job_matches: number;
+  interview_preps: number;
+  last_reset?: string;
+}
+
+interface UserPlanData {
+  plan: 'free' | 'pro';
+}
+
 export async function checkUsageLimit(userId: string, feature: FeatureType): Promise<UsageCheckResult> {
   try {
-    console.log(`Checking usage limit for user ${userId}, feature: ${feature}`);
-    
-    // Initialize user data if needed
-    const initSuccess = await initializeUserData(userId);
-    console.log(`User data initialization: ${initSuccess}`);
+    // Query user plan and usage directly from database
+    const { data: planData, error: planError } = await supabase
+      .from('user_plans')
+      .select('plan')
+      .eq('user_id', userId)
+      .single();
 
-    // Get user plan and usage
-    const { data: planUsageData, error } = await supabase.rpc('get_user_plan_and_usage', { 
-      p_user_id: userId 
-    });
+    const { data: usageData, error: usageError } = await supabase
+      .from('user_usage')
+      .select('resume_scans, cover_letters, job_matches, interview_preps, last_reset')
+      .eq('user_id', userId)
+      .single();
 
-    if (error) {
-      console.error('Error getting user plan and usage:', error);
-      return { allowed: false, limit: 0, remaining: 0, plan: 'free' };
+    // If no plan found, create default free plan
+    if (planError || !planData) {
+      await supabase
+        .from('user_plans')
+        .upsert({ user_id: userId, plan: 'free' }, { onConflict: 'user_id' });
     }
 
-    console.log('Plan and usage data:', planUsageData);
-
-    const data = planUsageData?.[0]; // RPC returns an array
-    if (!data) {
-      console.error('No plan/usage data found for user');
-      return { allowed: false, limit: 0, remaining: 0, plan: 'free' };
+    // If no usage found, create default usage record
+    if (usageError || !usageData) {
+      await supabase
+        .from('user_usage')
+        .upsert({ 
+          user_id: userId, 
+          resume_scans: 0, 
+          cover_letters: 0, 
+          job_matches: 0, 
+          interview_preps: 0,
+          last_reset: new Date().toISOString()
+        }, { onConflict: 'user_id' });
     }
 
-    const plan = data.plan || 'free';
-    console.log(`User plan: ${plan}`);
+    // Get the actual data (use defaults if queries failed)
+    const plan = planData?.plan || 'free';
+    const currentUsageData: UserUsageData = usageData || {
+      resume_scans: 0,
+      cover_letters: 0,
+      job_matches: 0,
+      interview_preps: 0
+    };
 
     // Pro users have unlimited access
     if (plan === 'pro') {
-      console.log('Pro user - unlimited access');
       return { allowed: true, limit: -1, remaining: -1, plan: 'pro' };
     }
 
-    // FIXED: Updated limits to match the new SQL schema
+    // Feature limits for free users
     const limits = {
-      resume_scan: 3,        // Updated from 2 to 3
-      cover_letter: 2,       // Updated from 1 to 2
-      job_match: 2,          // Updated from 1 to 2
-      interview_prep: 0      // Remains 0 (Pro only)
+      resume_scan: 3,        // Free users get 3 resume scans per month
+      cover_letter: 2,       // Free users get 2 cover letters per month  
+      job_match: 2,          // Free users get 2 job matches per month
+      interview_prep: 0      // Free users get 0 interview prep (Pro only)
     };
 
     const limit = limits[feature];
-    console.log(`Feature limit for ${feature}: ${limit}`);
+    const fieldName = getUsageFieldName(feature);
+    const currentUsage = (currentUsageData[fieldName as keyof UserUsageData] as number) || 0;
     
-    // Get current usage for the feature
-    const currentUsage = data[getUsageFieldName(feature)] || 0;
-    console.log(`Current usage for ${feature}: ${currentUsage}`);
-    
-    // Check if usage needs to be reset (handled by the database function)
+    // Calculate remaining and allowed status
     const remaining = Math.max(0, limit - currentUsage);
     const allowed = currentUsage < limit;
 
-    console.log(`Usage check result: allowed=${allowed}, remaining=${remaining}`);
-
-    return { allowed, limit, remaining, plan: 'free' };
+    return { 
+      allowed, 
+      limit, 
+      remaining, 
+      plan: plan as 'free' | 'pro'
+    };
   } catch (error) {
     console.error('Error in checkUsageLimit:', error);
     return { allowed: false, limit: 0, remaining: 0, plan: 'free' };
@@ -76,20 +102,44 @@ export async function checkUsageLimit(userId: string, feature: FeatureType): Pro
 
 export async function incrementUsage(userId: string, feature: FeatureType): Promise<boolean> {
   try {
-    console.log(`Incrementing usage for user ${userId}, feature: ${feature}`);
+    const fieldName = getUsageFieldName(feature);
     
-    const { data, error } = await supabase.rpc('increment_usage', {
-      p_user_id: userId,
-      p_feature: feature
-    });
+    // Get current usage value
+    const { data: existingUsage, error: fetchError } = await supabase
+      .from('user_usage')
+      .select(`${fieldName}`)
+      .eq('user_id', userId)
+      .single();
 
-    if (error) {
-      console.error('Error incrementing usage:', error);
-      return false;
+    if (fetchError) {
+      // Create the record if it doesn't exist
+      const { error: createError } = await supabase
+        .from('user_usage')
+        .upsert({
+          user_id: userId,
+          resume_scans: feature === 'resume_scan' ? 1 : 0,
+          cover_letters: feature === 'cover_letter' ? 1 : 0,
+          job_matches: feature === 'job_match' ? 1 : 0,
+          interview_preps: feature === 'interview_prep' ? 1 : 0,
+          last_reset: new Date().toISOString()
+        }, { onConflict: 'user_id' });
+      
+      return !createError;
     }
 
-    console.log(`Increment result: ${data}`);
-    return Boolean(data);
+    // Record exists, increment it
+    const currentValue = existingUsage[fieldName as keyof typeof existingUsage] || 0;
+    const newValue = (currentValue as number) + 1;
+    
+    const { error: updateError } = await supabase
+      .from('user_usage')
+      .update({
+        [fieldName]: newValue,
+        updated_at: new Date().toISOString()
+      })
+      .eq('user_id', userId);
+
+    return !updateError;
   } catch (error) {
     console.error('Error in incrementUsage:', error);
     return false;
@@ -98,20 +148,8 @@ export async function incrementUsage(userId: string, feature: FeatureType): Prom
 
 export async function canUseFeature(userId: string, feature: FeatureType): Promise<boolean> {
   try {
-    console.log(`Checking if user ${userId} can use feature: ${feature}`);
-    
-    const { data, error } = await supabase.rpc('can_use_feature', {
-      p_user_id: userId,
-      p_feature: feature
-    });
-
-    if (error) {
-      console.error('Error checking feature access:', error);
-      return false;
-    }
-
-    console.log(`Can use feature result: ${data}`);
-    return Boolean(data);
+    const usageCheck = await checkUsageLimit(userId, feature);
+    return usageCheck.allowed;
   } catch (error) {
     console.error('Error in canUseFeature:', error);
     return false;
@@ -120,19 +158,23 @@ export async function canUseFeature(userId: string, feature: FeatureType): Promi
 
 export async function initializeUserData(userId: string): Promise<boolean> {
   try {
-    console.log(`Initializing user data for: ${userId}`);
+    // Insert default records for new users
+    const { error: planError } = await supabase
+      .from('user_plans')
+      .upsert({ user_id: userId, plan: 'free' }, { onConflict: 'user_id' });
+
+    const { error: usageError } = await supabase
+      .from('user_usage')
+      .upsert({ 
+        user_id: userId, 
+        resume_scans: 0, 
+        cover_letters: 0, 
+        job_matches: 0, 
+        interview_preps: 0,
+        last_reset: new Date().toISOString()
+      }, { onConflict: 'user_id' });
     
-    const { data, error } = await supabase.rpc('initialize_user_data', { 
-      p_user_id: userId 
-    });
-    
-    if (error) {
-      console.error('Error initializing user data:', error);
-      return false;
-    }
-    
-    console.log(`Initialize result: ${data}`);
-    return Boolean(data);
+    return !planError && !usageError;
   } catch (error) {
     console.error('Error in initializeUserData:', error);
     return false;
@@ -141,19 +183,16 @@ export async function initializeUserData(userId: string): Promise<boolean> {
 
 export async function getPlanUsage(userId: string) {
   try {
-    console.log(`Getting plan/usage for user: ${userId}`);
+    // Query both tables directly
+    const [planResult, usageResult] = await Promise.all([
+      supabase.from('user_plans').select('*').eq('user_id', userId).single(),
+      supabase.from('user_usage').select('*').eq('user_id', userId).single()
+    ]);
     
-    const { data, error } = await supabase.rpc('get_user_plan_and_usage', { 
-      p_user_id: userId 
-    });
-    
-    if (error) {
-      console.error('Error getting plan/usage:', error);
-      return null;
-    }
-    
-    console.log('Plan/usage data:', data);
-    return data?.[0] || null;
+    return {
+      plan: planResult.data?.plan || 'free',
+      ...usageResult.data
+    };
   } catch (error) {
     console.error('Error in getPlanUsage:', error);
     return null;
@@ -162,36 +201,47 @@ export async function getPlanUsage(userId: string) {
 
 export async function resetMonthlyUsage(): Promise<number | null> {
   try {
-    const { data, error } = await supabase.rpc('reset_monthly_usage');
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+    
+    const { count, error } = await supabase
+      .from('user_usage')
+      .update({
+        resume_scans: 0,
+        cover_letters: 0,
+        job_matches: 0,
+        interview_preps: 0,
+        last_reset: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      })
+      .lt('last_reset', thirtyDaysAgo);
     
     if (error) {
       console.error('Error resetting monthly usage:', error);
       return null;
     }
     
-    return data ?? null;
+    return count || 0;
   } catch (error) {
     console.error('Error in resetMonthlyUsage:', error);
     return null;
   }
 }
 
-// Debug function to troubleshoot user issues
 export async function debugUserStatus(userId: string) {
   try {
-    console.log(`Debugging user status for: ${userId}`);
+    // Query both tables for debugging
+    const [planResult, usageResult] = await Promise.all([
+      supabase.from('user_plans').select('*').eq('user_id', userId).single(),
+      supabase.from('user_usage').select('*').eq('user_id', userId).single()
+    ]);
     
-    const { data, error } = await supabase.rpc('debug_user_status', {
-      p_user_id: userId
-    });
-    
-    if (error) {
-      console.error('Error debugging user status:', error);
-      return null;
-    }
-    
-    console.log('Debug results:', data);
-    return data?.[0] || null;
+    return {
+      user_exists: true,
+      plan_exists: !planResult.error,
+      usage_exists: !usageResult.error,
+      current_plan: planResult.data?.plan || 'unknown',
+      ...usageResult.data
+    };
   } catch (error) {
     console.error('Error in debugUserStatus:', error);
     return null;

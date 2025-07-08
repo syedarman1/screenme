@@ -1,13 +1,10 @@
-// app/api/analyzeResume/route.ts
+
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
 import { z } from "zod";
 import { rateLimit } from "../../lib/rate-limit";
-import { supabase } from "../../lib/supabaseClient";
+import { checkUsageLimit, incrementUsage } from "../../lib/usageTracker";
 
-/* ------------------------------------------------------------------
- * 1. Enhanced Zod schema with additional fields
- * ------------------------------------------------------------------ */
 const Section = z.enum(["Education", "Skills", "Experience", "Projects", "Summary", "Certifications", "Other"]);
 
 const IssueSchema = z.object({
@@ -15,14 +12,14 @@ const IssueSchema = z.object({
   line: z.string().min(5),
   text: z.string().min(10),
   severity: z.enum(["low", "medium", "high"]),
-  reason: z.string().min(10).optional(), // Why this is an issue
+  reason: z.string().min(10).optional(),
 });
 
 const ActionSchema = z.object({
   section: Section,
   original: z.string().min(5),
   rewrite: z.string().min(20),
-  improvement: z.string().min(10).optional(), // What specific improvement was made
+  improvement: z.string().min(10).optional(),
 });
 
 const StrengthSchema = z.object({
@@ -48,9 +45,6 @@ const AuditSchema = z.object({
 
 type Audit = z.infer<typeof AuditSchema>;
 
-/* ------------------------------------------------------------------
- * 2. Improved GPT prompt with examples and enhanced guidance
- * ------------------------------------------------------------------ */
 const PROMPT = `
 You are a world-class resume coach with expertise in ATS optimization and industry best practices. The user's resume follows (including section headers).  
 Produce **ONLY** valid JSON with this structure:
@@ -113,20 +107,13 @@ Original: "Responsible for managing team projects and client relationships"
 Rewrite: "Directed 5 cross-functional projects valued at $1.2M, achieving 98% client satisfaction and 15% faster delivery than industry average"
 `.trim();
 
-/* ------------------------------------------------------------------
- * 3. OpenAI client with error handling
- * ------------------------------------------------------------------ */
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
-  timeout: 30000, // 30 second timeout
+  timeout: 30000,
 });
 
-/* ------------------------------------------------------------------
- * 4. Enhanced handler with fixed usage tracking
- * ------------------------------------------------------------------ */
 export async function POST(req: Request) {
   try {
-    // Apply rate limiting
     const ip = req.headers.get("x-forwarded-for") || "anonymous";
     const { success, limit, remaining } = await rateLimit(ip);
 
@@ -143,11 +130,9 @@ export async function POST(req: Request) {
       );
     }
 
-    // Parse request body
     const body = await req.json().catch(() => ({}));
     const { resume, options, userId } = body;
 
-    // Validate input
     if (typeof resume !== "string" || resume.trim().length < 200) {
       return NextResponse.json(
         { error: "Please provide at least 200 characters of resume text." },
@@ -155,47 +140,21 @@ export async function POST(req: Request) {
       );
     }
 
-    // FIXED: Check usage limits using direct database calls
     if (userId) {
       try {
-        console.log(`Checking usage for user: ${userId}`);
-        
-        // Use the RPC function directly
-        const { data: canUse, error: canUseError } = await supabase.rpc('can_use_feature', {
-          p_user_id: userId,
-          p_feature: 'resume_scan'
-        });
+        const usageCheck = await checkUsageLimit(userId, 'resume_scan');
 
-        console.log(`Can use resume_scan:`, canUse, 'Error:', canUseError);
-
-        if (canUseError) {
-          console.error('Error checking feature access:', canUseError);
-          return NextResponse.json(
-            { error: "Failed to check usage limits. Please try again." },
-            { status: 500 }
-          );
-        }
-
-        if (!canUse) {
-          // Get debug info
-          const { data: debugInfo } = await supabase.rpc('debug_user_status', {
-            p_user_id: userId
-          });
-          
-          console.log('Debug info for blocked user:', debugInfo);
-          
+        if (!usageCheck.allowed) {
           return NextResponse.json(
             {
               error: "Usage limit reached. You've used all resume scans for this month.",
-              debug: debugInfo?.[0], // Include debug info to help troubleshoot
-              plan: debugInfo?.[0]?.current_plan || 'unknown',
-              remaining: 0
+              limit: usageCheck.limit,
+              remaining: usageCheck.remaining,
+              plan: usageCheck.plan
             },
             { status: 429 }
           );
         }
-
-        console.log('User can use resume_scan - proceeding...');
       } catch (error) {
         console.error('Exception in usage checking:', error);
         return NextResponse.json(
@@ -205,18 +164,15 @@ export async function POST(req: Request) {
       }
     }
 
-    // Prepare options for the API call
     const sanitizedResume = resume.trim();
     const model = options?.model || "gpt-4o-mini";
     const temperature = options?.temperature || 0.2;
 
-    // Prepare GPT request with modified prompt based on options
     let prompt = PROMPT;
     if (options?.focusArea) {
       prompt += `\nPay special attention to the "${options.focusArea}" section and prioritize improvements there.`;
     }
 
-    // Call GPT API with retries
     let raw = "";
     let retries = 0;
     const maxRetries = 2;
@@ -230,7 +186,7 @@ export async function POST(req: Request) {
             { role: "system", content: prompt },
             { role: "user", content: sanitizedResume },
           ],
-          response_format: { type: "json_object" }, // Force JSON response
+          response_format: { type: "json_object" },
         });
 
         raw = gpt.choices[0]?.message?.content ?? "";
@@ -240,23 +196,21 @@ export async function POST(req: Request) {
           throw error;
         }
         retries++;
-        await new Promise(r => setTimeout(r, 1000 * retries)); // Exponential backoff
+        await new Promise(r => setTimeout(r, 1000 * retries));
       }
     }
 
-    // Parse JSON
     let parsed: unknown;
     try {
       parsed = JSON.parse(raw);
     } catch (error) {
-      console.error("GPT sent non-JSON:\n", raw);
+      console.error("GPT sent non-JSON:", raw.substring(0, 500));
       return NextResponse.json({
         error: "Failed to parse GPT response as JSON",
         raw: raw.substring(0, 500)
       }, { status: 500 });
     }
 
-    // Validate against schema
     const result = AuditSchema.safeParse(parsed);
     if (!result.success) {
       console.error("Schema validation errors:", result.error.format());
@@ -270,7 +224,6 @@ export async function POST(req: Request) {
       );
     }
 
-    // Clean and process data
     const clean = (s: string) => s.replace(/\s*[-–—]\s*$/u, "").trim();
 
     const audit: Audit = {
@@ -297,25 +250,14 @@ export async function POST(req: Request) {
       summary: result.data.summary ? clean(result.data.summary) : undefined,
     };
 
-    // FIXED: Increment usage using direct database call
     if (userId) {
       try {
-        console.log(`Incrementing usage for user: ${userId}`);
-        
-        const { data: incrementResult, error: incrementError } = await supabase.rpc('increment_usage', {
-          p_user_id: userId,
-          p_feature: 'resume_scan'
-        });
-
-        console.log(`Increment result:`, incrementResult, 'Error:', incrementError);
-
-        if (incrementError) {
-          console.error('Failed to increment usage:', incrementError);
-          // Don't fail the request, just log the warning
+        const incrementSuccess = await incrementUsage(userId, 'resume_scan');
+        if (!incrementSuccess) {
+          console.error('Failed to increment usage for user:', userId);
         }
       } catch (error) {
         console.error('Exception incrementing usage:', error);
-        // Don't fail the request, just log the warning
       }
     }
 
@@ -327,7 +269,6 @@ export async function POST(req: Request) {
   } catch (error: any) {
     console.error("Error processing resume:", error);
 
-    // Structured error response
     return NextResponse.json(
       {
         error: "Failed to analyze resume",
@@ -339,9 +280,6 @@ export async function POST(req: Request) {
   }
 }
 
-/**
- * Handle OPTIONS requests for CORS preflight
- */
 export async function OPTIONS() {
   return new NextResponse(null, {
     status: 204,
