@@ -13,6 +13,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { CircularProgressbar, buildStyles } from "react-circular-progressbar";
 import "react-circular-progressbar/dist/styles.css";
 import confetti from "canvas-confetti";
+import PlanChecker from "../components/PlanChecker";
+import { supabase } from "../lib/supabaseClient";
 
 type MatchResult = {
   matchScore: number;
@@ -98,10 +100,17 @@ export default function JobMatchPage() {
     setResult(null);
 
     try {
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser();
+      
       const r = await fetch("/api/jobMatch", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ resume: resumeTxt, job: jdTxt }),
+        body: JSON.stringify({ 
+          resume: resumeTxt, 
+          job: jdTxt,
+          userId: user?.id,
+        }),
       });
 
       const data = await r.json();
@@ -154,7 +163,7 @@ export default function JobMatchPage() {
               strokeWidth="2"
               xmlns="http://www.w3.org/2000/svg"
             >
-              {/* magnifying glass to represent “match analysis” */}
+              {/* magnifying glass to represent "match analysis" */}
               <circle cx="11" cy="11" r="8" />
               <line x1="21" y1="21" x2="16.65" y2="16.65" />
             </svg>
@@ -224,11 +233,12 @@ export default function JobMatchPage() {
       )}
 
       <section className="w-full max-w-5xl mx-auto px-6">
-        <div className="bg-[var(--neutral-800)] rounded-xl border border-[var(--neutral-700)] p-6 shadow-xl">
-          <h2 className="text-xl font-semibold text-[var(--gray-200)] mb-4">
-            Upload Your Resume
-          </h2>
-          <ResumeUploader onResumeSubmit={setResumeTxt} simple={true} />
+        <PlanChecker feature="job_match">
+          <div className="bg-[var(--neutral-800)] rounded-xl border border-[var(--neutral-700)] p-6 shadow-xl">
+            <h2 className="text-xl font-semibold text-[var(--gray-200)] mb-4">
+              Upload Your Resume
+            </h2>
+            <ResumeUploader onResumeSubmit={setResumeTxt} simple={true} />
           <div className="mt-6">
             <label
               htmlFor="jd-input"
@@ -267,6 +277,7 @@ export default function JobMatchPage() {
             </button>
           </div>
         </div>
+        </PlanChecker>
       </section>
 
       <section

@@ -7,6 +7,8 @@ import { Document, Packer, Paragraph, TextRun } from "docx";
 import { saveAs } from "file-saver";
 import { motion, AnimatePresence } from "framer-motion";
 import confetti from "canvas-confetti";
+import PlanChecker from "../components/PlanChecker";
+import { supabase } from "../lib/supabaseClient";
 
 const TONES = ["Professional", "Enthusiastic", "Concise"] as const;
 type Tone = (typeof TONES)[number];
@@ -24,6 +26,7 @@ export default function CoverLetterPage() {
   const [editText, setEditText] = useState<string>("");
   const [controller, setController] = useState<AbortController | null>(null);
   const [showTips, setShowTips] = useState(true);
+  const [userPlan, setUserPlan] = useState<string>("free");
   const letterRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -40,6 +43,26 @@ export default function CoverLetterPage() {
     }
   }, [coverLetter, isEditing]);
 
+  // Check user plan
+  useEffect(() => {
+    const checkUserPlan = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { data: planData } = await supabase
+            .from('user_plans')
+            .select('plan')
+            .eq('user_id', user.id)
+            .single();
+          setUserPlan(planData?.plan || 'free');
+        }
+      } catch (error) {
+        console.error('Error checking user plan:', error);
+      }
+    };
+    checkUserPlan();
+  }, []);
+
   const handleGenerate = async () => {
     if (!resumeText || !jobTitle || !company) {
       setError("Please fill in resume, job title, and company.");
@@ -52,6 +75,9 @@ export default function CoverLetterPage() {
     setError(null);
 
     try {
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser();
+      
       const res = await fetch("/api/coverLetter", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -61,6 +87,7 @@ export default function CoverLetterPage() {
           company,
           jobDesc,
           tone,
+          userId: user?.id,
         }),
         signal: ac.signal,
       });
@@ -203,11 +230,12 @@ export default function CoverLetterPage() {
       )}
 
       <section className="w-full max-w-5xl mx-auto px-6">
-        <div className="bg-[var(--neutral-800)] rounded-xl border border-[var(--neutral-700)] p-6 shadow-xl space-y-6">
-          <h2 className="text-xl font-semibold text-[var(--gray-200)]">
-            Create Your Cover Letter
-          </h2>
-          <ResumeUploader onResumeSubmit={setResumeText} />
+        <PlanChecker feature="cover_letter">
+          <div className="bg-[var(--neutral-800)] rounded-xl border border-[var(--neutral-700)] p-6 shadow-xl space-y-6">
+            <h2 className="text-xl font-semibold text-[var(--gray-200)]">
+              Create Your Cover Letter
+            </h2>
+            <ResumeUploader onResumeSubmit={setResumeText} />
 
           <div className="grid md:grid-cols-2 gap-4">
             <div>
@@ -262,21 +290,54 @@ export default function CoverLetterPage() {
           </div>
 
           <div className="flex flex-wrap gap-2">
-            {TONES.map((t) => (
-              <button
-                key={t}
-                type="button"
-                onClick={() => setTone(t)}
-                className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                  tone === t
-                    ? "bg-[var(--accent)] text-black ring-2 ring-[var(--accent)]"
-                    : "bg-[var(--neutral-700)] text-[var(--gray-300)] hover:bg-[var(--neutral-600)] focus:ring-2 focus:ring-[var(--accent)]"
-                }`}
-                aria-pressed={tone === t}
-              >
-                {t}
-              </button>
-            ))}
+            {userPlan === 'pro' ? (
+              // Pro users can select any tone
+              TONES.map((t) => (
+                <button
+                  key={t}
+                  type="button"
+                  onClick={() => setTone(t)}
+                  className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                    tone === t
+                      ? "bg-[var(--accent)] text-black ring-2 ring-[var(--accent)]"
+                      : "bg-[var(--neutral-700)] text-[var(--gray-300)] hover:bg-[var(--neutral-600)] focus:ring-2 focus:ring-[var(--accent)]"
+                  }`}
+                  aria-pressed={tone === t}
+                >
+                  {t}
+                </button>
+              ))
+            ) : (
+              // Free users can only use Professional tone
+              <div className="flex flex-wrap gap-2 items-center">
+                <button
+                  type="button"
+                  className="px-4 py-2 rounded-lg font-medium bg-[var(--accent)] text-black ring-2 ring-[var(--accent)]"
+                  disabled
+                >
+                  Professional
+                </button>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    className="px-4 py-2 rounded-lg font-medium bg-[var(--neutral-700)] text-[var(--gray-400)] cursor-not-allowed opacity-50"
+                    disabled
+                  >
+                    Enthusiastic
+                  </button>
+                  <button
+                    type="button"
+                    className="px-4 py-2 rounded-lg font-medium bg-[var(--neutral-700)] text-[var(--gray-400)] cursor-not-allowed opacity-50"
+                    disabled
+                  >
+                    Concise
+                  </button>
+                </div>
+                <span className="text-sm text-[var(--gray-400)] ml-2">
+                  (Upgrade to Pro for all tones)
+                </span>
+              </div>
+            )}
           </div>
 
           <button
@@ -314,6 +375,7 @@ export default function CoverLetterPage() {
             )}
           </button>
         </div>
+        </PlanChecker>
       </section>
 
       <section

@@ -7,6 +7,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { CircularProgressbar, buildStyles } from "react-circular-progressbar";
 import "react-circular-progressbar/dist/styles.css";
 import confetti from "canvas-confetti";
+import PlanChecker from "../components/PlanChecker";
+import { supabase } from "../lib/supabaseClient";
 
 export type Severity = "low" | "medium" | "high";
 
@@ -95,12 +97,16 @@ export default function ResumeScreen() {
     setAudit(null);
 
     try {
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser();
+      
       const res = await fetch("/api/analyzeResume", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           resume,
           options: { model: "gpt-4o-mini", temperature: 0.2 },
+          userId: user?.id,
         }),
         signal: ac.signal,
       });
@@ -217,12 +223,14 @@ export default function ResumeScreen() {
 
       {/* Uploader */}
       <section className="w-full max-w-5xl mx-auto px-6">
-        <div className="bg-[var(--neutral-800)] rounded-xl border border-[var(--neutral-700)] p-6 shadow-xl">
-          <h2 className="text-xl font-semibold text-[var(--gray-200)] mb-4">
-            Upload Your Resume
-          </h2>
-          <ResumeUploader onResumeSubmit={sendToApi} />
-        </div>
+        <PlanChecker feature="resume_scan">
+          <div className="bg-[var(--neutral-800)] rounded-xl border border-[var(--neutral-700)] p-6 shadow-xl">
+            <h2 className="text-xl font-semibold text-[var(--gray-200)] mb-4">
+              Upload Your Resume
+            </h2>
+            <ResumeUploader onResumeSubmit={sendToApi} />
+          </div>
+        </PlanChecker>
       </section>
 
       {/* Status */}

@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import OpenAI from "openai";
 import { z } from "zod";
 import { rateLimit } from "../../lib/rate-limit";
+import { supabase } from "../../lib/supabaseClient";
 
 /* ------------------------------------------------------------------
  * 1. Enhanced Zod schema with additional fields
@@ -115,24 +116,24 @@ Rewrite: "Directed 5 cross-functional projects valued at $1.2M, achieving 98% cl
 /* ------------------------------------------------------------------
  * 3. OpenAI client with error handling
  * ------------------------------------------------------------------ */
-const openai = new OpenAI({ 
+const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
   timeout: 30000, // 30 second timeout
 });
 
 /* ------------------------------------------------------------------
- * 4. Enhanced handler with caching, rate limiting and better error handling
+ * 4. Enhanced handler with fixed usage tracking
  * ------------------------------------------------------------------ */
 export async function POST(req: Request) {
   try {
     // Apply rate limiting
     const ip = req.headers.get("x-forwarded-for") || "anonymous";
     const { success, limit, remaining } = await rateLimit(ip);
-    
+
     if (!success) {
       return NextResponse.json(
         { error: "Rate limit exceeded. Please try again later." },
-        { 
+        {
           status: 429,
           headers: {
             "X-RateLimit-Limit": limit.toString(),
@@ -144,7 +145,7 @@ export async function POST(req: Request) {
 
     // Parse request body
     const body = await req.json().catch(() => ({}));
-    const { resume, options } = body;
+    const { resume, options, userId } = body;
 
     // Validate input
     if (typeof resume !== "string" || resume.trim().length < 200) {
@@ -154,14 +155,61 @@ export async function POST(req: Request) {
       );
     }
 
+    // FIXED: Check usage limits using direct database calls
+    if (userId) {
+      try {
+        console.log(`Checking usage for user: ${userId}`);
+        
+        // Use the RPC function directly
+        const { data: canUse, error: canUseError } = await supabase.rpc('can_use_feature', {
+          p_user_id: userId,
+          p_feature: 'resume_scan'
+        });
+
+        console.log(`Can use resume_scan:`, canUse, 'Error:', canUseError);
+
+        if (canUseError) {
+          console.error('Error checking feature access:', canUseError);
+          return NextResponse.json(
+            { error: "Failed to check usage limits. Please try again." },
+            { status: 500 }
+          );
+        }
+
+        if (!canUse) {
+          // Get debug info
+          const { data: debugInfo } = await supabase.rpc('debug_user_status', {
+            p_user_id: userId
+          });
+          
+          console.log('Debug info for blocked user:', debugInfo);
+          
+          return NextResponse.json(
+            {
+              error: "Usage limit reached. You've used all resume scans for this month.",
+              debug: debugInfo?.[0], // Include debug info to help troubleshoot
+              plan: debugInfo?.[0]?.current_plan || 'unknown',
+              remaining: 0
+            },
+            { status: 429 }
+          );
+        }
+
+        console.log('User can use resume_scan - proceeding...');
+      } catch (error) {
+        console.error('Exception in usage checking:', error);
+        return NextResponse.json(
+          { error: "Failed to check usage limits. Please try again." },
+          { status: 500 }
+        );
+      }
+    }
+
     // Prepare options for the API call
     const sanitizedResume = resume.trim();
     const model = options?.model || "gpt-4o-mini";
     const temperature = options?.temperature || 0.2;
-    
-    // Calculate a cache key (optional - implement with Redis or similar)
-    // const cacheKey = `resume:${createHash('sha256').update(sanitizedResume).digest('hex')}`;
-    
+
     // Prepare GPT request with modified prompt based on options
     let prompt = PROMPT;
     if (options?.focusArea) {
@@ -172,7 +220,7 @@ export async function POST(req: Request) {
     let raw = "";
     let retries = 0;
     const maxRetries = 2;
-    
+
     while (retries <= maxRetries) {
       try {
         const gpt = await openai.chat.completions.create({
@@ -202,9 +250,9 @@ export async function POST(req: Request) {
       parsed = JSON.parse(raw);
     } catch (error) {
       console.error("GPT sent non-JSON:\n", raw);
-      return NextResponse.json({ 
-        error: "Failed to parse GPT response as JSON", 
-        raw: raw.substring(0, 500) 
+      return NextResponse.json({
+        error: "Failed to parse GPT response as JSON",
+        raw: raw.substring(0, 500)
       }, { status: 500 });
     }
 
@@ -213,8 +261,8 @@ export async function POST(req: Request) {
     if (!result.success) {
       console.error("Schema validation errors:", result.error.format());
       return NextResponse.json(
-        { 
-          error: "Response format error", 
+        {
+          error: "Response format error",
           details: result.error.format(),
           raw: raw.substring(0, 500)
         },
@@ -249,6 +297,28 @@ export async function POST(req: Request) {
       summary: result.data.summary ? clean(result.data.summary) : undefined,
     };
 
+    // FIXED: Increment usage using direct database call
+    if (userId) {
+      try {
+        console.log(`Incrementing usage for user: ${userId}`);
+        
+        const { data: incrementResult, error: incrementError } = await supabase.rpc('increment_usage', {
+          p_user_id: userId,
+          p_feature: 'resume_scan'
+        });
+
+        console.log(`Increment result:`, incrementResult, 'Error:', incrementError);
+
+        if (incrementError) {
+          console.error('Failed to increment usage:', incrementError);
+          // Don't fail the request, just log the warning
+        }
+      } catch (error) {
+        console.error('Exception incrementing usage:', error);
+        // Don't fail the request, just log the warning
+      }
+    }
+
     return NextResponse.json(audit, {
       headers: {
         'Cache-Control': 'private, max-age=3600',
@@ -256,14 +326,14 @@ export async function POST(req: Request) {
     });
   } catch (error: any) {
     console.error("Error processing resume:", error);
-    
+
     // Structured error response
     return NextResponse.json(
-      { 
-        error: "Failed to analyze resume", 
+      {
+        error: "Failed to analyze resume",
         message: error.message || "Unknown error",
         code: error.code || "UNKNOWN_ERROR"
-      }, 
+      },
       { status: error.status || 500 }
     );
   }

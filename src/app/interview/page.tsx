@@ -6,6 +6,7 @@ import ResumeUploader from "../components/ResumeUploader";
 import { motion, AnimatePresence } from "framer-motion";
 import confetti from "canvas-confetti";
 import AudioChat from "../components/AudioChat";
+import PlanChecker from "../components/PlanChecker";
 
 type QA = {
   question: string;
@@ -74,6 +75,7 @@ export default function InterviewPrepPage() {
 
   return (
     <div className="min-h-screen bg-[var(--background)] text-[var(--foreground)] pt-16 pb-16">
+      <PlanChecker requiredPlan="pro">
       {/* Header */}
       <header className="max-w-5xl mx-auto text-center mb-8 px-6">
         <div className="flex justify-center mb-4">
@@ -382,6 +384,7 @@ export default function InterviewPrepPage() {
           </p>
         </div>
       </section>
+      </PlanChecker>
     </div>
   );
 }

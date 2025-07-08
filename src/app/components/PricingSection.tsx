@@ -21,9 +21,10 @@ const PRICING_PLANS: PricingPlan[] = [
     price: "$0",
     period: "/mo",
     features: [
-      "2× Resume scans",
-      "1× Cover letter",
-      "1× Job-match analysis",
+      "2× Resume scans per month",
+      "1× Cover letter per month",
+      "1× Job-match analysis per month",
+      "Basic tone only",
       "Email support"
     ],
     buttonText: "Get Started",
@@ -35,9 +36,11 @@ const PRICING_PLANS: PricingPlan[] = [
     period: "/mo",
     features: [
       "Unlimited resume scans",
-      "Unlimited cover letters (tone-switch & edits)",
+      "Unlimited cover letters",
       "Unlimited job-match analysis",
-      "Unlimited interview prep Q&A"
+      "Unlimited interview prep Q&A",
+      "All tone options (Professional, Enthusiastic, Concise)",
+      "Live voice interview practice"
     ],
     buttonText: "Go Pro",
     isFeatured: true,
