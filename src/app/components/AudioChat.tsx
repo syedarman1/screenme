@@ -3,6 +3,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import VideoFeed from "./VideoFeed";
+import { supabase } from "../lib/supabaseClient";
 
 export type ChatMsg = { id: number; who: "user" | "ai"; text: string };
 
@@ -15,12 +16,22 @@ export default function AudioChat() {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isInterviewActive, setIsInterviewActive] = useState(false);
   const [startDisabled, setStartDisabled] = useState(true); // Default to true on server
+  const [currentUser, setCurrentUser] = useState<any>(null);
 
   // --- Refs ---
   const mediaRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const streamRef = useRef<MediaStream | null>(null);
   const synthRef = useRef<SpeechSynthesis | null>(null);
+
+  // --- Get current user ---
+  useEffect(() => {
+    const getCurrentUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      setCurrentUser(user);
+    };
+    getCurrentUser();
+  }, []);
 
   // --- Initialize startDisabled on client ---
   useEffect(() => {
@@ -156,24 +167,37 @@ export default function AudioChat() {
       const form = new FormData();
       form.append("audio", audioBlob, "audio.webm");
       form.append("history", JSON.stringify(msgs));
+      
+      // Add userId to form data for usage tracking
+      if (currentUser?.id) {
+        form.append("userId", currentUser.id);
+      }
+
       const placeholderId = Date.now();
       setMsgs((prev) => [
         ...prev,
         { id: placeholderId, who: "user", text: "🎤 (Processing…)" },
       ]);
       try {
-        const res = await fetch("/api/interviewConversation", {
+        const res = await fetch("/api/interviewPrep", {
           method: "POST",
           body: form,
         });
+        
         if (!res.ok) {
           let errorDetails = `Server error ${res.status}`;
           try {
             const d = await res.json();
-            errorDetails = d.error || d.message || errorDetails;
+            // Handle Pro feature requirement error specifically
+            if (d.code === "PRO_FEATURE_REQUIRED") {
+              errorDetails = "🔒 " + d.error;
+            } else {
+              errorDetails = d.error || d.message || errorDetails;
+            }
           } catch {}
           throw new Error(errorDetails);
         }
+        
         const { transcript, reply } = await res.json();
         setMsgs((prev) =>
           prev.map((m) =>

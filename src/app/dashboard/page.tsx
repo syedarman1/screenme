@@ -97,9 +97,20 @@ export default function DashboardPage() {
       localStorage.removeItem("selectedPriceId");
       setSelectedPriceId(null);
       setCurrentPlan("free");
-    } else if (planType === "pro" && process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO) {
+    } else if (planType === "pro") {
+      // Validate Pro plan configuration
+      if (!process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO) {
+        setError(
+          "Pro plan is not configured. Please contact support or check your environment variables."
+        );
+        console.error(
+          "NEXT_PUBLIC_STRIPE_PRICE_PRO environment variable is not set"
+        );
+        return;
+      }
+
       try {
-        const response = await fetch("/api/stripe/checkout", {
+        const response = await fetch("/api/stripe", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -107,14 +118,25 @@ export default function DashboardPage() {
             userId,
           }),
         });
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(
+            errorData.error ||
+              `HTTP ${response.status}: Failed to create checkout session`
+          );
+        }
+
         const { url } = await response.json();
         if (url) {
           window.location.href = url;
           localStorage.removeItem("selectedPriceId");
+        } else {
+          throw new Error("No checkout URL received from server");
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error("Error initiating checkout:", error);
-        setError("Failed to initiate Pro plan checkout");
+        setError(`Failed to initiate Pro plan checkout: ${error.message}`);
       }
     }
   };
