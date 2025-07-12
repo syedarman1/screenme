@@ -21,9 +21,9 @@ const PRICING_PLANS: PricingPlan[] = [
     price: "$0",
     period: "/mo",
     features: [
-      "2× Resume scans per month",
-      "1× Cover letter per month",
-      "1× Job-match analysis per month",
+      "3× Resume scans per month",
+      "2× Cover letter per month",
+      "2× Job-match analysis per month",
       "Basic tone only",
       "Email support"
     ],

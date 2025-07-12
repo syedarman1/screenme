@@ -14,6 +14,16 @@ interface Plan {
   buttonText: string;
   priceId?: string;
   isCurrent?: boolean;
+  isPopular?: boolean;
+}
+
+interface Tool {
+  title: string;
+  description: string;
+  href: string;
+  icon: React.ReactNode;
+  available: boolean;
+  isPro?: boolean;
 }
 
 export default function DashboardPage() {
@@ -23,6 +33,7 @@ export default function DashboardPage() {
   const [error, setError] = useState<string | null>(null);
   const [selectedPriceId, setSelectedPriceId] = useState<string | null>(null);
   const [currentPlan, setCurrentPlan] = useState<string | null>(null);
+  const [usageStats, setUsageStats] = useState<any>(null);
 
   // auth check
   useEffect(() => {
@@ -37,7 +48,7 @@ export default function DashboardPage() {
         }
         setUser(data.user);
 
-        // Check if user has a plan otherwidse throww err
+        // Check if user has a plan
         const { data: planData, error: planError } = await supabase
           .from("user_plans")
           .select("plan")
@@ -49,6 +60,14 @@ export default function DashboardPage() {
             .insert({ user_id: data.user.id, plan: "free" });
         } else if (planError) throw planError;
         setCurrentPlan(planData?.plan || "free");
+
+        // Get usage stats
+        const { data: usageData } = await supabase
+          .from("user_usage")
+          .select("*")
+          .eq("user_id", data.user.id)
+          .single();
+        setUsageStats(usageData);
 
         const subscription = supabase
           .channel("user_plans_changes")
@@ -98,7 +117,6 @@ export default function DashboardPage() {
       setSelectedPriceId(null);
       setCurrentPlan("free");
     } else if (planType === "pro") {
-      // Validate Pro plan configuration
       if (!process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO) {
         setError(
           "Pro plan is not configured. Please contact support or check your environment variables."
@@ -147,9 +165,9 @@ export default function DashboardPage() {
       price: "$0",
       period: "/mo",
       features: [
-        "2× Resume scans per month",
-        "1× Cover letter per month",
-        "1× Job-match analysis per month",
+        "3× Resume scans per month",
+        "2× Cover letters per month",
+        "2× Job-match analyses per month",
         "Basic tone only",
         "Email support",
       ],
@@ -165,39 +183,119 @@ export default function DashboardPage() {
         "Unlimited cover letters",
         "Unlimited job-match analysis",
         "Unlimited interview prep Q&A",
-        "All tone options (Professional, Enthusiastic, Concise)",
+        "All tone options",
         "Live voice interview practice",
+        "Priority support",
       ],
       buttonText: currentPlan === "pro" ? "Current Plan" : "Upgrade to Pro",
       priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO,
       isCurrent: currentPlan === "pro",
+      isPopular: true,
+    },
+  ];
+
+  const tools: Tool[] = [
+    {
+      title: "Resume Scanner",
+      description: "AI-powered ATS optimization & instant feedback",
+      href: "/resume",
+      available: true,
+      icon: (
+        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
+            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+        </svg>
+      ),
+    },
+    {
+      title: "Job Match Analyzer",
+      description: "Compare your skills against job requirements",
+      href: "/jobmatch",
+      available: true,
+      icon: (
+        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
+            d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+        </svg>
+      ),
+    },
+    {
+      title: "Cover Letter Generator",
+      description: "Create tailored cover letters in seconds",
+      href: "/coverLetter",
+      available: true,
+      icon: (
+        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
+            d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+        </svg>
+      ),
+    },
+    {
+      title: "Interview Prep",
+      description: "Practice with AI-generated questions & live mock interviews",
+      href: "/interview",
+      available: true,
+      isPro: true,
+      icon: (
+        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
+            d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+        </svg>
+      ),
+    },
+    {
+      title: "LinkedIn Optimizer",
+      description: "Enhance your LinkedIn profile for maximum visibility",
+      href: "#",
+      available: false,
+      icon: (
+        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
+            d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+        </svg>
+      ),
+    },
+    {
+      title: "Salary Negotiator",
+      description: "Get data-driven salary insights and negotiation tips",
+      href: "#",
+      available: false,
+      icon: (
+        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
+            d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+      ),
     },
   ];
 
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#0a0a0a] text-white">
-        <svg
-          className="animate-spin h-6 w-6 mr-3 text-[var(--accent)]"
-          xmlns="http://www.w3.org/2000/svg"
-          fill="none"
-          viewBox="0 0 24 24"
-        >
-          <circle
-            className="opacity-25"
-            cx="12"
-            cy="12"
-            r="10"
-            stroke="currentColor"
-            strokeWidth="4"
-          />
-          <path
-            className="opacity-75"
-            fill="currentColor"
-            d="M4 12a8 8 0 018-8v8h8a8 8 0 01-16 0z"
-          />
-        </svg>
-        Loading…
+        <div className="flex flex-col items-center">
+          <svg
+            className="animate-spin h-12 w-12 text-[var(--accent)]"
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+          >
+            <circle
+              className="opacity-25"
+              cx="12"
+              cy="12"
+              r="10"
+              stroke="currentColor"
+              strokeWidth="4"
+            />
+            <path
+              className="opacity-75"
+              fill="currentColor"
+              d="M4 12a8 8 0 018-8v8h8a8 8 0 01-16 0z"
+            />
+          </svg>
+          <p className="mt-4 text-gray-400">Loading your dashboard...</p>
+        </div>
       </div>
     );
   }
@@ -236,64 +334,144 @@ export default function DashboardPage() {
   }
 
   const userEmail = user?.email ?? "User";
+  const firstName = userEmail.split('@')[0].charAt(0).toUpperCase() + userEmail.split('@')[0].slice(1);
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] text-white flex flex-col items-center">
-      <header className="pt-16 pb-8 px-6 text-center w-full max-w-4xl">
-        <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-2">
-          Welcome, {userEmail}
-        </h1>
-        <p className="text-lg text-gray-400">
-          Your all-in-one toolkit for job success—no more guesswork.
-        </p>
+    <div className="min-h-screen bg-[#0a0a0a] text-white">
+      {/* Header */}
+      <header className="pt-20 pb-16 px-6 text-center w-full">
+        <div className="max-w-6xl mx-auto">
+          <h1 className="text-4xl md:text-5xl font-light mb-4">
+            Welcome back, <span className="text-[var(--accent)] font-normal">{firstName}</span>
+          </h1>
+          <p className="text-lg text-gray-400 font-light">
+            Your AI-powered career advancement platform
+          </p>
+        </div>
       </header>
 
-      <main className="pb-16 px-6 w-full max-w-4xl">
-        <section className="mb-12">
-          <h2 className="text-3xl font-semibold text-gray-200 mb-6 text-center">
-            Choose Your Plan
-          </h2>
-          <div className="grid sm:grid-cols-2 gap-6">
+      <main className="pb-20 px-6 w-full max-w-6xl mx-auto">
+        {/* Tools Section */}
+        <section className="mb-20">
+          <div className="flex items-center justify-between mb-10">
+            <h2 className="text-2xl font-light text-gray-100">Your Tools</h2>
+            {currentPlan === "pro" && (
+              <span className="px-4 py-1.5 bg-[var(--accent)] text-black text-sm font-medium rounded-full">
+                PRO USER - Unlimited Access
+              </span>
+            )}
+          </div>
+          
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {tools.map((tool) => (
+              <div
+                key={tool.title}
+                className={`relative ${!tool.available ? 'opacity-60' : ''}`}
+              >
+                <div className={`bg-[#1a1a1a] rounded-xl p-6 h-full flex flex-col
+                  border border-[#2a2a2a] transition-all duration-300
+                  ${tool.available ? 'hover:border-[#3a3a3a] hover:bg-[#1f1f1f]' : ''}
+                `}>
+                  {/* Coming Soon Badge */}
+                  {!tool.available && (
+                    <span className="absolute -top-3 right-4 px-3 py-1 bg-[#2a2a2a] text-gray-500 text-xs font-medium rounded-full uppercase tracking-wider">
+                      Soon
+                    </span>
+                  )}
+                  
+                  <div className={`mb-4 ${tool.available ? 'text-[var(--accent)]' : 'text-gray-600'}`}>
+                    {tool.icon}
+                  </div>
+                  
+                  <h3 className="text-lg font-normal text-gray-100 mb-2">
+                    {tool.title}
+                  </h3>
+                  
+                  <p className="text-gray-500 text-sm flex-grow mb-6 font-light">
+                    {tool.description}
+                  </p>
+                  
+                  {tool.available ? (
+                    <Link
+                      href={tool.href}
+                      className="w-full px-4 py-3 bg-[var(--accent)] text-black font-medium rounded-lg
+                        transition-all duration-200 hover:bg-[#e6b800] text-center
+                        flex items-center justify-center gap-2 group"
+                    >
+                      <span>Open Tool</span>
+                      <svg className="w-4 h-4 transition-transform group-hover:translate-x-1" 
+                        fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
+                          d="M9 5l7 7-7 7" />
+                      </svg>
+                    </Link>
+                  ) : (
+                    <button
+                      disabled
+                      className="w-full px-4 py-3 bg-[#2a2a2a] text-gray-600 font-medium rounded-lg
+                        cursor-not-allowed"
+                    >
+                      Coming Soon
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* Pricing Section */}
+        <section>
+          <div className="text-center mb-10">
+            <h2 className="text-2xl font-light text-gray-100 mb-2">Your Plan</h2>
+            <p className="text-gray-500 font-light">
+              {currentPlan === "free" 
+                ? "Upgrade to unlock unlimited access to all features" 
+                : "You have unlimited access to all features"}
+            </p>
+          </div>
+          
+          <div className="grid md:grid-cols-2 gap-6 max-w-3xl mx-auto">
             {plans.map((plan) => (
               <div
                 key={plan.title}
-                className={`
-                  bg-[#2a2a2a] p-6 rounded-xl shadow-lg flex flex-col
-                  border-2 ${
-                    plan.isCurrent
-                      ? "border-[var(--accent)]"
-                      : "border-transparent"
-                  }
-                  transition-all duration-200 hover:shadow-xl
+                className={`relative rounded-xl p-8 flex flex-col
+                  ${plan.isCurrent 
+                    ? 'bg-[#1a1a1a] border-2 border-[var(--accent)]' 
+                    : 'bg-[#1a1a1a] border border-[#2a2a2a]'}
+                  transition-all duration-300 hover:border-[#3a3a3a]
                 `}
               >
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-xl font-semibold text-gray-200">
+                {/* Current Plan Badge */}
+                {plan.isCurrent && (
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                    <span className="px-3 py-1 bg-[#2a2a2a] text-gray-400 text-xs font-medium rounded-full uppercase tracking-wider">
+                      Current Plan
+                    </span>
+                  </div>
+                )}
+                
+                <div className="text-center mb-6">
+                  <h3 className="text-xl font-light text-gray-100 mb-4">
                     {plan.title}
                   </h3>
-                  {plan.isCurrent && (
-                    <span className="bg-[var(--accent)] text-black text-xs font-semibold px-2 py-1 rounded-full">
-                      Current
-                    </span>
-                  )}
+                  <div className="flex items-baseline justify-center">
+                    <span className="text-4xl font-light text-gray-100">{plan.price}</span>
+                    {plan.period && (
+                      <span className="text-gray-500 ml-1 text-lg font-light">{plan.period}</span>
+                    )}
+                  </div>
                 </div>
-                <p className="text-3xl font-bold text-gray-100 mb-4">
-                  {plan.price}
-                  {plan.period && (
-                    <span className="text-sm font-normal text-gray-400">
-                      {plan.period}
-                    </span>
-                  )}
-                </p>
-                <ul className="text-gray-300 mb-6 space-y-2 text-sm flex-grow">
+                
+                <ul className="space-y-3 mb-8 flex-grow">
                   {plan.features.map((feature, i) => (
-                    <li key={i} className="flex items-start gap-2">
+                    <li key={i} className="flex items-start gap-3">
                       <svg
-                        className="h-4 w-4 text-[var(--accent)] flex-shrink-0 mt-0.5"
+                        className="w-5 h-5 flex-shrink-0 mt-0.5 text-[var(--accent)]"
                         fill="none"
                         viewBox="0 0 24 24"
                         stroke="currentColor"
-                        strokeWidth={3}
+                        strokeWidth={2}
                       >
                         <path
                           strokeLinecap="round"
@@ -301,26 +479,20 @@ export default function DashboardPage() {
                           d="M5 13l4 4L19 7"
                         />
                       </svg>
-                      <span>{feature}</span>
+                      <span className="text-gray-400 text-sm font-light">{feature}</span>
                     </li>
                   ))}
                 </ul>
+                
                 <button
-                  onClick={() =>
-                    handlePlanSelection(
-                      plan.title.toLowerCase() as "free" | "pro"
-                    )
-                  }
+                  onClick={() => handlePlanSelection(plan.title.toLowerCase() as "free" | "pro")}
                   disabled={plan.isCurrent}
-                  className={`
-                    w-full px-6 py-2 rounded-lg font-medium transition duration-200
-                    ${
-                      plan.isCurrent
-                        ? "bg-gray-700 text-gray-400 cursor-not-allowed"
-                        : plan.title === "Free"
-                        ? "bg-green-600 text-white hover:bg-green-700"
-                        : "bg-[var(--accent)] text-black hover:opacity-90"
-                    }
+                  className={`w-full py-3 rounded-lg font-medium transition-all duration-200
+                    ${plan.isCurrent
+                      ? "bg-[#2a2a2a] text-gray-600 cursor-not-allowed"
+                      : plan.title === "Pro"
+                      ? "bg-[var(--accent)] text-black hover:bg-[#e6b800]"
+                      : "bg-[#2a2a2a] text-gray-300 hover:bg-[#3a3a3a]"}
                   `}
                 >
                   {plan.buttonText}
@@ -328,111 +500,27 @@ export default function DashboardPage() {
               </div>
             ))}
           </div>
-        </section>
-
-        <section>
-          <h2 className="text-3xl font-semibold text-gray-200 mb-6 text-center">
-            Your Tools
-          </h2>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            <div className="bg-[#2a2a2a] rounded-xl p-6 flex flex-col shadow-lg hover:shadow-xl transition-shadow">
-              <h3 className="text-xl font-semibold text-gray-200 mb-2">
-                Resume Scanner
-              </h3>
-              <p className="text-gray-400 text-sm flex-grow mb-4">
-                Check ATS readiness & get instant feedback.
-              </p>
-              <Link
-                href="/resume"
-                className="w-full px-6 py-2 bg-[var(--accent)] text-black font-medium rounded-lg transition transform duration-200 hover:opacity-90 text-center"
-                aria-label="Go to Resume Scanner"
-              >
-                Scan Resume
-              </Link>
+          
+          {/* Usage Stats for Free Users */}
+          {currentPlan === "free" && usageStats && (
+            <div className="mt-12 max-w-2xl mx-auto">
+              <h3 className="text-center text-gray-500 text-sm font-light mb-4">Monthly Usage</h3>
+              <div className="grid grid-cols-3 gap-4">
+                <div className="bg-[#1a1a1a] rounded-lg p-4 text-center border border-[#2a2a2a]">
+                  <p className="text-2xl font-light text-[var(--accent)]">{3 - (usageStats.resume_scans || 0)}/3</p>
+                  <p className="text-xs text-gray-500 mt-1">Resume Scans</p>
+                </div>
+                <div className="bg-[#1a1a1a] rounded-lg p-4 text-center border border-[#2a2a2a]">
+                  <p className="text-2xl font-light text-[var(--accent)]">{2 - (usageStats.cover_letters || 0)}/2</p>
+                  <p className="text-xs text-gray-500 mt-1">Cover Letters</p>
+                </div>
+                <div className="bg-[#1a1a1a] rounded-lg p-4 text-center border border-[#2a2a2a]">
+                  <p className="text-2xl font-light text-[var(--accent)]">{2 - (usageStats.job_matches || 0)}/2</p>
+                  <p className="text-xs text-gray-500 mt-1">Job Matches</p>
+                </div>
+              </div>
             </div>
-
-            <div className="bg-[#2a2a2a] rounded-xl p-6 flex flex-col shadow-lg hover:shadow-xl transition-shadow">
-              <h3 className="text-xl font-semibold text-gray-200 mb-2">
-                Job-Match Analyzer
-              </h3>
-              <p className="text-gray-400 text-sm flex-grow mb-4">
-                Compare your resume vs. job description skill-fit.
-              </p>
-              <Link
-                href="/jobmatch"
-                className="w-full px-6 py-2 bg-[var(--accent)] text-black font-medium rounded-lg transition transform duration-200 hover:opacity-90 text-center"
-                aria-label="Go to Job-Match Analyzer"
-              >
-                Analyze Match
-              </Link>
-            </div>
-
-            <div className="bg-[#2a2a2a] rounded-xl p-6 flex flex-col shadow-lg hover:shadow-xl transition-shadow">
-              <h3 className="text-xl font-semibold text-gray-200 mb-2">
-                Cover Letter
-              </h3>
-              <p className="text-gray-400 text-sm flex-grow mb-4">
-                Auto-write a personalized cover letter.
-              </p>
-              <Link
-                href="/coverLetter"
-                className="w-full px-6 py-2 bg-[var(--accent)] text-black font-medium rounded-lg transition transform duration-200 hover:opacity-90 text-center"
-                aria-label="Go to Cover Letter Generator"
-              >
-                Write Cover Letter
-              </Link>
-            </div>
-
-            <div className="bg-[#2a2a2a] rounded-xl p-6 flex flex-col shadow-lg hover:shadow-xl transition-shadow">
-              <h3 className="text-xl font-semibold text-gray-200 mb-2">
-                Interview Prep
-              </h3>
-              <p className="text-gray-400 text-sm flex-grow mb-4">
-                Generate tailored Q&A from your job description.
-              </p>
-              <Link
-                href="/interview"
-                className="w-full px-6 py-2 bg-[var(--accent)] text-black font-medium rounded-lg transition transform duration-200 hover:opacity-90 text-center"
-                aria-label="Go to Interview Prep"
-              >
-                Start Prep
-              </Link>
-            </div>
-
-            <div className="bg-[#2a2a2a] rounded-xl p-6 flex flex-col shadow-lg hover:shadow-xl transition-shadow">
-              <h3 className="text-xl font-semibold text-gray-200 mb-2">
-                LinkedIn Critique (Premium)
-              </h3>
-              <p className="text-gray-400 text-sm flex-grow mb-4">
-                Fine-tune your LinkedIn profile. Coming soon!
-              </p>
-              <button
-                disabled
-                className="w-full px-6 py-2 bg-gray-700 text-gray-400 font-medium rounded-lg cursor-not-allowed opacity-50"
-                aria-disabled="true"
-                aria-label="LinkedIn Critique coming soon"
-              >
-                Stay Tuned
-              </button>
-            </div>
-
-            <div className="bg-[#2a2a2a] rounded-xl p-6 flex flex-col shadow-lg hover:shadow-xl transition-shadow">
-              <h3 className="text-xl font-semibold text-gray-200 mb-2">
-                Coming Soon
-              </h3>
-              <p className="text-gray-400 text-sm flex-grow mb-4">
-                More AI-driven tools to elevate your job hunt.
-              </p>
-              <button
-                disabled
-                className="w-full px-6 py-2 bg-gray-700 text-gray-400 font-medium rounded-lg cursor-not-allowed opacity-50"
-                aria-disabled="true"
-                aria-label="More tools coming soon"
-              >
-                Stay Tuned
-              </button>
-            </div>
-          </div>
+          )}
         </section>
       </main>
     </div>

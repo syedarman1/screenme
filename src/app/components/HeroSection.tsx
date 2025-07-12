@@ -1,9 +1,10 @@
 // src/app/components/HeroSection.tsx
 "use client";
 
-import React, { useRef } from "react";
+import React, { useRef, useEffect, useState } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
+import { supabase } from "../lib/supabaseClient";
 
 const DEMOS = [
   {
@@ -27,6 +28,8 @@ const DEMOS = [
 const filteredDemos = DEMOS.filter(demo => demo.title !== "Job-Match Scanner");
 
 export default function HeroSection() {
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
+  
   // Explicitly type the ref as an array of HTMLVideoElement | null
   const videoRefs = useRef<(HTMLVideoElement | null)[]>([]);
 
@@ -49,6 +52,23 @@ export default function HeroSection() {
       video.currentTime = 0; // Optional: Reset video to start on mouse leave
     }
   };
+
+  // Check authentication status
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      setIsAuthenticated(!!user);
+    };
+    
+    checkAuth();
+    
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      setIsAuthenticated(!!session?.user);
+    });
+    
+    return () => subscription.unsubscribe();
+  }, []);
 
   // Animation variants for entrance effects (unchanged)
   const textVariants = {
@@ -104,7 +124,7 @@ export default function HeroSection() {
           initial="hidden"
           animate="visible"
         >
-          <Link href="/login">
+          <Link href={isAuthenticated ? "/dashboard" : "/login"}>
             <button className="bg-[var(--accent)] text-[var(--neutral-900)] font-inter font-semibold px-10 py-4 rounded-full shadow-lg
                                transform transition duration-300 hover:scale-105 hover:shadow-[var(--accent)]/50 focus:outline-none focus:ring-4 focus:ring-[var(--accent)]/50">
               Try ScreenMe Now
