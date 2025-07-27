@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { z } from 'zod';
 import { checkUsageLimit, incrementUsage } from '../../lib/usageTracker';
+import { ErrorTypes, handleAPIError, validateRequest, validateContentLength } from '../../lib/errorHandler';
 
 /* ------------------------------------------------------------------ */
 /* 1 ▸ Zod schema (no hard cap on array length – we'll trim manually)  */
@@ -58,42 +59,53 @@ export async function POST(req: Request) {
     const body = await req.json().catch(() => ({}));
     const { resume, job, userId } = body as { resume?: string; job?: string; userId?: string };
 
-    // Validate required inputs
-    if (typeof resume !== 'string' || typeof job !== 'string' ||
-      !resume.trim() || !job.trim()) {
-      return NextResponse.json(
-        { error: 'Both resume and job description must be provided.' },
-        { status: 400 }
-      );
+    // Validate required fields
+    const validationError = validateRequest(body, ['resume', 'job']);
+    if (validationError) {
+      return handleAPIError(validationError);
     }
 
-    // Validate minimum content length
-    if (resume.trim().length < 100) {
-      return NextResponse.json(
-        { error: 'Resume must be at least 100 characters long.' },
-        { status: 400 }
-      );
+    // Validate resume content length with specific guidance
+    const resumeError = validateContentLength(
+      resume,
+      'Resume',
+      100,
+      'Include your work experience, skills, and key achievements for accurate job matching.'
+    );
+    if (resumeError) {
+      return handleAPIError(resumeError);
     }
 
-    if (job.trim().length < 50) {
-      return NextResponse.json(
-        { error: 'Job description must be at least 50 characters long.' },
-        { status: 400 }
-      );
+    // Validate job description content length
+    const jobError = validateContentLength(
+      job,
+      'Job description',
+      50,
+      'Paste the complete job posting including requirements, responsibilities, and qualifications.'
+    );
+    if (jobError) {
+      return handleAPIError(jobError);
     }
 
     // Check usage limits if user is authenticated
     if (userId) {
       const usageCheck = await checkUsageLimit(userId, 'job_match');
       if (!usageCheck.allowed) {
+        const usageError = ErrorTypes.USAGE_LIMIT_REACHED('job match analyses', usageCheck.plan);
         return NextResponse.json(
           {
-            error: 'Usage limit reached. You\'ve used all job match analyses for this month.',
-            limit: usageCheck.limit,
-            remaining: usageCheck.remaining,
-            plan: usageCheck.plan
+            error: usageError.message,
+            details: {
+              message: usageError.message,
+              code: usageError.code,
+              action: usageError.action,
+              limit: usageCheck.limit,
+              remaining: usageCheck.remaining,
+              plan: usageCheck.plan
+            },
+            timestamp: new Date().toISOString()
           },
-          { status: 429 }
+          { status: usageError.status }
         );
       }
     }
@@ -115,14 +127,29 @@ export async function POST(req: Request) {
       raw = completion.choices[0]?.message?.content ?? '';
       
       if (!raw) {
-        throw new Error("OpenAI returned empty response");
+        throw ErrorTypes.OPENAI_SERVICE_ERROR();
       }
     } catch (err: any) {
       console.error('OpenAI error:', err);
-      return NextResponse.json({ 
-        error: 'OpenAI request failed.',
-        message: err.message || "Unknown OpenAI error"
-      }, { status: 500 });
+      
+      // Check for specific OpenAI error types
+      if (err.message?.includes('rate limit') || err.message?.includes('quota')) {
+        return NextResponse.json(
+          {
+            error: 'Job matching temporarily unavailable due to high demand. Please try again in a few minutes.',
+            details: {
+              message: 'Service temporarily overloaded',
+              code: 'OPENAI_RATE_LIMITED',
+              action: 'Wait 2-3 minutes and try analyzing your job match again.'
+            },
+            timestamp: new Date().toISOString()
+          },
+          { status: 503 }
+        );
+      }
+      
+      const serviceError = ErrorTypes.OPENAI_SERVICE_ERROR();
+      return handleAPIError(serviceError);
     }
 
     /* 4‑C ▸ parse JSON ------------------------------------------------- */
@@ -131,10 +158,20 @@ export async function POST(req: Request) {
       parsed = JSON.parse(raw); 
     } catch (parseError) {
       console.error('GPT returned non‑JSON:\n', raw.substring(0, 500));
-      return NextResponse.json({ 
-        error: 'Invalid JSON from GPT', 
-        raw: raw.substring(0, 500) 
-      }, { status: 500 });
+      const formatError = ErrorTypes.INVALID_RESPONSE_FORMAT();
+      return NextResponse.json(
+        {
+          error: formatError.message,
+          details: {
+            message: formatError.message,
+            code: formatError.code,
+            action: formatError.action,
+            raw: raw.substring(0, 200)
+          },
+          timestamp: new Date().toISOString()
+        },
+        { status: formatError.status }
+      );
     }
 
     /* 4‑D ▸ trim arrays to safe limits before validation --------------- */
@@ -151,13 +188,20 @@ export async function POST(req: Request) {
     const validation = MatchSchema.safeParse(safe);
     if (!validation.success) {
       console.error('Schema errors:', validation.error.issues);
+      const formatError = ErrorTypes.INVALID_RESPONSE_FORMAT();
       return NextResponse.json(
-        { 
-          error: 'Schema mismatch', 
-          details: validation.error.issues, 
-          raw: raw.substring(0, 500) 
+        {
+          error: formatError.message,
+          details: {
+            message: formatError.message,
+            code: formatError.code,
+            action: formatError.action,
+            validationErrors: validation.error.issues,
+            raw: raw.substring(0, 200)
+          },
+          timestamp: new Date().toISOString()
         },
-        { status: 500 }
+        { status: formatError.status }
       );
     }
 
@@ -184,14 +228,7 @@ export async function POST(req: Request) {
 
   } catch (error: any) {
     console.error("Error processing job match:", error);
-    return NextResponse.json(
-      {
-        error: "Failed to analyze job match",
-        message: error.message || "Unknown error",
-        code: error.code || "UNKNOWN_ERROR"
-      },
-      { status: error.status || 500 }
-    );
+    return handleAPIError(error);
   }
 }
 

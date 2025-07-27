@@ -3,6 +3,7 @@ import OpenAI from "openai";
 import { z } from "zod";
 import { rateLimit } from "../../lib/rate-limit";
 import { checkUsageLimit, incrementUsage } from "../../lib/usageTracker";
+import { ErrorTypes, handleAPIError, validateRequest, validateContentLength } from "../../lib/errorHandler";
 
 // Extended sections to cover more resume types
 const Section = z.enum([
@@ -396,13 +397,25 @@ export async function POST(req: Request) {
     const { success, limit, remaining } = await rateLimit(ip);
 
     if (!success) {
+      const retryMinutes = Math.ceil((limit - remaining) / 10); // Estimate retry time
+      const rateLimitError = ErrorTypes.RATE_LIMIT_EXCEEDED(retryMinutes);
       return NextResponse.json(
-        { error: "Rate limit exceeded. Please try again later." },
         {
-          status: 429,
+          error: rateLimitError.message,
+          details: {
+            message: rateLimitError.message,
+            code: rateLimitError.code,
+            action: rateLimitError.action,
+            retryAfter: rateLimitError.retryAfter
+          },
+          timestamp: new Date().toISOString()
+        },
+        {
+          status: rateLimitError.status,
           headers: {
             "X-RateLimit-Limit": limit.toString(),
             "X-RateLimit-Remaining": remaining.toString(),
+            "Retry-After": (rateLimitError.retryAfter || 300).toString()
           }
         }
       );
@@ -411,11 +424,21 @@ export async function POST(req: Request) {
     const body = await req.json().catch(() => ({}));
     const { resume, options, userId, format } = body;
 
-    if (typeof resume !== "string" || resume.trim().length < 200) {
-      return NextResponse.json(
-        { error: "Please provide at least 200 characters of resume text." },
-        { status: 400 }
-      );
+    // Validate required fields
+    const validationError = validateRequest(body, ['resume']);
+    if (validationError) {
+      return handleAPIError(validationError);
+    }
+
+    // Validate resume content length with specific guidance
+    const contentError = validateContentLength(
+      resume,
+      'Resume',
+      200,
+      'Add more details about your experience, skills, and achievements.'
+    );
+    if (contentError) {
+      return handleAPIError(contentError);
     }
 
     if (userId) {
@@ -423,22 +446,27 @@ export async function POST(req: Request) {
         const usageCheck = await checkUsageLimit(userId, 'resume_scan');
 
         if (!usageCheck.allowed) {
+          const usageError = ErrorTypes.USAGE_LIMIT_REACHED('resume scans', usageCheck.plan);
           return NextResponse.json(
             {
-              error: "Usage limit reached. You've used all resume scans for this month.",
-              limit: usageCheck.limit,
-              remaining: usageCheck.remaining,
-              plan: usageCheck.plan
+              error: usageError.message,
+              details: {
+                message: usageError.message,
+                code: usageError.code,
+                action: usageError.action,
+                limit: usageCheck.limit,
+                remaining: usageCheck.remaining,
+                plan: usageCheck.plan
+              },
+              timestamp: new Date().toISOString()
             },
-            { status: 429 }
+            { status: usageError.status }
           );
         }
       } catch (error) {
         console.error('Exception in usage checking:', error);
-        return NextResponse.json(
-          { error: "Failed to check usage limits. Please try again." },
-          { status: 500 }
-        );
+        const trackingError = ErrorTypes.USAGE_TRACKING_ERROR();
+        return handleAPIError(trackingError);
       }
     }
 
@@ -485,7 +513,8 @@ export async function POST(req: Request) {
         break;
       } catch (error: any) {
         if (retries === maxRetries || !error?.isRetryable) {
-          throw error;
+          console.error('OpenAI API error:', error);
+          throw ErrorTypes.OPENAI_SERVICE_ERROR();
         }
         retries++;
         await new Promise(r => setTimeout(r, 1000 * retries));
@@ -497,10 +526,17 @@ export async function POST(req: Request) {
       parsed = JSON.parse(raw);
     } catch (error) {
       console.error("GPT sent non-JSON:", raw.substring(0, 500));
+      const formatError = ErrorTypes.INVALID_RESPONSE_FORMAT();
       return NextResponse.json({
-        error: "Failed to parse GPT response as JSON",
-        raw: raw.substring(0, 500)
-      }, { status: 500 });
+        error: formatError.message,
+        details: {
+          message: formatError.message,
+          code: formatError.code,
+          action: formatError.action,
+          raw: raw.substring(0, 200)
+        },
+        timestamp: new Date().toISOString()
+      }, { status: formatError.status });
     }
 
     const result = AuditSchema.safeParse(parsed);
@@ -514,13 +550,20 @@ export async function POST(req: Request) {
         `${err.path.join('.')}: ${err.message}`
       ).join('; ');
       
+      const formatError = ErrorTypes.INVALID_RESPONSE_FORMAT();
       return NextResponse.json(
         {
-          error: "Response format error",
-          details: errorMessages,
-          raw: raw.substring(0, 500)
+          error: formatError.message,
+          details: {
+            message: formatError.message,
+            code: formatError.code,
+            action: formatError.action,
+            validationErrors: errorMessages,
+            raw: raw.substring(0, 200)
+          },
+          timestamp: new Date().toISOString()
         },
-        { status: 500 }
+        { status: formatError.status }
       );
     }
 
@@ -640,15 +683,7 @@ export async function POST(req: Request) {
     });
   } catch (error: any) {
     console.error("Error processing resume:", error);
-
-    return NextResponse.json(
-      {
-        error: "Failed to analyze resume",
-        message: error.message || "Unknown error",
-        code: error.code || "UNKNOWN_ERROR"
-      },
-      { status: error.status || 500 }
-    );
+    return handleAPIError(error);
   }
 }
 

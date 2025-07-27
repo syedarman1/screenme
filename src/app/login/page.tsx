@@ -117,9 +117,8 @@ export default function AuthPage() {
   return (
     <div className="min-h-screen bg-[#0a0a0a] flex flex-col items-center justify-center p-4">
       <div className="w-full max-w-md">
-        {/* Logo */}
+        {/* Header */}
         <div className="text-center mb-8">
-          <img src="/logo.png" alt="ScreenMe" className="h-12 mx-auto mb-2" />
           <h2 className="text-2xl font-light text-white">
             Welcome to ScreenMe
           </h2>
