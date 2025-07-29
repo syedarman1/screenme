@@ -45,12 +45,7 @@ export async function POST(req: Request) {
 
         const { name, email, subject, message } = validation.data;
 
-        // Here you would typically:
-        // 1. Store the contact form submission in your database
-        // 2. Send an email notification to your support team
-        // 3. Send a confirmation email to the user
 
-        // For now, we'll simulate a successful submission
         console.log("Contact form submission:", {
             name,
             email,
@@ -60,16 +55,8 @@ export async function POST(req: Request) {
             ip
         });
 
-        // TODO: Implement actual contact form handling
-        // Example database insertion:
-        // await supabase.from('contact_submissions').insert({
-        //   name,
-        //   email,
-        //   subject,
-        //   message,
-        //   ip_address: ip,
-        //   created_at: new Date().toISOString()
-        // });
+
+        
 
         return NextResponse.json(
             {

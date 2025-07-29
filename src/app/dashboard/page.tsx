@@ -31,11 +31,10 @@ export default function DashboardPage() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedPriceId, setSelectedPriceId] = useState<string | null>(null);
+  const [, setSelectedPriceId] = useState<string | null>(null);
   const [currentPlan, setCurrentPlan] = useState<string | null>(null);
   const [usageStats, setUsageStats] = useState<any>(null);
 
-  // auth check
   useEffect(() => {
     const checkUserAndPlan = async () => {
       try {
@@ -48,7 +47,6 @@ export default function DashboardPage() {
         }
         setUser(data.user);
 
-        // Check if user has a plan
         const { data: planData, error: planError } = await supabase
           .from("user_plans")
           .select("plan")
@@ -201,9 +199,18 @@ export default function DashboardPage() {
       href: "/resume",
       available: true,
       icon: (
-        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
-            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+        <svg
+          className="w-6 h-6"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+          />
         </svg>
       ),
     },
@@ -213,9 +220,18 @@ export default function DashboardPage() {
       href: "/jobmatch",
       available: true,
       icon: (
-        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
-            d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+        <svg
+          className="w-6 h-6"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+          />
         </svg>
       ),
     },
@@ -225,22 +241,41 @@ export default function DashboardPage() {
       href: "/coverLetter",
       available: true,
       icon: (
-        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
-            d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+        <svg
+          className="w-6 h-6"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+          />
         </svg>
       ),
     },
     {
       title: "Interview Prep",
-      description: "Practice with AI-generated questions & live mock interviews",
+      description:
+        "Practice with AI-generated questions & live mock interviews",
       href: "/interview",
       available: true,
       isPro: true,
       icon: (
-        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
-            d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+        <svg
+          className="w-6 h-6"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"
+          />
         </svg>
       ),
     },
@@ -250,9 +285,18 @@ export default function DashboardPage() {
       href: "#",
       available: false,
       icon: (
-        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
-            d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+        <svg
+          className="w-6 h-6"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+          />
         </svg>
       ),
     },
@@ -262,9 +306,18 @@ export default function DashboardPage() {
       href: "#",
       available: false,
       icon: (
-        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
-            d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        <svg
+          className="w-6 h-6"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+          />
         </svg>
       ),
     },
@@ -334,7 +387,9 @@ export default function DashboardPage() {
   }
 
   const userEmail = user?.email ?? "User";
-  const firstName = userEmail.split('@')[0].charAt(0).toUpperCase() + userEmail.split('@')[0].slice(1);
+  const firstName =
+    userEmail.split("@")[0].charAt(0).toUpperCase() +
+    userEmail.split("@")[0].slice(1);
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] text-white">
@@ -342,7 +397,10 @@ export default function DashboardPage() {
       <header className="pt-20 pb-16 px-6 text-center w-full">
         <div className="max-w-6xl mx-auto">
           <h1 className="text-4xl md:text-5xl font-light mb-4">
-            Welcome back, <span className="text-[var(--accent)] font-normal">{firstName}</span>
+            Welcome back,{" "}
+            <span className="text-[var(--accent)] font-normal">
+              {firstName}
+            </span>
           </h1>
           <p className="text-lg text-gray-400 font-light">
             Your AI-powered career advancement platform
@@ -361,36 +419,46 @@ export default function DashboardPage() {
               </span>
             )}
           </div>
-          
+
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {tools.map((tool) => (
               <div
                 key={tool.title}
-                className={`relative ${!tool.available ? 'opacity-60' : ''}`}
+                className={`relative ${!tool.available ? "opacity-60" : ""}`}
               >
-                <div className={`bg-[#1a1a1a] rounded-xl p-6 h-full flex flex-col
+                <div
+                  className={`bg-[#1a1a1a] rounded-xl p-6 h-full flex flex-col
                   border border-[#2a2a2a] transition-all duration-300
-                  ${tool.available ? 'hover:border-[#3a3a3a] hover:bg-[#1f1f1f]' : ''}
-                `}>
+                  ${
+                    tool.available
+                      ? "hover:border-[#3a3a3a] hover:bg-[#1f1f1f]"
+                      : ""
+                  }
+                `}
+                >
                   {/* Coming Soon Badge */}
                   {!tool.available && (
                     <span className="absolute -top-3 right-4 px-3 py-1 bg-[#2a2a2a] text-gray-500 text-xs font-medium rounded-full uppercase tracking-wider">
                       Soon
                     </span>
                   )}
-                  
-                  <div className={`mb-4 ${tool.available ? 'text-[var(--accent)]' : 'text-gray-600'}`}>
+
+                  <div
+                    className={`mb-4 ${
+                      tool.available ? "text-[var(--accent)]" : "text-gray-600"
+                    }`}
+                  >
                     {tool.icon}
                   </div>
-                  
+
                   <h3 className="text-lg font-normal text-gray-100 mb-2">
                     {tool.title}
                   </h3>
-                  
+
                   <p className="text-gray-500 text-sm flex-grow mb-6 font-light">
                     {tool.description}
                   </p>
-                  
+
                   {tool.available ? (
                     <Link
                       href={tool.href}
@@ -399,10 +467,18 @@ export default function DashboardPage() {
                         flex items-center justify-center gap-2 group"
                     >
                       <span>Open Tool</span>
-                      <svg className="w-4 h-4 transition-transform group-hover:translate-x-1" 
-                        fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
-                          d="M9 5l7 7-7 7" />
+                      <svg
+                        className="w-4 h-4 transition-transform group-hover:translate-x-1"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M9 5l7 7-7 7"
+                        />
                       </svg>
                     </Link>
                   ) : (
@@ -423,22 +499,26 @@ export default function DashboardPage() {
         {/* Pricing Section */}
         <section>
           <div className="text-center mb-10">
-            <h2 className="text-2xl font-light text-gray-100 mb-2">Your Plan</h2>
+            <h2 className="text-2xl font-light text-gray-100 mb-2">
+              Your Plan
+            </h2>
             <p className="text-gray-500 font-light">
-              {currentPlan === "free" 
-                ? "Upgrade to unlock unlimited access to all features" 
+              {currentPlan === "free"
+                ? "Upgrade to unlock unlimited access to all features"
                 : "You have unlimited access to all features"}
             </p>
           </div>
-          
+
           <div className="grid md:grid-cols-2 gap-6 max-w-3xl mx-auto">
             {plans.map((plan) => (
               <div
                 key={plan.title}
                 className={`relative rounded-xl p-8 flex flex-col
-                  ${plan.isCurrent 
-                    ? 'bg-[#1a1a1a] border-2 border-[var(--accent)]' 
-                    : 'bg-[#1a1a1a] border border-[#2a2a2a]'}
+                  ${
+                    plan.isCurrent
+                      ? "bg-[#1a1a1a] border-2 border-[var(--accent)]"
+                      : "bg-[#1a1a1a] border border-[#2a2a2a]"
+                  }
                   transition-all duration-300 hover:border-[#3a3a3a]
                 `}
               >
@@ -450,19 +530,23 @@ export default function DashboardPage() {
                     </span>
                   </div>
                 )}
-                
+
                 <div className="text-center mb-6">
                   <h3 className="text-xl font-light text-gray-100 mb-4">
                     {plan.title}
                   </h3>
                   <div className="flex items-baseline justify-center">
-                    <span className="text-4xl font-light text-gray-100">{plan.price}</span>
+                    <span className="text-4xl font-light text-gray-100">
+                      {plan.price}
+                    </span>
                     {plan.period && (
-                      <span className="text-gray-500 ml-1 text-lg font-light">{plan.period}</span>
+                      <span className="text-gray-500 ml-1 text-lg font-light">
+                        {plan.period}
+                      </span>
                     )}
                   </div>
                 </div>
-                
+
                 <ul className="space-y-3 mb-8 flex-grow">
                   {plan.features.map((feature, i) => (
                     <li key={i} className="flex items-start gap-3">
@@ -479,20 +563,28 @@ export default function DashboardPage() {
                           d="M5 13l4 4L19 7"
                         />
                       </svg>
-                      <span className="text-gray-400 text-sm font-light">{feature}</span>
+                      <span className="text-gray-400 text-sm font-light">
+                        {feature}
+                      </span>
                     </li>
                   ))}
                 </ul>
-                
+
                 <button
-                  onClick={() => handlePlanSelection(plan.title.toLowerCase() as "free" | "pro")}
+                  onClick={() =>
+                    handlePlanSelection(
+                      plan.title.toLowerCase() as "free" | "pro"
+                    )
+                  }
                   disabled={plan.isCurrent}
                   className={`w-full py-3 rounded-lg font-medium transition-all duration-200
-                    ${plan.isCurrent
-                      ? "bg-[#2a2a2a] text-gray-600 cursor-not-allowed"
-                      : plan.title === "Pro"
-                      ? "bg-[var(--accent)] text-black hover:bg-[#e6b800]"
-                      : "bg-[#2a2a2a] text-gray-300 hover:bg-[#3a3a3a]"}
+                    ${
+                      plan.isCurrent
+                        ? "bg-[#2a2a2a] text-gray-600 cursor-not-allowed"
+                        : plan.title === "Pro"
+                        ? "bg-[var(--accent)] text-black hover:bg-[#e6b800]"
+                        : "bg-[#2a2a2a] text-gray-300 hover:bg-[#3a3a3a]"
+                    }
                   `}
                 >
                   {plan.buttonText}
@@ -500,22 +592,30 @@ export default function DashboardPage() {
               </div>
             ))}
           </div>
-          
+
           {/* Usage Stats for Free Users */}
           {currentPlan === "free" && usageStats && (
             <div className="mt-12 max-w-2xl mx-auto">
-              <h3 className="text-center text-gray-500 text-sm font-light mb-4">Monthly Usage</h3>
+              <h3 className="text-center text-gray-500 text-sm font-light mb-4">
+                Monthly Usage
+              </h3>
               <div className="grid grid-cols-3 gap-4">
                 <div className="bg-[#1a1a1a] rounded-lg p-4 text-center border border-[#2a2a2a]">
-                  <p className="text-2xl font-light text-[var(--accent)]">{3 - (usageStats.resume_scans || 0)}/3</p>
+                  <p className="text-2xl font-light text-[var(--accent)]">
+                    {3 - (usageStats.resume_scans || 0)}/3
+                  </p>
                   <p className="text-xs text-gray-500 mt-1">Resume Scans</p>
                 </div>
                 <div className="bg-[#1a1a1a] rounded-lg p-4 text-center border border-[#2a2a2a]">
-                  <p className="text-2xl font-light text-[var(--accent)]">{2 - (usageStats.cover_letters || 0)}/2</p>
+                  <p className="text-2xl font-light text-[var(--accent)]">
+                    {2 - (usageStats.cover_letters || 0)}/2
+                  </p>
                   <p className="text-xs text-gray-500 mt-1">Cover Letters</p>
                 </div>
                 <div className="bg-[#1a1a1a] rounded-lg p-4 text-center border border-[#2a2a2a]">
-                  <p className="text-2xl font-light text-[var(--accent)]">{2 - (usageStats.job_matches || 0)}/2</p>
+                  <p className="text-2xl font-light text-[var(--accent)]">
+                    {2 - (usageStats.job_matches || 0)}/2
+                  </p>
                   <p className="text-xs text-gray-500 mt-1">Job Matches</p>
                 </div>
               </div>

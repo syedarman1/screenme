@@ -8,7 +8,7 @@ import { useRouter } from "next/navigation";
 const DynamicNavbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [user, setUser] = useState<any>(null);
-  const [dropdownOpen, setDropdownOpen] = useState(false);
+
   const router = useRouter();
 
   // Change navbar background on scroll

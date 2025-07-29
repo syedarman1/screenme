@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
         // Check for empty file
          if (audioEntry.size === 0) {
              console.error("Validation Error: Received empty audio file.");
-             // You might want to return a specific error message the client can show
+         
              return NextResponse.json({ error: "Received empty audio file." }, { status: 400 });
          }
 
@@ -86,7 +86,6 @@ export async function POST(req: NextRequest) {
             }
 
         } catch (error: any) {
-            // Log the specific error from OpenAI SDK!
             console.error("ERROR DURING WHISPER TRANSCRIPTION:", error);
             // Return a structured error
             return NextResponse.json({
@@ -120,7 +119,6 @@ export async function POST(req: NextRequest) {
             }
 
         } catch (error: any) {
-             // Log the specific error from OpenAI SDK!
             console.error("ERROR DURING GPT COMPLETION:", error);
              // Decide: Still return transcript even if GPT fails? Yes.
             return NextResponse.json({

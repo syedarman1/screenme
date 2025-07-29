@@ -1,4 +1,3 @@
-// src/app/api/stripe/webhook/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { supabase } from '../../../../lib/supabaseClient';
@@ -9,7 +8,6 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
 
 const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET!;
 
-// Add validation
 if (!endpointSecret) {
   console.error('STRIPE_WEBHOOK_SECRET is not configured');
 }
@@ -30,13 +28,11 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // Handle the event
   try {
     switch (event.type) {
       case 'checkout.session.completed': {
         const session = event.data.object as Stripe.Checkout.Session;
         
-        // Get the user ID from metadata
         const userId = session.metadata?.userId;
         
         if (!userId) {
@@ -44,7 +40,6 @@ export async function POST(req: NextRequest) {
           break;
         }
 
-        // Check if we already processed this session using your function
         const { data: alreadyProcessed } = await supabase
           .rpc('is_stripe_session_processed', { p_session_id: session.id });
           
@@ -53,7 +48,7 @@ export async function POST(req: NextRequest) {
           break;
         }
 
-        // Record the session with full details using enhanced function
+
         await supabase.rpc('record_stripe_session', {
           p_session_id: session.id,
           p_user_id: userId,
@@ -73,7 +68,7 @@ export async function POST(req: NextRequest) {
           }
         });
 
-        // Upgrade user to Pro using your function
+
         const { data: upgradeSuccess, error: upgradeError } = await supabase
           .rpc('upgrade_user_to_pro_with_stripe', {
             p_user_id: userId,
@@ -86,7 +81,7 @@ export async function POST(req: NextRequest) {
           throw upgradeError;
         }
 
-        // Record the payment event for analytics
+
         if (session.amount_total && session.payment_status === 'paid') {
           await supabase.rpc('record_payment_event', {
             p_user_id: userId,
@@ -113,7 +108,7 @@ export async function POST(req: NextRequest) {
       case 'customer.subscription.updated': {
         const subscription = event.data.object as Stripe.Subscription;
         
-        // Handle subscription status changes
+
         const { data: planData } = await supabase
           .from('user_plans')
           .select('user_id')
@@ -155,7 +150,7 @@ export async function POST(req: NextRequest) {
       case 'customer.subscription.deleted': {
         const subscription = event.data.object as Stripe.Subscription;
         
-        // Handle subscription cancellation
+
         const { data: planData } = await supabase
           .from('user_plans')
           .select('user_id')
@@ -183,7 +178,7 @@ export async function POST(req: NextRequest) {
       case 'invoice.payment_succeeded': {
         const invoice = event.data.object as Stripe.Invoice;
         
-        // Handle successful recurring payment
+
         const { data: planData } = await supabase
           .from('user_plans')
           .select('user_id')
@@ -191,7 +186,7 @@ export async function POST(req: NextRequest) {
           .single();
 
         if (planData) {
-          // Ensure user is on Pro and status is active
+
           await supabase
             .from('user_plans')
             .update({
@@ -228,7 +223,7 @@ export async function POST(req: NextRequest) {
       case 'invoice.payment_failed': {
         const invoice = event.data.object as Stripe.Invoice;
         
-        // Handle failed payment
+
         const { data: planData } = await supabase
           .from('user_plans')
           .select('user_id')
@@ -236,8 +231,7 @@ export async function POST(req: NextRequest) {
           .single();
 
         if (planData) {
-          // Update status but don't immediately downgrade
-          // Stripe usually gives a few retry attempts
+
           await supabase
             .from('user_plans')
             .update({
@@ -246,7 +240,7 @@ export async function POST(req: NextRequest) {
             })
             .eq('user_id', planData.user_id);
 
-          // Record the failed payment event
+
           await supabase.rpc('record_payment_event', {
             p_user_id: planData.user_id,
             p_event_type: 'invoice.payment_failed',
@@ -268,8 +262,7 @@ export async function POST(req: NextRequest) {
             
           console.log(`Payment failed for user ${planData.user_id} - marked as past_due`);
           
-          // You might want to send an email notification here
-          // or implement your own retry logic
+          
         }
         break;
       }
@@ -288,5 +281,5 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({ received: true });
 }
 
-// Required for Stripe webhook verification
+
 export const runtime = 'nodejs';

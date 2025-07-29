@@ -1,29 +1,31 @@
 "use client";
 
-import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { supabase } from '../lib/supabaseClient';
+import React, { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+
 
 const ContactPage = () => {
   const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    subject: '',
-    message: ''
+    name: "",
+    email: "",
+    subject: "",
+    message: "",
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitStatus, setSubmitStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [submitStatus, setSubmitStatus] = useState<
+    "idle" | "success" | "error"
+  >("idle");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
-    setSubmitStatus('idle');
+    setSubmitStatus("idle");
 
     try {
-      const response = await fetch('/api/contact', {
-        method: 'POST',
+      const response = await fetch("/api/contact", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify(formData),
       });
@@ -31,29 +33,32 @@ const ContactPage = () => {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to send message');
+        throw new Error(data.error || "Failed to send message");
       }
 
-      setSubmitStatus('success');
-      setFormData({ name: '', email: '', subject: '', message: '' });
+      setSubmitStatus("success");
+      setFormData({ name: "", email: "", subject: "", message: "" });
     } catch (error: any) {
-      console.error('Contact form error:', error);
-      setSubmitStatus('error');
+      console.error("Contact form error:", error);
+      setSubmitStatus("error");
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    setFormData(prev => ({
+  const handleInputChange = (
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+    >
+  ) => {
+    setFormData((prev) => ({
       ...prev,
-      [e.target.name]: e.target.value
+      [e.target.name]: e.target.value,
     }));
   };
 
   return (
     <div className="min-h-screen bg-[var(--background)] relative">
-
       {/* Main Content */}
       <div className="relative z-10 container mx-auto px-6 py-16">
         <motion.div
@@ -78,7 +83,7 @@ const ContactPage = () => {
               transition={{ duration: 0.8, delay: 0.4 }}
               className="text-xl text-[var(--gray-300)] max-w-2xl mx-auto leading-relaxed"
             >
-              Have questions about your resume? Need help with your job search? 
+              Have questions about your resume? Need help with your job search?
               We're here to help you succeed in your career journey.
             </motion.p>
           </div>
@@ -94,7 +99,7 @@ const ContactPage = () => {
               <h2 className="text-2xl font-bold text-[var(--gray-100)] mb-6">
                 Send us a Message
               </h2>
-              
+
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="grid md:grid-cols-2 gap-6">
                   <div>
@@ -175,12 +180,12 @@ const ContactPage = () => {
                       Sending...
                     </div>
                   ) : (
-                    'Send Message'
+                    "Send Message"
                   )}
                 </motion.button>
 
                 <AnimatePresence>
-                  {submitStatus === 'success' && (
+                  {submitStatus === "success" && (
                     <motion.div
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
@@ -190,7 +195,7 @@ const ContactPage = () => {
                       ✅ Message sent successfully! We'll get back to you soon.
                     </motion.div>
                   )}
-                  {submitStatus === 'error' && (
+                  {submitStatus === "error" && (
                     <motion.div
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
@@ -222,9 +227,15 @@ const ContactPage = () => {
                       📧
                     </div>
                     <div>
-                      <h3 className="text-lg font-semibold text-[var(--gray-100)]">Email Us</h3>
-                      <p className="text-[var(--gray-300)]">support@screenme.com</p>
-                      <p className="text-sm text-[var(--gray-400)]">We typically respond within 24 hours</p>
+                      <h3 className="text-lg font-semibold text-[var(--gray-100)]">
+                        Email Us
+                      </h3>
+                      <p className="text-[var(--gray-300)]">
+                        support@screenme.com
+                      </p>
+                      <p className="text-sm text-[var(--gray-400)]">
+                        We typically respond within 24 hours
+                      </p>
                     </div>
                   </div>
                 </motion.div>
@@ -238,9 +249,15 @@ const ContactPage = () => {
                       💬
                     </div>
                     <div>
-                      <h3 className="text-lg font-semibold text-[var(--gray-100)]">Live Chat</h3>
-                      <p className="text-[var(--gray-300)]">Available during business hours</p>
-                      <p className="text-sm text-[var(--gray-400)]">Get instant help with your questions</p>
+                      <h3 className="text-lg font-semibold text-[var(--gray-100)]">
+                        Live Chat
+                      </h3>
+                      <p className="text-[var(--gray-300)]">
+                        Available during business hours
+                      </p>
+                      <p className="text-sm text-[var(--gray-400)]">
+                        Get instant help with your questions
+                      </p>
                     </div>
                   </div>
                 </motion.div>
@@ -254,9 +271,15 @@ const ContactPage = () => {
                       📚
                     </div>
                     <div>
-                      <h3 className="text-lg font-semibold text-[var(--gray-100)]">Help Center</h3>
-                      <p className="text-[var(--gray-300)]">Browse our knowledge base</p>
-                      <p className="text-sm text-[var(--gray-400)]">Find answers to common questions</p>
+                      <h3 className="text-lg font-semibold text-[var(--gray-100)]">
+                        Help Center
+                      </h3>
+                      <p className="text-[var(--gray-300)]">
+                        Browse our knowledge base
+                      </p>
+                      <p className="text-sm text-[var(--gray-400)]">
+                        Find answers to common questions
+                      </p>
                     </div>
                   </div>
                 </motion.div>
@@ -269,21 +292,30 @@ const ContactPage = () => {
                 </h3>
                 <div className="space-y-4">
                   <div className="border-l-4 border-[var(--accent)] pl-4">
-                    <h4 className="font-semibold text-[var(--gray-100)]">How accurate is the resume scoring?</h4>
+                    <h4 className="font-semibold text-[var(--gray-100)]">
+                      How accurate is the resume scoring?
+                    </h4>
                     <p className="text-sm text-[var(--gray-300)] mt-1">
-                      Our AI analyzes resumes using industry best practices and ATS optimization standards.
+                      Our AI analyzes resumes using industry best practices and
+                      ATS optimization standards.
                     </p>
                   </div>
                   <div className="border-l-4 border-[var(--accent)] pl-4">
-                    <h4 className="font-semibold text-[var(--gray-100)]">Can I use this for any industry?</h4>
+                    <h4 className="font-semibold text-[var(--gray-100)]">
+                      Can I use this for any industry?
+                    </h4>
                     <p className="text-sm text-[var(--gray-300)] mt-1">
-                      Yes! Our system adapts to different industries and job levels.
+                      Yes! Our system adapts to different industries and job
+                      levels.
                     </p>
                   </div>
                   <div className="border-l-4 border-[var(--accent)] pl-4">
-                    <h4 className="font-semibold text-[var(--gray-100)]">Is my data secure?</h4>
+                    <h4 className="font-semibold text-[var(--gray-100)]">
+                      Is my data secure?
+                    </h4>
                     <p className="text-sm text-[var(--gray-300)] mt-1">
-                      Absolutely. We use enterprise-grade security and never share your information.
+                      Absolutely. We use enterprise-grade security and never
+                      share your information.
                     </p>
                   </div>
                 </div>
@@ -296,4 +328,4 @@ const ContactPage = () => {
   );
 };
 
-export default ContactPage; 
+export default ContactPage;

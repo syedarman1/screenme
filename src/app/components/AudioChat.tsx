@@ -27,7 +27,9 @@ export default function AudioChat() {
   // --- Get current user ---
   useEffect(() => {
     const getCurrentUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       setCurrentUser(user);
     };
     getCurrentUser();
@@ -36,7 +38,9 @@ export default function AudioChat() {
   // --- Initialize startDisabled on client ---
   useEffect(() => {
     // This runs only on the client
-    const disabled = !hasPermission && (typeof navigator === "undefined" || !navigator.permissions);
+    const disabled =
+      !hasPermission &&
+      (typeof navigator === "undefined" || !navigator.permissions);
     setStartDisabled(disabled);
   }, [hasPermission]);
 
@@ -86,7 +90,9 @@ export default function AudioChat() {
       setIsSpeaking(false);
     };
     const voices = synthRef.current.getVoices();
-    const female = voices.find((v) => /female/i.test(v.name) && v.lang.startsWith("en"));
+    const female = voices.find(
+      (v) => /female/i.test(v.name) && v.lang.startsWith("en")
+    );
     if (female) utter.voice = female;
     synthRef.current.speak(utter);
   };
@@ -112,7 +118,9 @@ export default function AudioChat() {
     } catch (err) {
       console.error("Mic permission error:", err);
       setHasPermission(false);
-      alert("Microphone access was denied. Please enable it in browser settings.");
+      alert(
+        "Microphone access was denied. Please enable it in browser settings."
+      );
       return false;
     }
   };
@@ -127,7 +135,9 @@ export default function AudioChat() {
         })
         .catch(() => setHasPermission(false));
     } else {
-      console.warn("Permissions API not supported for microphone state checking.");
+      console.warn(
+        "Permissions API not supported for microphone state checking."
+      );
     }
   }, []);
 
@@ -167,8 +177,7 @@ export default function AudioChat() {
       const form = new FormData();
       form.append("audio", audioBlob, "audio.webm");
       form.append("history", JSON.stringify(msgs));
-      
-      // Add userId to form data for usage tracking
+
       if (currentUser?.id) {
         form.append("userId", currentUser.id);
       }
@@ -183,7 +192,7 @@ export default function AudioChat() {
           method: "POST",
           body: form,
         });
-        
+
         if (!res.ok) {
           let errorDetails = `Server error ${res.status}`;
           try {
@@ -197,11 +206,13 @@ export default function AudioChat() {
           } catch {}
           throw new Error(errorDetails);
         }
-        
+
         const { transcript, reply } = await res.json();
         setMsgs((prev) =>
           prev.map((m) =>
-            m.id === placeholderId ? { ...m, text: transcript || "[Silence]" } : m
+            m.id === placeholderId
+              ? { ...m, text: transcript || "[Silence]" }
+              : m
           )
         );
         setTimeout(() => {
@@ -457,8 +468,7 @@ export default function AudioChat() {
                       : "bg-[var(--accent)]/20 text-[var(--accent)]"
                   }`}
                 >
-                  <strong>{m.who === "user" ? "You:" : "AI:"}</strong>{" "}
-                  {m.text}
+                  <strong>{m.who === "user" ? "You:" : "AI:"}</strong> {m.text}
                 </div>
               ))
             )}

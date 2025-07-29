@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { supabase } from '../lib/supabaseClient';
+import React, { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { supabase } from "../lib/supabaseClient";
 
 type PricingPlan = {
   title: string;
@@ -25,10 +25,9 @@ const PRICING_PLANS: PricingPlan[] = [
       "2× Cover letter per month",
       "2× Job-match analysis per month",
       "Basic tone only",
-      "Email support"
+      "Email support",
     ],
     buttonText: "Get Started",
-    // No priceId for Free plan since it's $0 and doesn't require checkout
   },
   {
     title: "Pro",
@@ -40,7 +39,7 @@ const PRICING_PLANS: PricingPlan[] = [
       "Unlimited job-match analysis",
       "Unlimited interview prep Q&A",
       "All tone options (Professional, Enthusiastic, Concise)",
-      "Live voice interview practice"
+      "Live voice interview practice",
     ],
     buttonText: "Go Pro",
     isFeatured: true,
@@ -52,7 +51,7 @@ const PRICING_PLANS: PricingPlan[] = [
     features: [
       "All Pro features",
       "Team seats & usage analytics",
-      "Dedicated support & SLAs"
+      "Dedicated support & SLAs",
     ],
     buttonText: "Contact Us",
   },
@@ -64,13 +63,21 @@ const PricingCard = ({ plan }: { plan: PricingPlan }) => {
 
   useEffect(() => {
     const checkAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
       setIsAuthenticated(!!session);
     };
     checkAuth();
   }, []);
 
   const handleCheckoutRedirect = () => {
+    // Handle Enterprise plan - redirect to contact page
+    if (plan.title === "Enterprise") {
+      router.push("/contact");
+      return;
+    }
+
     if (isAuthenticated === null) {
       return; // Still loading auth state
     }
@@ -78,24 +85,28 @@ const PricingCard = ({ plan }: { plan: PricingPlan }) => {
     if (!isAuthenticated) {
       // Store priceId if it exists (for Pro plan), then redirect to login
       if (plan.priceId) {
-        localStorage.setItem('selectedPriceId', plan.priceId);
+        localStorage.setItem("selectedPriceId", plan.priceId);
       }
-      router.push('/login');
+      router.push("/login");
       return;
     }
 
     // Authenticated users go to dashboard
     if (plan.priceId) {
-      localStorage.setItem('selectedPriceId', plan.priceId);
+      localStorage.setItem("selectedPriceId", plan.priceId);
     }
-    router.push('/dashboard');
+    router.push("/dashboard");
   };
 
   return (
     <div
       className={`
         bg-[var(--neutral-800)] p-6 rounded-lg text-center
-        border-2 ${plan.isFeatured ? 'border-[var(--accent)] scale-105' : 'border-[var(--neutral-700)]'}
+        border-2 ${
+          plan.isFeatured
+            ? "border-[var(--accent)] scale-105"
+            : "border-[var(--neutral-700)]"
+        }
         flex flex-col transition-transform duration-200 ease-in-out
       `}
     >
@@ -123,7 +134,11 @@ const PricingCard = ({ plan }: { plan: PricingPlan }) => {
               stroke="currentColor"
               strokeWidth={3}
             >
-              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M5 13l4 4L19 7"
+              />
             </svg>
             <span>{feature}</span>
           </li>
@@ -169,7 +184,7 @@ export default function PricingSection() {
           Simple, Transparent Pricing
         </h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 items-stretch">
-          {PRICING_PLANS.map(plan => (
+          {PRICING_PLANS.map((plan) => (
             <PricingCard key={plan.title} plan={plan} />
           ))}
         </div>

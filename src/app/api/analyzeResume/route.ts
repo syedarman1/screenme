@@ -544,7 +544,7 @@ export async function POST(req: Request) {
       console.error("Schema validation errors:", result.error.format());
       console.error("Raw parsed data:", JSON.stringify(parsed, null, 2).substring(0, 1000));
       
-      // Try to provide more specific error messages
+
       const errors = result.error.issues;
       const errorMessages = errors.map(err => 
         `${err.path.join('.')}: ${err.message}`
