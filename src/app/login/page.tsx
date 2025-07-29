@@ -19,6 +19,11 @@ export default function AuthPage() {
       return;
     }
 
+    if (!supabase) {
+      setError("Authentication service is not available. Please try again later.");
+      return;
+    }
+
     setLoading(true);
     setError(null);
     setMessage(null);
@@ -49,6 +54,11 @@ export default function AuthPage() {
 
     if (!email || !password) {
       setError("Please enter both email and password");
+      return;
+    }
+
+    if (!supabase) {
+      setError("Authentication service is not available. Please try again later.");
       return;
     }
 
@@ -92,6 +102,11 @@ export default function AuthPage() {
   };
 
   const handleGoogleOAuth = async () => {
+    if (!supabase) {
+      setError("Authentication service is not available. Please try again later.");
+      return;
+    }
+
     setLoading(true);
     setError(null);
     setMessage(null);

@@ -47,6 +47,18 @@ export async function POST(req: NextRequest) {
     let event: Stripe.Event | undefined;
 
     try {
+        // 0. Check if Supabase client is available
+        if (!supabase) {
+            logSecurityEvent('error', 'Supabase client not available - missing environment variables', { 
+                requestId,
+                ip: req.headers.get('x-forwarded-for') || 'unknown'
+            });
+            return NextResponse.json(
+                { error: 'Database service not available' },
+                { status: 500 }
+            );
+        }
+
         // 1. Validate Content-Type header
         const contentType = req.headers.get('content-type');
         if (!contentType || !contentType.includes('application/json')) {

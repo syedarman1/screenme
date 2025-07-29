@@ -9,6 +9,15 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
 // POST /api/stripe - Create checkout session
 export async function POST(req: NextRequest) {
   try {
+    // Check if Supabase client is available
+    if (!supabase) {
+      console.error('Supabase client not available - missing environment variables');
+      return NextResponse.json(
+        { error: 'Database service not available' },
+        { status: 500 }
+      );
+    }
+
     const body = await req.json();
     
     // Check if this is a verification request
@@ -72,6 +81,18 @@ async function verifySession(sessionId: string, userId: string) {
         message: 'Missing session ID or user ID' 
       },
       { status: 400 }
+    );
+  }
+
+  // Check if Supabase client is available
+  if (!supabase) {
+    console.error('Supabase client not available during session verification');
+    return NextResponse.json(
+      { 
+        success: false, 
+        message: 'Database service not available' 
+      },
+      { status: 500 }
     );
   }
 

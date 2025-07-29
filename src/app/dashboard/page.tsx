@@ -38,6 +38,12 @@ export default function DashboardPage() {
   useEffect(() => {
     const checkUserAndPlan = async () => {
       try {
+        if (!supabase) {
+          setError("Authentication service is not available. Please try again later.");
+          setLoading(false);
+          return;
+        }
+
         const { data, error: authError } = await supabase.auth.getUser();
         if (authError) throw new Error("Failed to fetch user");
         if (!data?.user) {
@@ -87,7 +93,9 @@ export default function DashboardPage() {
         setSelectedPriceId(priceId);
 
         return () => {
-          supabase.removeChannel(subscription);
+          if (supabase) {
+            supabase.removeChannel(subscription);
+          }
         };
       } catch (e: any) {
         setError(e.message || "An error occurred while loading your dashboard");
@@ -108,6 +116,10 @@ export default function DashboardPage() {
     }
 
     if (planType === "free") {
+      if (!supabase) {
+        setError("Authentication service is not available. Please try again later.");
+        return;
+      }
       await supabase
         .from("user_plans")
         .upsert({ user_id: userId, plan: "free" }, { onConflict: "user_id" });

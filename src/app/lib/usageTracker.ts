@@ -24,6 +24,12 @@ interface UserPlanData {
 
 export async function checkUsageLimit(userId: string, feature: FeatureType): Promise<UsageCheckResult> {
   try {
+    // Check if Supabase client is available
+    if (!supabase) {
+      console.warn('Supabase client not available, allowing access');
+      return { allowed: true, limit: -1, remaining: -1, plan: 'free' };
+    }
+
     // Query user plan and usage directly from database
     const { data: planData, error: planError } = await supabase
       .from('user_plans')
@@ -38,21 +44,21 @@ export async function checkUsageLimit(userId: string, feature: FeatureType): Pro
       .single();
 
     // If no plan found, create default free plan
-    if (planError || !planData) {
+    if ((planError || !planData) && supabase) {
       await supabase
         .from('user_plans')
         .upsert({ user_id: userId, plan: 'free' }, { onConflict: 'user_id' });
     }
 
     // If no usage found, create default usage record
-    if (usageError || !usageData) {
+    if ((usageError || !usageData) && supabase) {
       await supabase
         .from('user_usage')
-        .upsert({ 
-          user_id: userId, 
-          resume_scans: 0, 
-          cover_letters: 0, 
-          job_matches: 0, 
+        .upsert({
+          user_id: userId,
+          resume_scans: 0,
+          cover_letters: 0,
+          job_matches: 0,
           interview_preps: 0,
           last_reset: new Date().toISOString()
         }, { onConflict: 'user_id' });
@@ -83,15 +89,15 @@ export async function checkUsageLimit(userId: string, feature: FeatureType): Pro
     const limit = limits[feature];
     const fieldName = getUsageFieldName(feature);
     const currentUsage = (currentUsageData[fieldName as keyof UserUsageData] as number) || 0;
-    
+
     // Calculate remaining and allowed status
     const remaining = Math.max(0, limit - currentUsage);
     const allowed = currentUsage < limit;
 
-    return { 
-      allowed, 
-      limit, 
-      remaining, 
+    return {
+      allowed,
+      limit,
+      remaining,
       plan: plan as 'free' | 'pro'
     };
   } catch (error) {
@@ -102,8 +108,13 @@ export async function checkUsageLimit(userId: string, feature: FeatureType): Pro
 
 export async function incrementUsage(userId: string, feature: FeatureType): Promise<boolean> {
   try {
+    if (!supabase) {
+      console.warn('Supabase client not available, skipping usage increment');
+      return true;
+    }
+
     const fieldName = getUsageFieldName(feature);
-    
+
     // Get current usage value
     const { data: existingUsage, error: fetchError } = await supabase
       .from('user_usage')
@@ -123,14 +134,14 @@ export async function incrementUsage(userId: string, feature: FeatureType): Prom
           interview_preps: feature === 'interview_prep' ? 1 : 0,
           last_reset: new Date().toISOString()
         }, { onConflict: 'user_id' });
-      
+
       return !createError;
     }
 
     // Record exists, increment it
     const currentValue = existingUsage[fieldName as keyof typeof existingUsage] || 0;
     const newValue = (currentValue as number) + 1;
-    
+
     const { error: updateError } = await supabase
       .from('user_usage')
       .update({
@@ -158,6 +169,11 @@ export async function canUseFeature(userId: string, feature: FeatureType): Promi
 
 export async function initializeUserData(userId: string): Promise<boolean> {
   try {
+    if (!supabase) {
+      console.warn('Supabase client not available, skipping user data initialization');
+      return true;
+    }
+
     // Insert default records for new users
     const { error: planError } = await supabase
       .from('user_plans')
@@ -165,15 +181,15 @@ export async function initializeUserData(userId: string): Promise<boolean> {
 
     const { error: usageError } = await supabase
       .from('user_usage')
-      .upsert({ 
-        user_id: userId, 
-        resume_scans: 0, 
-        cover_letters: 0, 
-        job_matches: 0, 
+      .upsert({
+        user_id: userId,
+        resume_scans: 0,
+        cover_letters: 0,
+        job_matches: 0,
         interview_preps: 0,
         last_reset: new Date().toISOString()
       }, { onConflict: 'user_id' });
-    
+
     return !planError && !usageError;
   } catch (error) {
     console.error('Error in initializeUserData:', error);
@@ -183,12 +199,23 @@ export async function initializeUserData(userId: string): Promise<boolean> {
 
 export async function getPlanUsage(userId: string) {
   try {
+    if (!supabase) {
+      console.warn('Supabase client not available, returning default plan usage');
+      return {
+        plan: 'free',
+        resume_scans: 0,
+        cover_letters: 0,
+        job_matches: 0,
+        interview_preps: 0
+      };
+    }
+
     // Query both tables directly
     const [planResult, usageResult] = await Promise.all([
       supabase.from('user_plans').select('*').eq('user_id', userId).single(),
       supabase.from('user_usage').select('*').eq('user_id', userId).single()
     ]);
-    
+
     return {
       plan: planResult.data?.plan || 'free',
       ...usageResult.data
@@ -201,8 +228,13 @@ export async function getPlanUsage(userId: string) {
 
 export async function resetMonthlyUsage(): Promise<number | null> {
   try {
+    if (!supabase) {
+      console.warn('Supabase client not available, skipping monthly usage reset');
+      return 0;
+    }
+
     const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
-    
+
     const { count, error } = await supabase
       .from('user_usage')
       .update({
@@ -214,12 +246,12 @@ export async function resetMonthlyUsage(): Promise<number | null> {
         updated_at: new Date().toISOString()
       })
       .lt('last_reset', thirtyDaysAgo);
-    
+
     if (error) {
       console.error('Error resetting monthly usage:', error);
       return null;
     }
-    
+
     return count || 0;
   } catch (error) {
     console.error('Error in resetMonthlyUsage:', error);
@@ -229,12 +261,17 @@ export async function resetMonthlyUsage(): Promise<number | null> {
 
 export async function debugUserStatus(userId: string) {
   try {
+    if (!supabase) {
+      console.warn('Supabase client not available, returning null for debug status');
+      return null;
+    }
+
     // Query both tables for debugging
     const [planResult, usageResult] = await Promise.all([
       supabase.from('user_plans').select('*').eq('user_id', userId).single(),
       supabase.from('user_usage').select('*').eq('user_id', userId).single()
     ]);
-    
+
     return {
       user_exists: true,
       plan_exists: !planResult.error,
@@ -252,7 +289,7 @@ export async function debugUserStatus(userId: string) {
 function getUsageFieldName(feature: FeatureType): string {
   const fieldMap = {
     resume_scan: 'resume_scans',
-    cover_letter: 'cover_letters', 
+    cover_letter: 'cover_letters',
     job_match: 'job_matches',
     interview_prep: 'interview_preps'
   };
