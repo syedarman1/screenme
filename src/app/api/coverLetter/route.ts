@@ -30,10 +30,13 @@ City, State ZIP
 Output only the cover letter text—no JSON wrapper, no extra commentary.
 `.trim();
 
-const openai = new OpenAI({ 
-  apiKey: process.env.OPENAI_API_KEY,
-  timeout: 30000
-});
+// Only create OpenAI client if API key is available
+const openai = process.env.OPENAI_API_KEY
+  ? new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY,
+    timeout: 30000
+  })
+  : null;
 
 export async function POST(request: Request) {
   try {
@@ -114,6 +117,23 @@ ${jobDesc?.trim() || "(none provided)"}
 Tone: ${tone.trim()}
 `.trim();
 
+    // Check if OpenAI client is available
+    if (!openai) {
+      const serviceError = ErrorTypes.OPENAI_SERVICE_ERROR();
+      return NextResponse.json(
+        {
+          error: 'AI cover letter service is not configured. Please contact support.',
+          details: {
+            message: serviceError.message,
+            code: serviceError.code,
+            action: serviceError.action
+          },
+          timestamp: new Date().toISOString()
+        },
+        { status: serviceError.status }
+      );
+    }
+
     // Call OpenAI API
     let coverLetter: string;
     try {
@@ -128,13 +148,13 @@ Tone: ${tone.trim()}
       });
 
       coverLetter = completion.choices[0].message?.content?.trim() || "";
-      
+
       if (!coverLetter) {
         throw ErrorTypes.OPENAI_SERVICE_ERROR();
       }
     } catch (err: any) {
       console.error("OpenAI error:", err);
-      
+
       // Check for specific OpenAI error types
       if (err.message?.includes('rate limit') || err.message?.includes('quota')) {
         const rateLimitError = ErrorTypes.OPENAI_SERVICE_ERROR();
@@ -151,7 +171,7 @@ Tone: ${tone.trim()}
           { status: 503 }
         );
       }
-      
+
       const serviceError = ErrorTypes.OPENAI_SERVICE_ERROR();
       return handleAPIError(serviceError);
     }
@@ -165,9 +185,9 @@ Tone: ${tone.trim()}
       }
     }
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       coverLetter,
-      success: true 
+      success: true
     }, {
       headers: {
         'Cache-Control': 'private, max-age=1800', // 30 minutes

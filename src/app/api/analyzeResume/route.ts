@@ -332,7 +332,7 @@ function preprocessResume(text: string): {
 
   let bulletStyle = 'none';
   let maxCount = 0;
-  
+
   for (const [style, regex] of Object.entries(bulletStyles)) {
     const matches = text.match(regex);
     if (matches && matches.length > maxCount) {
@@ -345,7 +345,7 @@ function preprocessResume(text: string): {
   const hasMarkdown = /[*_~`#]/.test(text);
   const hasHTML = /<[^>]+>/.test(text);
   const hasPipes = /\|/.test(text); // Possible table
-  
+
   let detectedFormat = 'plain';
   if (hasMarkdown) detectedFormat = 'markdown';
   if (hasHTML) detectedFormat = 'html';
@@ -376,9 +376,9 @@ function detectSections(text: string): string[] {
   for (const line of lines) {
     const cleaned = line.trim().toLowerCase();
     // Check if line might be a header (short, possibly all caps, matches common headers)
-    if (cleaned.length < 50 && 
-        (line.trim() === line.trim().toUpperCase() || 
-         commonHeaders.some(h => cleaned.includes(h)))) {
+    if (cleaned.length < 50 &&
+      (line.trim() === line.trim().toUpperCase() ||
+        commonHeaders.some(h => cleaned.includes(h)))) {
       detectedSections.push(line.trim());
     }
   }
@@ -386,10 +386,13 @@ function detectSections(text: string): string[] {
   return detectedSections;
 }
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-  timeout: 30000,
-});
+// Only create OpenAI client if API key is available
+const openai = process.env.OPENAI_API_KEY
+  ? new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY,
+    timeout: 30000,
+  })
+  : null;
 
 export async function POST(req: Request) {
   try {
@@ -480,7 +483,7 @@ export async function POST(req: Request) {
     enhancedPrompt += `\n- Format: ${format || detectedFormat}`;
     enhancedPrompt += `\n- Bullet Style: ${bulletStyle}`;
     enhancedPrompt += `\n- Detected Sections: ${detectedSections.join(', ')}`;
-    
+
     if (options?.focusArea) {
       enhancedPrompt += `\n\nPay special attention to the "${options.focusArea}" section.`;
     }
@@ -495,6 +498,22 @@ export async function POST(req: Request) {
     let raw = "";
     let retries = 0;
     const maxRetries = 2;
+
+    if (!openai) {
+      const serviceError = ErrorTypes.OPENAI_SERVICE_ERROR();
+      return NextResponse.json(
+        {
+          error: 'AI analysis service is not configured. Please contact support.',
+          details: {
+            message: serviceError.message,
+            code: serviceError.code,
+            action: serviceError.action
+          },
+          timestamp: new Date().toISOString()
+        },
+        { status: serviceError.status }
+      );
+    }
 
     while (retries <= maxRetries) {
       try {
@@ -543,13 +562,13 @@ export async function POST(req: Request) {
     if (!result.success) {
       console.error("Schema validation errors:", result.error.format());
       console.error("Raw parsed data:", JSON.stringify(parsed, null, 2).substring(0, 1000));
-      
+
 
       const errors = result.error.issues;
-      const errorMessages = errors.map(err => 
+      const errorMessages = errors.map(err =>
         `${err.path.join('.')}: ${err.message}`
       ).join('; ');
-      
+
       const formatError = ErrorTypes.INVALID_RESPONSE_FORMAT();
       return NextResponse.json(
         {
@@ -572,27 +591,27 @@ export async function POST(req: Request) {
 
     // Post-process to ensure scoring is consistent and fix mismatched rewrites
     const processedData = result.data;
-    
+
     // Filter out false "table format" issues
     processedData.issues = processedData.issues.filter(issue => {
       // If it's a "table format" issue, check if the line actually contains table indicators
       if (issue.text.toLowerCase().includes('table format')) {
-        const hasTableIndicators = 
-          issue.line.includes('|') || 
+        const hasTableIndicators =
+          issue.line.includes('|') ||
           issue.line.split(/\s{4,}/).length > 3 || // Multiple large spaces
           issue.line.includes('\t\t'); // Multiple tabs
-        
+
         if (!hasTableIndicators) {
           console.log('Filtered out false table format issue:', issue.line);
           return false;
         }
       }
-      
+
       // Filter out false "weak verb" issues for strong verbs
-      const strongVerbs = ['resolved', 'developed', 'implemented', 'enhanced', 'optimized', 
-                          'designed', 'built', 'launched', 'led', 'managed', 'achieved', 
-                          'delivered', 'transformed', 'established', 'streamlined'];
-      
+      const strongVerbs = ['resolved', 'developed', 'implemented', 'enhanced', 'optimized',
+        'designed', 'built', 'launched', 'led', 'managed', 'achieved',
+        'delivered', 'transformed', 'established', 'streamlined'];
+
       if (issue.text.toLowerCase().includes('weak') || issue.text.toLowerCase().includes('less impactful')) {
         const firstWord = issue.line.toLowerCase().replace(/[•\-\*]\s*/, '').split(' ')[0];
         if (strongVerbs.includes(firstWord)) {
@@ -600,40 +619,40 @@ export async function POST(req: Request) {
           return false;
         }
       }
-      
+
       return true;
     });
-    
+
     // Validate that actions match their corresponding issues
     processedData.actions = processedData.actions.filter((action, index) => {
       const correspondingIssue = processedData.issues[index];
       if (!correspondingIssue) return false;
-      
+
       // Check if the action addresses the issue
       const issueAboutDates = correspondingIssue.text.toLowerCase().includes('date');
       const actionAboutDates = action.rewrite.includes('2024') || action.rewrite.includes('2023');
-      
+
       if (issueAboutDates && !actionAboutDates) {
         console.log('Filtered out mismatched action - issue about dates but action not fixing dates');
         return false;
       }
-      
+
       return true;
     });
-    
+
     // Ensure issues and actions arrays have same length
     const minLength = Math.min(processedData.issues.length, processedData.actions.length);
     processedData.issues = processedData.issues.slice(0, minLength);
     processedData.actions = processedData.actions.slice(0, minLength);
-    
+
     // Recalculate score if needed based on issues
     const highAtsIssues = processedData.issues.filter(
       i => i.severity === 'high' && i.category === 'ats'
     ).length;
-    
+
     const highIssuesTotal = processedData.issues.filter(i => i.severity === 'high').length;
     const mediumIssuesTotal = processedData.issues.filter(i => i.severity === 'medium').length;
-    
+
     // Apply score caps
     if (highAtsIssues > 0 && processedData.score > 75) {
       processedData.score = 75; // Cap at 75 for HIGH ATS issues

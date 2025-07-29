@@ -45,10 +45,13 @@ Rules:
 /* ------------------------------------------------------------------ */
 /* 3 ▸ OpenAI client                                                   */
 /* ------------------------------------------------------------------ */
-const openai = new OpenAI({ 
-  apiKey: process.env.OPENAI_API_KEY,
-  timeout: 30000
-});
+// Only create OpenAI client if API key is available
+const openai = process.env.OPENAI_API_KEY
+  ? new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY,
+    timeout: 30000
+  })
+  : null;
 
 /* ------------------------------------------------------------------ */
 /* 4 ▸ POST handler                                                   */
@@ -111,6 +114,22 @@ export async function POST(req: Request) {
     }
 
     /* 4‑B ▸ call GPT --------------------------------------------------- */
+    if (!openai) {
+      const serviceError = ErrorTypes.OPENAI_SERVICE_ERROR();
+      return NextResponse.json(
+        {
+          error: 'AI job matching service is not configured. Please contact support.',
+          details: {
+            message: serviceError.message,
+            code: serviceError.code,
+            action: serviceError.action
+          },
+          timestamp: new Date().toISOString()
+        },
+        { status: serviceError.status }
+      );
+    }
+
     let raw = '';
     try {
       const completion = await openai.chat.completions.create({
@@ -125,13 +144,13 @@ export async function POST(req: Request) {
         ],
       });
       raw = completion.choices[0]?.message?.content ?? '';
-      
+
       if (!raw) {
         throw ErrorTypes.OPENAI_SERVICE_ERROR();
       }
     } catch (err: any) {
       console.error('OpenAI error:', err);
-      
+
       // Check for specific OpenAI error types
       if (err.message?.includes('rate limit') || err.message?.includes('quota')) {
         return NextResponse.json(
@@ -147,15 +166,15 @@ export async function POST(req: Request) {
           { status: 503 }
         );
       }
-      
+
       const serviceError = ErrorTypes.OPENAI_SERVICE_ERROR();
       return handleAPIError(serviceError);
     }
 
     /* 4‑C ▸ parse JSON ------------------------------------------------- */
     let parsed: unknown;
-    try { 
-      parsed = JSON.parse(raw); 
+    try {
+      parsed = JSON.parse(raw);
     } catch (parseError) {
       console.error('GPT returned non‑JSON:\n', raw.substring(0, 500));
       const formatError = ErrorTypes.INVALID_RESPONSE_FORMAT();

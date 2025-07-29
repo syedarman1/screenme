@@ -2,9 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { supabase } from '../../lib/supabaseClient';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
-  apiVersion: '2025-04-30.basil',
-});
+// Only create Stripe client if secret key is available
+const stripe = process.env.STRIPE_SECRET_KEY
+  ? new Stripe(process.env.STRIPE_SECRET_KEY, {
+    apiVersion: '2025-04-30.basil',
+  })
+  : null;
 
 // POST /api/stripe - Create checkout session
 export async function POST(req: NextRequest) {
@@ -19,12 +22,12 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    
+
     // Check if this is a verification request
     if (body.action === 'verify' && body.sessionId) {
       return await verifySession(body.sessionId, body.userId);
     }
-    
+
     // Otherwise, create checkout session
     return await createCheckoutSession(body.priceId, body.userId);
   } catch (error: any) {
@@ -40,6 +43,15 @@ export async function POST(req: NextRequest) {
 async function createCheckoutSession(priceId: string, userId: string) {
   console.log('Creating checkout session:', { priceId, userId });
 
+  // Check if Stripe client is available
+  if (!stripe) {
+    console.error('Stripe client not available - missing environment variables');
+    return NextResponse.json(
+      { error: 'Payment service not available' },
+      { status: 500 }
+    );
+  }
+
   // Validate required environment variables
   if (!process.env.STRIPE_SECRET_KEY) {
     throw new Error('STRIPE_SECRET_KEY is not defined');
@@ -47,7 +59,7 @@ async function createCheckoutSession(priceId: string, userId: string) {
 
   // Get base URL with fallback for development
   const baseUrl = process.env.NEXT_PUBLIC_URL || 'http://localhost:3000';
-  
+
   if (!baseUrl || baseUrl === 'undefined') {
     throw new Error('NEXT_PUBLIC_URL environment variable is required for Stripe checkout');
   }
@@ -76,9 +88,9 @@ async function createCheckoutSession(priceId: string, userId: string) {
 async function verifySession(sessionId: string, userId: string) {
   if (!sessionId || !userId) {
     return NextResponse.json(
-      { 
-        success: false, 
-        message: 'Missing session ID or user ID' 
+      {
+        success: false,
+        message: 'Missing session ID or user ID'
       },
       { status: 400 }
     );
@@ -88,9 +100,21 @@ async function verifySession(sessionId: string, userId: string) {
   if (!supabase) {
     console.error('Supabase client not available during session verification');
     return NextResponse.json(
+      {
+        success: false,
+        message: 'Database service not available'
+      },
+      { status: 500 }
+    );
+  }
+
+  // Check if Stripe client is available
+  if (!stripe) {
+    console.error('Stripe client not available during session verification');
+    return NextResponse.json(
       { 
         success: false, 
-        message: 'Database service not available' 
+        message: 'Payment service not available' 
       },
       { status: 500 }
     );
@@ -103,9 +127,9 @@ async function verifySession(sessionId: string, userId: string) {
   } catch (error) {
     console.error('Error retrieving Stripe session:', error);
     return NextResponse.json(
-      { 
-        success: false, 
-        message: 'Invalid session ID or session not found' 
+      {
+        success: false,
+        message: 'Invalid session ID or session not found'
       },
       { status: 400 }
     );
@@ -118,9 +142,9 @@ async function verifySession(sessionId: string, userId: string) {
       requestUserId: userId
     });
     return NextResponse.json(
-      { 
-        success: false, 
-        message: 'Session does not belong to the current user' 
+      {
+        success: false,
+        message: 'Session does not belong to the current user'
       },
       { status: 403 }
     );
@@ -129,9 +153,9 @@ async function verifySession(sessionId: string, userId: string) {
   // Check if payment was successful
   if (session.payment_status !== 'paid') {
     return NextResponse.json(
-      { 
-        success: false, 
-        message: `Payment not completed. Status: ${session.payment_status}` 
+      {
+        success: false,
+        message: `Payment not completed. Status: ${session.payment_status}`
       },
       { status: 400 }
     );
@@ -144,9 +168,9 @@ async function verifySession(sessionId: string, userId: string) {
   if (checkError) {
     console.error('Error checking session status:', checkError);
     return NextResponse.json(
-      { 
-        success: false, 
-        message: 'Database error while checking session status' 
+      {
+        success: false,
+        message: 'Database error while checking session status'
       },
       { status: 500 }
     );
@@ -172,9 +196,9 @@ async function verifySession(sessionId: string, userId: string) {
   if (upgradeError || !upgradeSuccess) {
     console.error('Error upgrading user to Pro:', upgradeError);
     return NextResponse.json(
-      { 
-        success: false, 
-        message: 'Failed to upgrade user to Pro plan' 
+      {
+        success: false,
+        message: 'Failed to upgrade user to Pro plan'
       },
       { status: 500 }
     );

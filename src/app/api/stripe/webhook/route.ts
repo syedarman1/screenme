@@ -2,9 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { supabase } from '../../../lib/supabaseClient';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
-    apiVersion: '2025-04-30.basil',
-});
+// Only create Stripe client if secret key is available
+const stripe = process.env.STRIPE_SECRET_KEY
+    ? new Stripe(process.env.STRIPE_SECRET_KEY, {
+        apiVersion: '2025-04-30.basil',
+    })
+    : null;
 
 const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
@@ -47,14 +50,25 @@ export async function POST(req: NextRequest) {
     let event: Stripe.Event | undefined;
 
     try {
-        // 0. Check if Supabase client is available
+        // 0. Check if required clients are available
         if (!supabase) {
-            logSecurityEvent('error', 'Supabase client not available - missing environment variables', { 
+            logSecurityEvent('error', 'Supabase client not available - missing environment variables', {
                 requestId,
                 ip: req.headers.get('x-forwarded-for') || 'unknown'
             });
             return NextResponse.json(
                 { error: 'Database service not available' },
+                { status: 500 }
+            );
+        }
+
+        if (!stripe) {
+            logSecurityEvent('error', 'Stripe client not available - missing environment variables', {
+                requestId,
+                ip: req.headers.get('x-forwarded-for') || 'unknown'
+            });
+            return NextResponse.json(
+                { error: 'Payment service not available' },
                 { status: 500 }
             );
         }

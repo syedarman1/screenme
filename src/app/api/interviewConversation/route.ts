@@ -11,10 +11,23 @@ type ChatMsg = { id: number; who: "user" | "ai"; text: string }; // Use the ID-b
 if (!process.env.OPENAI_API_KEY) {
     console.error("FATAL: OPENAI_API_KEY environment variable not set.");
 }
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+// Only create OpenAI client if API key is available
+const openai = process.env.OPENAI_API_KEY 
+  ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+  : null;
 
 export async function POST(req: NextRequest) {
     try { // Wrap main logic in a try...catch
+        if (!openai) {
+            return NextResponse.json(
+                {
+                    error: 'AI interview service is not configured. Please contact support.',
+                    timestamp: new Date().toISOString()
+                },
+                { status: 500 }
+            );
+        }
+
         const form = await req.formData();
 
         // 1) Validate audio blob
