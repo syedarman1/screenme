@@ -27,15 +27,19 @@ const DynamicNavbar = () => {
 
   // Fetch current user from Supabase on mount
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      setUser(data?.user || null);
-    });
+    if (supabase) {
+      supabase.auth.getUser().then(({ data }) => {
+        setUser(data?.user || null);
+      });
+    }
   }, []);
 
   // Sign out logic
   const handleSignOut = async () => {
-    await supabase.auth.signOut();
-    router.push("/login");
+    if (supabase) {
+      await supabase.auth.signOut();
+      router.push("/login");
+    }
   };
 
   return (

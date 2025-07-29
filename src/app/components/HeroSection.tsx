@@ -55,7 +55,10 @@ export default function HeroSection() {
 
   // Check authentication status
   useEffect(() => {
+    if (!supabase) return;
+    
     const checkAuth = async () => {
+      if (!supabase) return;
       const { data: { user } } = await supabase.auth.getUser();
       setIsAuthenticated(!!user);
     };

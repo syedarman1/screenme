@@ -31,6 +31,12 @@ function SuccessPageContent() {
 
   useEffect(() => {
     const handleSuccess = async () => {
+      if (!supabase) {
+        setErrorMessage("Authentication service not available");
+        setState("error");
+        return;
+      }
+      
       try {
         const {
           data: { user: currentUser },

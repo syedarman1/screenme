@@ -63,6 +63,7 @@ const PricingCard = ({ plan }: { plan: PricingPlan }) => {
 
   useEffect(() => {
     const checkAuth = async () => {
+      if (!supabase) return;
       const {
         data: { session },
       } = await supabase.auth.getSession();

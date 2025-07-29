@@ -101,6 +101,9 @@ export default function JobMatchPage() {
 
     try {
       // Get current user
+      if (!supabase) {
+        throw new Error("Authentication service not available");
+      }
       const { data: { user } } = await supabase.auth.getUser();
       
       const r = await fetch("/api/jobMatch", {
@@ -163,7 +166,7 @@ export default function JobMatchPage() {
               strokeWidth="2"
               xmlns="http://www.w3.org/2000/svg"
             >
-              {/* magnifying glass to represent "match analysis" */}
+              {/* magnifying glass to represent “match analysis” */}
               <circle cx="11" cy="11" r="8" />
               <line x1="21" y1="21" x2="16.65" y2="16.65" />
             </svg>

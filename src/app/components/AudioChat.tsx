@@ -27,6 +27,7 @@ export default function AudioChat() {
   // --- Get current user ---
   useEffect(() => {
     const getCurrentUser = async () => {
+      if (!supabase) return;
       const {
         data: { user },
       } = await supabase.auth.getUser();

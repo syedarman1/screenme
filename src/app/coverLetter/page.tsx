@@ -46,6 +46,7 @@ export default function CoverLetterPage() {
   // Check user plan
   useEffect(() => {
     const checkUserPlan = async () => {
+      if (!supabase) return;
       try {
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
@@ -76,6 +77,9 @@ export default function CoverLetterPage() {
 
     try {
       // Get current user
+      if (!supabase) {
+        throw new Error("Authentication service not available");
+      }
       const { data: { user } } = await supabase.auth.getUser();
       
       const res = await fetch("/api/coverLetter", {

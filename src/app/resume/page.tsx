@@ -98,6 +98,9 @@ export default function ResumeScreen() {
 
     try {
       // Get current user
+      if (!supabase) {
+        throw new Error("Authentication service not available");
+      }
       const { data: { user } } = await supabase.auth.getUser();
       
       const res = await fetch("/api/analyzeResume", {

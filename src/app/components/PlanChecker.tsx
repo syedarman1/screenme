@@ -25,6 +25,13 @@ export default function PlanChecker({
 
   useEffect(() => {
     async function checkAccess() {
+      if (!supabase) {
+        console.log("Supabase client not available");
+        setAllowed(false);
+        setLoading(false);
+        return;
+      }
+      
       try {
         const {
           data: { user },
