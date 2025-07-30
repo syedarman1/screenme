@@ -70,7 +70,7 @@ export async function POST(req: Request) {
 
     // Validate resume content length with specific guidance
     const resumeError = validateContentLength(
-      resume,
+      resume!,
       'Resume',
       100,
       'Include your work experience, skills, and key achievements for accurate job matching.'
@@ -81,7 +81,7 @@ export async function POST(req: Request) {
 
     // Validate job description content length
     const jobError = validateContentLength(
-      job,
+      job!,
       'Job description',
       50,
       'Paste the complete job posting including requirements, responsibilities, and qualifications.'
@@ -139,8 +139,8 @@ export async function POST(req: Request) {
         response_format: { type: "json_object" },
         messages: [
           { role: 'system', content: PROMPT },
-          { role: 'user', content: `JOB DESCRIPTION:\n${job.trim()}` },
-          { role: 'user', content: `CANDIDATE RESUME:\n${resume.trim()}` },
+          { role: 'user', content: `JOB DESCRIPTION:\n${job!.trim()}` },
+          { role: 'user', content: `CANDIDATE RESUME:\n${resume!.trim()}` },
         ],
       });
       raw = completion.choices[0]?.message?.content ?? '';

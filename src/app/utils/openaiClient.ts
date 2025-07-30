@@ -9,9 +9,16 @@ export type PromptMessage = {
   content: string;
 };
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+// Only create OpenAI client if API key is available
+const openai = process.env.OPENAI_API_KEY 
+  ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+  : null;
 
 export async function transcribeAudio(buffer: Buffer): Promise<string> {
+  if (!openai) {
+    throw new Error('OpenAI client not available - missing API key');
+  }
+  
   // wrap your Buffer in a Readable and cast to any
   const stream = Readable.from(buffer) as any;
   const resp = await openai.audio.transcriptions.create({
@@ -25,6 +32,10 @@ export async function chatCompletionStream(
   messages: readonly PromptMessage[],
   onDelta: (delta: string) => void
 ): Promise<void> {
+  if (!openai) {
+    throw new Error('OpenAI client not available - missing API key');
+  }
+  
   const completion = await openai.chat.completions.create({
     model: "gpt-4o-mini",
     messages: messages as any,  // cast so TS stops complaining
@@ -37,6 +48,10 @@ export async function chatCompletionStream(
 }
 
 export async function textToSpeech(text: string): Promise<Buffer> {
+  if (!openai) {
+    throw new Error('OpenAI client not available - missing API key');
+  }
+  
   const resp = await openai.audio.speech.create({
     model: "tts-1",
     voice: "alloy",     // required by the SDK

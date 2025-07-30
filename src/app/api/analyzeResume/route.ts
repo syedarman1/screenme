@@ -84,6 +84,29 @@ const ParsedStructureSchema = z.object({
   }),
 });
 
+// Simplified audit schema for faster processing
+const SimpleAuditSchema = z.object({
+  score: z.number().int().min(0).max(100),
+  issues: z.array(z.object({
+    section: z.string(), // More flexible - any string
+    line: z.string(),
+    text: z.string(),
+    severity: z.enum(["low", "medium", "high"]),
+    category: z.string(), // More flexible - any string
+  })),
+  actions: z.array(z.object({
+    section: z.string(), // More flexible - any string
+    original: z.string(),
+    rewrite: z.string(),
+  })),
+  strengths: z.array(z.object({
+    section: z.string(), // More flexible - any string
+    text: z.string(),
+    reason: z.string(),
+  })).optional(),
+  summary: z.string().optional(),
+});
+
 // Enhanced audit schema
 const AuditSchema = z.object({
   score: z.number().int().min(0).max(100),
@@ -112,9 +135,51 @@ const AuditSchema = z.object({
 
 type Audit = z.infer<typeof AuditSchema>;
 
+// Simplified prompt for faster processing
+const SIMPLE_PROMPT = `
+You are a resume analysis expert. Analyze this resume and return ONLY valid JSON.
+
+Score the resume 0-100 based on:
+- Content quality (clear achievements, quantified results)
+- ATS compatibility (no tables with pipes |, readable format)
+- Professional presentation
+
+Return this exact JSON structure:
+
+{
+  "score": 75,
+  "issues": [
+    {
+      "section": "Experience",
+      "line": "exact text from resume",
+      "text": "description of issue", 
+      "severity": "high",
+      "category": "content"
+    }
+  ],
+  "actions": [
+    {
+      "section": "Experience",
+      "original": "exact text to replace",
+      "rewrite": "improved version"
+    }
+  ],
+  "strengths": [
+    {
+      "section": "Experience",
+      "text": "what works well",
+      "reason": "why it's good"
+    }
+  ],
+  "summary": "Brief overall assessment"
+}
+
+Keep arrays small (max 5 items each). Focus on the most important issues only.
+`.trim();
+
 // Enhanced prompt with better parsing instructions and scoring methodology
 const ENHANCED_PROMPT = `
-You are a world-class resume coach with expertise in ATS optimization, visual design, and industry best practices. 
+You are a world-class resume coach with expertise in ATS optimization, visual design, and industry best practices.
 Analyze the resume comprehensively, considering both content and implied formatting.
 
 First, intelligently parse the resume to identify:
@@ -390,7 +455,8 @@ function detectSections(text: string): string[] {
 const openai = process.env.OPENAI_API_KEY
   ? new OpenAI({
     apiKey: process.env.OPENAI_API_KEY,
-    timeout: 30000,
+    timeout: 120000, // Increased to 2 minutes
+    maxRetries: 0, // We'll handle retries manually
   })
   : null;
 
@@ -478,7 +544,7 @@ export async function POST(req: Request) {
     const detectedSections = detectSections(processedText);
 
     // Enhance prompt with detected information
-    let enhancedPrompt = ENHANCED_PROMPT;
+    let enhancedPrompt = SIMPLE_PROMPT;
     enhancedPrompt += `\n\nDetected Information:`;
     enhancedPrompt += `\n- Format: ${format || detectedFormat}`;
     enhancedPrompt += `\n- Bullet Style: ${bulletStyle}`;
@@ -497,7 +563,7 @@ export async function POST(req: Request) {
 
     let raw = "";
     let retries = 0;
-    const maxRetries = 2;
+    const maxRetries = 1; // Reduce retries to avoid long delays
 
     if (!openai) {
       const serviceError = ErrorTypes.OPENAI_SERVICE_ERROR();
@@ -517,6 +583,7 @@ export async function POST(req: Request) {
 
     while (retries <= maxRetries) {
       try {
+        console.log("Making OpenAI API call with model:", model);
         const gpt = await openai.chat.completions.create({
           model,
           temperature,
@@ -525,14 +592,19 @@ export async function POST(req: Request) {
             { role: "user", content: processedText },
           ],
           response_format: { type: "json_object" },
-          max_tokens: 4000, // Increased for more detailed analysis
+          max_tokens: 1500, // Reduced for faster response
         });
 
         raw = gpt.choices[0]?.message?.content ?? "";
+        console.log("OpenAI response received, length:", raw.length);
+        console.log("OpenAI response first 200 chars:", raw.substring(0, 200));
         break;
       } catch (error: any) {
+        console.error('OpenAI API error details:', error);
+        console.error('Error message:', error.message);
+        console.error('Error code:', error.code);
+        console.error('Error type:', error.type);
         if (retries === maxRetries || !error?.isRetryable) {
-          console.error('OpenAI API error:', error);
           throw ErrorTypes.OPENAI_SERVICE_ERROR();
         }
         retries++;
@@ -558,11 +630,10 @@ export async function POST(req: Request) {
       }, { status: formatError.status });
     }
 
-    const result = AuditSchema.safeParse(parsed);
+    const result = SimpleAuditSchema.safeParse(parsed);
     if (!result.success) {
       console.error("Schema validation errors:", result.error.format());
       console.error("Raw parsed data:", JSON.stringify(parsed, null, 2).substring(0, 1000));
-
 
       const errors = result.error.issues;
       const errorMessages = errors.map(err =>
@@ -623,31 +694,14 @@ export async function POST(req: Request) {
       return true;
     });
 
-    // Validate that actions match their corresponding issues
-    processedData.actions = processedData.actions.filter((action, index) => {
-      const correspondingIssue = processedData.issues[index];
-      if (!correspondingIssue) return false;
-
-      // Check if the action addresses the issue
-      const issueAboutDates = correspondingIssue.text.toLowerCase().includes('date');
-      const actionAboutDates = action.rewrite.includes('2024') || action.rewrite.includes('2023');
-
-      if (issueAboutDates && !actionAboutDates) {
-        console.log('Filtered out mismatched action - issue about dates but action not fixing dates');
-        return false;
-      }
-
-      return true;
-    });
-
-    // Ensure issues and actions arrays have same length
+    // Ensure issues and actions arrays have same length (simplified schema doesn't have impact field)
     const minLength = Math.min(processedData.issues.length, processedData.actions.length);
     processedData.issues = processedData.issues.slice(0, minLength);
     processedData.actions = processedData.actions.slice(0, minLength);
 
     // Recalculate score if needed based on issues
     const highAtsIssues = processedData.issues.filter(
-      i => i.severity === 'high' && i.category === 'ats'
+      i => i.severity === 'high' && i.category.toLowerCase().includes('ats')
     ).length;
 
     const highIssuesTotal = processedData.issues.filter(i => i.severity === 'high').length;
@@ -661,20 +715,30 @@ export async function POST(req: Request) {
       processedData.score = 70; // Cap at 70 for 3+ HIGH issues
     }
 
+    // Convert simplified data to full audit format
     const audit: Audit = {
-      ...processedData,
+      score: processedData.score,
       issues: processedData.issues.map((i) => ({
-        ...i,
+        section: (i.section === "Format" ? "Other" : i.section) as any, // Type assertion for compatibility
         line: clean(i.line),
         text: clean(i.text),
-        reason: i.reason ? clean(i.reason) : undefined,
+        severity: i.severity,
+        category: i.category as any, // Type assertion for compatibility
+        reason: undefined, // Simplified schema doesn't include reason
       })),
       actions: processedData.actions.map((a) => ({
-        ...a,
+        section: (a.section === "Format" ? "Other" : a.section) as any, // Type assertion for compatibility
         original: clean(a.original),
         rewrite: clean(a.rewrite),
-        improvement: a.improvement ? clean(a.improvement) : undefined,
+        impact: "medium" as const, // Default impact since simplified schema doesn't include it
+        improvement: undefined, // Simplified schema doesn't include improvement
       })),
+      strengths: processedData.strengths?.map((s) => ({
+        section: (s.section === "Format" ? "Other" : s.section) as any, // Type assertion for compatibility
+        text: clean(s.text),
+        reason: clean(s.reason),
+      })) || [],
+      summary: processedData.summary || "",
       // Add metadata about the analysis
       metadata: {
         analyzedAt: new Date().toISOString(),
@@ -698,6 +762,9 @@ export async function POST(req: Request) {
     return NextResponse.json(audit, {
       headers: {
         'Cache-Control': 'private, max-age=3600',
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
       }
     });
   } catch (error: any) {

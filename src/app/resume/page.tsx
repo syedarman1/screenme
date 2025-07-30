@@ -46,6 +46,12 @@ interface Audit {
   strengths?: StrengthObj[];
   keywords?: KeywordObj[];
   summary?: string;
+  metadata?: {
+    analyzedAt: string;
+    detectedFormat: string;
+    bulletStyle: string;
+    sectionsFound: number;
+  };
 }
 
 const badgeColor = {
@@ -116,10 +122,12 @@ export default function ResumeScreen() {
 
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
+        console.error('API Error Response:', data);
         throw new Error(data.error || "Failed to analyze resume");
       }
 
       const data: Audit = await res.json();
+      console.log('API Success Response:', data);
       setAudit(data);
       setActiveTab("issues");
     } catch (e: any) {
