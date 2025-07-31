@@ -104,13 +104,15 @@ export default function JobMatchPage() {
       if (!supabase) {
         throw new Error("Authentication service not available");
       }
-      const { data: { user } } = await supabase.auth.getUser();
-      
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
       const r = await fetch("/api/jobMatch", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          resume: resumeTxt, 
+        body: JSON.stringify({
+          resume: resumeTxt,
           job: jdTxt,
           userId: user?.id,
         }),
@@ -242,44 +244,44 @@ export default function JobMatchPage() {
               Upload Your Resume
             </h2>
             <ResumeUploader onResumeSubmit={setResumeTxt} simple={true} />
-          <div className="mt-6">
-            <label
-              htmlFor="jd-input"
-              className="block mb-2 font-semibold text-[var(--gray-200)]"
-            >
-              Job Description
-            </label>
-            <textarea
-              id="jd-input"
-              name="jobDescription"
-              value={jdTxt}
-              onChange={(e) => setJdTxt(e.target.value)}
-              rows={7}
-              placeholder="Paste the job description here…"
-              aria-required
-              className="w-full bg-[var(--neutral-900)] text-[var(--gray-200)] placeholder-[var(--gray-500)] p-3 rounded-lg border border-[var(--neutral-700)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
-            />
+            <div className="mt-6">
+              <label
+                htmlFor="jd-input"
+                className="block mb-2 font-semibold text-[var(--gray-200)]"
+              >
+                Job Description
+              </label>
+              <textarea
+                id="jd-input"
+                name="jobDescription"
+                value={jdTxt}
+                onChange={(e) => setJdTxt(e.target.value)}
+                rows={7}
+                placeholder="Paste the job description here…"
+                aria-required
+                className="w-full bg-[var(--neutral-900)] text-[var(--gray-200)] placeholder-[var(--gray-500)] p-3 rounded-lg border border-[var(--neutral-700)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
+              />
+            </div>
+            <div className="flex space-x-4 mt-6">
+              <button
+                type="submit"
+                disabled={loading}
+                onClick={submit}
+                className="flex-1 px-6 py-3 bg-[var(--accent)] text-black font-semibold rounded-lg transition transform duration-200 hover:-translate-y-1 hover:shadow-xl disabled:opacity-50"
+                aria-disabled={loading}
+              >
+                {loading ? "Analyzing…" : "Analyze Match"}
+              </button>
+              <button
+                type="button"
+                onClick={resetForm}
+                disabled={loading}
+                className="px-6 py-3 bg-[var(--neutral-700)] text-[var(--gray-300)] font-semibold rounded-lg transition hover:bg-[var(--neutral-600)] disabled:opacity-50"
+              >
+                Clear
+              </button>
+            </div>
           </div>
-          <div className="flex space-x-4 mt-6">
-            <button
-              type="submit"
-              disabled={loading}
-              onClick={submit}
-              className="flex-1 px-6 py-3 bg-[var(--accent)] text-black font-semibold rounded-lg transition transform duration-200 hover:-translate-y-1 hover:shadow-xl disabled:opacity-50"
-              aria-disabled={loading}
-            >
-              {loading ? "Analyzing…" : "Analyze Match"}
-            </button>
-            <button
-              type="button"
-              onClick={resetForm}
-              disabled={loading}
-              className="px-6 py-3 bg-[var(--neutral-700)] text-[var(--gray-300)] font-semibold rounded-lg transition hover:bg-[var(--neutral-600)] disabled:opacity-50"
-            >
-              Clear
-            </button>
-          </div>
-        </div>
         </PlanChecker>
       </section>
 

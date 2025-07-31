@@ -46,16 +46,6 @@ export async function POST(req: Request) {
         const { name, email, subject, message } = validation.data;
 
 
-        console.log("Contact form submission:", {
-            name,
-            email,
-            subject,
-            message,
-            timestamp: new Date().toISOString(),
-            ip
-        });
-
-
         
 
         return NextResponse.json(

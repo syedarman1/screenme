@@ -199,7 +199,7 @@ async function handleAudioChat(req: NextRequest) {
     }
 
     // Log audio details for debugging
-    console.log(`Received audio file: name=${audioEntry.name}, size=${audioEntry.size}, type=${audioEntry.type}`);
+    
 
     // Check for empty file
     if (audioEntry.size === 0) {
@@ -291,7 +291,7 @@ async function handleAudioChat(req: NextRequest) {
     // 3) Transcribe with Whisper
     let transcript = "";
     try {
-      console.log("Starting Whisper transcription...");
+      
 
       const whisperResponse = await openai.audio.transcriptions.create({
         model: "whisper-1",
@@ -301,7 +301,7 @@ async function handleAudioChat(req: NextRequest) {
       });
 
       transcript = whisperResponse.text?.trim() || "";
-      console.log("Whisper Transcription Result:", transcript);
+      
 
       // Handle potentially empty transcriptions from Whisper
       if (!transcript || transcript.length === 0) {
@@ -369,7 +369,7 @@ async function handleAudioChat(req: NextRequest) {
     // 5) Generate GPT reply
     let reply = "";
     try {
-      console.log("Generating AI response...");
+      
 
       // Convert chat history to OpenAI format
       const messages = updatedHistory.map((m) => ({
@@ -393,7 +393,7 @@ async function handleAudioChat(req: NextRequest) {
       });
 
       reply = chatResp.choices[0]?.message?.content?.trim() ?? "";
-      console.log("GPT Reply Generated:", reply);
+      
 
       if (!reply) {
         console.warn("GPT returned an empty reply.");
@@ -441,7 +441,7 @@ async function handleAudioChat(req: NextRequest) {
     }
 
     // 6) Return successful response
-    console.log("Sending successful response to client");
+    
     return NextResponse.json({
       transcript,
       reply,

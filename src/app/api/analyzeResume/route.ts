@@ -45,7 +45,7 @@ const ActionSchema = z.object({
   original: z.string().min(5),
   rewrite: z.string().min(20),
   improvement: z.string().min(10).optional(),
-  impact: z.enum(["high", "medium", "low"]), // Priority of this change
+  impact: z.enum(["high", "medium", "low"]), 
 });
 
 const StrengthSchema = z.object({
@@ -58,7 +58,7 @@ const KeywordSchema = z.object({
   category: z.string().min(3),
   terms: z.array(z.string().min(2)),
   missing: z.array(z.string().min(2)).optional(),
-  density: z.number().optional(), // Keyword density percentage
+  density: z.number().optional(), 
 });
 
 // New schema for parsed structure
@@ -88,21 +88,27 @@ const ParsedStructureSchema = z.object({
 const SimpleAuditSchema = z.object({
   score: z.number().int().min(0).max(100),
   issues: z.array(z.object({
-    section: z.string(), // More flexible - any string
+    section: z.string(), 
     line: z.string(),
     text: z.string(),
     severity: z.enum(["low", "medium", "high"]),
-    category: z.string(), // More flexible - any string
+    category: z.string(), 
   })),
   actions: z.array(z.object({
-    section: z.string(), // More flexible - any string
+    section: z.string(), 
     original: z.string(),
     rewrite: z.string(),
   })),
   strengths: z.array(z.object({
-    section: z.string(), // More flexible - any string
+    section: z.string(), 
     text: z.string(),
     reason: z.string(),
+  })).optional(),
+  keywords: z.array(z.object({
+    category: z.string(),
+    terms: z.array(z.string()),
+    missing: z.array(z.string()).optional(),
+    density: z.number().optional(),
   })).optional(),
   summary: z.string().optional(),
 });
@@ -116,14 +122,14 @@ const AuditSchema = z.object({
     ats: z.number().min(0).max(100),
     keywords: z.number().min(0).max(100),
   }).optional(),
-  issues: z.array(IssueSchema).max(15), // Increased limit
+  issues: z.array(IssueSchema).max(15), 
   formatIssues: z.array(FormatIssueSchema).optional(),
   actions: z.array(ActionSchema).max(15),
   strengths: z.array(StrengthSchema).max(5).optional(),
   keywords: z.array(KeywordSchema).max(5).optional(),
   parsedStructure: ParsedStructureSchema.optional(),
   summary: z.string().min(50).max(500).optional(),
-  targetRole: z.string().optional(), // Detected target role
+  targetRole: z.string().optional(), 
   experienceLevel: z.enum(["entry", "mid", "senior", "executive"]).optional(),
   metadata: z.object({
     analyzedAt: z.string(),
@@ -135,24 +141,73 @@ const AuditSchema = z.object({
 
 type Audit = z.infer<typeof AuditSchema>;
 
-// Simplified prompt for faster processing
-const SIMPLE_PROMPT = `
-You are a resume analysis expert. Analyze this resume and return ONLY valid JSON.
+// Optimized prompt for better accuracy and performance
+const OPTIMIZED_PROMPT = `
+Analyze this resume and return ONLY valid JSON. Focus on actionable improvements for ANY industry or role.
 
-Score the resume 0-100 based on:
-- Content quality (clear achievements, quantified results)
-- ATS compatibility (no tables with pipes |, readable format)
-- Professional presentation
+SCORING METHOD:
+- Start at 100 points
+- HIGH severity: -12 points
+- MEDIUM severity: -4 points  
+- LOW severity: -2 points
 
-Return this exact JSON structure:
+UNIVERSAL ANALYSIS CRITERIA:
 
+1. **METRICS ENHANCEMENT**: Look for measurable impact opportunities
+   - Identify statements that could benefit from numbers, percentages, timeframes, or scale
+   - Suggest adding context like "increased efficiency by X%", "managed team of X people", "served X customers"
+   - NEVER fabricate specific numbers - only suggest where metrics could reasonably be added
+
+2. **ACTION VERB OPTIMIZATION**: Flag weak verbs and suggest stronger alternatives
+   - Weak verbs to flag: "Responsible for", "Helped", "Assisted", "Duties included", "Worked on", "Involved in"
+   - Strong verbs (don't flag): Led, Developed, Implemented, Enhanced, Built, Designed, Achieved, Boosted, Increased, Improved, Managed, Created, Established, Streamlined, Delivered, Transformed, Executed, Spearheaded, Pioneered, Drove, Facilitated, Resolved, Optimized, Launched, Constructed, Trained, Performed, Deployed, Integrated, Leveraged, Engineered, Architected, Crafted
+
+3. **SPECIFICITY IMPROVEMENT**: Turn vague statements into concrete accomplishments
+   - Look for generic terms like "various", "many", "several", "helped with"
+   - Suggest adding scope, tools used, outcomes, or business context
+   - Focus on making statements more concrete without inventing details
+
+4. **FORMATTING CONSISTENCY**: Detect and unify formatting issues
+   - Inconsistent bullet styles, date formats, spacing
+   - Table formats with pipes (|) that may not be ATS-friendly
+   - Inconsistent section headers or indentation
+
+5. **KEYWORD OPTIMIZATION**: Extract ALL keywords found in the resume
+   - Extract EVERY technical skill, tool, technology, methodology, and competency mentioned
+   - Categorize them properly (Technical Skills, Tools, Methodologies, Soft Skills, etc.)
+   - Identify missing industry-agnostic keywords: "project management", "cross-functional collaboration", "process improvement", "stakeholder management", "strategic planning", "team leadership", "problem solving", "communication", "analytics", "quality assurance"
+
+6. **STRUCTURE ENHANCEMENT**: Ensure logical flow and clear organization
+   - Check section order (Contact → Summary → Experience → Education → Skills → Other)
+   - Ensure every issue has a matching action item
+   - Verify clear headings and consistent formatting
+
+COMMON SECTIONS TO ANALYZE:
+- Experience, Education, Skills, Certifications, Awards, Summary, Volunteer, Languages, Interests, References, Other
+
+STRENGTHS ANALYSIS:
+- List SPECIFIC strengths found in the resume with exact examples
+- Include strong action verbs, quantified achievements, relevant skills, good formatting, etc.
+- Provide concrete examples from the resume content
+
+CRITICAL RULES:
+- NEVER fabricate specific numbers, metrics, or information not implied by the original text
+- Only suggest improvements that are reasonable and accurate
+- **CRITICAL: The "original" text MUST be the COMPLETE original text from the resume, not a summary or truncated version**
+- **CRITICAL: Copy the EXACT original text as it appears in the resume, including all details, context, and full sentences**
+- Focus on constructive feedback without making up data
+- Each issue MUST have a matching action with the same original text
+- Limit to 5 most important issues
+- Extract ALL keywords mentioned in the resume, not just some
+
+RETURN THIS EXACT STRUCTURE:
 {
   "score": 75,
   "issues": [
     {
       "section": "Experience",
-      "line": "exact text from resume",
-      "text": "description of issue", 
+      "line": "Resolved 50+ front-end issues in JavaScript by collaborating with teams, implementing advanced code refactoring strategies and DOM optimization techniques, resulting in enhanced performance and responsiveness across platforms for 10,000+ users",
+      "text": "Missing context on the impact of resolving issues on overall project success",
       "severity": "high",
       "category": "content"
     }
@@ -160,224 +215,26 @@ Return this exact JSON structure:
   "actions": [
     {
       "section": "Experience",
-      "original": "exact text to replace",
-      "rewrite": "improved version"
+      "original": "Resolved 50+ front-end issues in JavaScript by collaborating with teams, implementing advanced code refactoring strategies and DOM optimization techniques, resulting in enhanced performance and responsiveness across platforms for 10,000+ users",
+      "rewrite": "Resolved 50+ front-end issues in JavaScript by collaborating with teams, implementing advanced code refactoring strategies and DOM optimization techniques, resulting in enhanced performance and responsiveness across platforms for 10,000+ users, contributing to overall project success"
     }
   ],
   "strengths": [
     {
-      "section": "Experience",
-      "text": "what works well",
-      "reason": "why it's good"
-    }
-  ],
-  "summary": "Brief overall assessment"
-}
-
-Keep arrays small (max 5 items each). Focus on the most important issues only.
-`.trim();
-
-// Enhanced prompt with better parsing instructions and scoring methodology
-const ENHANCED_PROMPT = `
-You are a world-class resume coach with expertise in ATS optimization, visual design, and industry best practices.
-Analyze the resume comprehensively, considering both content and implied formatting.
-
-First, intelligently parse the resume to identify:
-1. Contact information (name, email, phone, location, LinkedIn, portfolio)
-2. All sections, including non-standard ones
-3. Formatting patterns (bullet points, dashes, asterisks)
-4. Date formats and consistency
-5. Quantified achievements vs vague statements
-6. Action verbs usage
-7. Technical skills and tools mentioned
-8. Industry-specific keywords
-
-SCORING METHODOLOGY:
-Calculate the overall score using this weighted system:
-
-Base Score Calculation:
-- Start with 100 points
-- Deduct points based on issues:
-  • HIGH severity: -15 to -20 points each
-  • MEDIUM severity: -5 to -10 points each  
-  • LOW severity: -2 to -3 points each
-
-Score Components (weights):
-1. ATS Compatibility (30%):
-   - Table formats: -20 points
-   - Graphics/images: -15 points
-   - Special characters: -10 points
-   - Non-standard fonts: -10 points
-   - Headers/footers: -15 points
-
-2. Content Quality (25%):
-   - No quantified achievements: -15 points
-   - Vague job descriptions: -10 points
-   - Missing action verbs: -5 points
-   - Poor grammar/spelling: -20 points
-
-3. Keyword Optimization (20%):
-   - <30% relevant keywords: -15 points
-   - Missing critical skills: -10 points
-   - Keyword stuffing: -10 points
-
-4. Structure & Format (15%):
-   - Poor section order: -10 points
-   - Inconsistent formatting: -5 points
-   - Too long (>2 pages early career): -10 points
-   - Hard to scan quickly: -10 points
-
-5. Completeness (10%):
-   - Missing contact info: -20 points
-   - No dates on positions: -15 points
-   - Gaps unexplained: -10 points
-
-Score Ranges:
-- 90-100: Exceptional - Ready to submit
-- 80-89: Strong - Minor tweaks needed
-- 70-79: Good - Some improvements recommended
-- 60-69: Fair - Significant improvements needed
-- 50-59: Needs Work - Major revision required
-- Below 50: Poor - Complete overhaul needed
-
-CRITICAL: Any single HIGH severity ATS issue should cap the score at 75 maximum.
-
-Then produce **ONLY** valid JSON with this EXACT structure:
-
-{
-  "score": <0–100 overall score>,
-  "subscores": {
-    "content": <0-100 for content quality>,
-    "formatting": <0-100 for format/structure>,
-    "ats": <0-100 for ATS compatibility>,
-    "keywords": <0-100 for keyword optimization>
-  },
-  "issues": [
-    {
-      "section": <MUST be one of: "Education", "Skills", "Experience", "Projects", "Summary", "Certifications", "Publications", "Awards", "Volunteer", "Languages", "Interests", "References", "Other">,
-      "line": <exact text snippet from resume>,
-      "text": <clear explanation of the issue>,
-      "severity": <MUST be: "low" OR "medium" OR "high">,
-      "category": <MUST be: "content" OR "format" OR "ats" OR "keyword" OR "structure">,
-      "reason": <why this matters>
-    }
-  ],
-  "formatIssues": [
-    {
-      "type": <MUST be: "spacing" OR "consistency" OR "readability" OR "ats_compatibility" OR "visual_hierarchy">,
-      "description": <what formatting issue was detected>,
-      "severity": <MUST be: "low" OR "medium" OR "high">,
-      "location": <where in the resume>
-    }
-  ],
-  "actions": [
-    {
-      "section": <MUST be one of the valid sections listed above>,
-      "original": <exact text to replace>,
-      "rewrite": <improved version with metrics and impact>,
-      "improvement": <what was improved>,
-      "impact": <MUST be: "high" OR "medium" OR "low">
-    }
-  ],
-  "strengths": [
-    {
-      "section": <MUST be one of the valid sections>,
-      "text": <what the candidate is doing well>,
-      "reason": <why this is effective>
+      "section": "Skills",
+      "text": "Strong technical skills section with React, Node.js, and AWS",
+      "reason": "Lists relevant technologies with clear categorization and includes cloud platform experience"
     }
   ],
   "keywords": [
     {
-      "category": <like "Technical", "Soft Skills", "Industry", "Tools">,
-      "terms": <array of strings, e.g. ["Python", "Java", "SQL"]>,
-      "missing": <array of strings, e.g. ["Docker", "Kubernetes"]>,
-      "density": <number between 0 and 1, e.g. 0.15>
+      "category": "Technical Skills",
+      "terms": ["Python", "React", "AWS", "Node.js", "JavaScript", "TypeScript", "Docker", "Git"],
+      "missing": ["CI/CD", "Agile", "Project Management"]
     }
   ],
-  "parsedStructure": {
-    "contactInfo": {
-      "name": <string or null>,
-      "email": <string or null>,
-      "phone": <string or null>,
-      "location": <string or null>,
-      "linkedin": <string or null>,
-      "portfolio": <string or null>
-    },
-    "sections": [
-      {
-        "name": <section name as string>,
-        "content": <section content as string>,
-        "order": <number starting from 1>
-      }
-    ],
-    "metrics": {
-      "totalWords": <integer>,
-      "bulletPoints": <integer>,
-      "quantifiedAchievements": <integer>,
-      "actionVerbs": <integer>
-    }
-  },
-  "summary": <executive summary string>,
-  "targetRole": <detected or inferred target role string>,
-  "experienceLevel": <MUST be: "entry" OR "mid" OR "senior" OR "executive">
+  "summary": "Resume needs quantified achievements and stronger action verbs. Good technical foundation but lacks measurable impact."
 }
-
-CRITICAL RULES:
-• For sections, if it doesn't fit the standard categories, use "Other"
-• ALL arrays must be arrays, even if empty: use [] not null
-• ALL optional fields can be omitted entirely, but if included must have the correct type
-• For keywords.terms and keywords.missing, these MUST be arrays of strings, not objects
-• Ensure all enum values match exactly (case-sensitive)
-• Numbers should be actual numbers, not strings
-• IMPORTANT: Table format means actual tables with | pipes or grid structures, NOT simple text on one line
-• Always include at least 3-5 strengths if the resume has any positive aspects
-• Always include at least 3-4 keyword categories with actual keywords found
-• The "rewrite" MUST directly address the issue mentioned - if the issue is about dates, the rewrite must fix the dates
-• "Resolved", "Developed", "Implemented", "Enhanced" are STRONG action verbs - do not flag them as weak
-• Only flag truly weak verbs like "Responsible for", "Duties included", "Helped with", "Assisted"
-
-Table Format Examples:
-- ACTUAL TABLE: "Company | Role | Date" with pipes
-- NOT A TABLE: "Company July 2024 - Sept 2024 Software Engineer New York"
-- ACTUAL TABLE: Multiple columns separated by excessive spaces trying to align
-- NOT A TABLE: Standard one-line format with company, dates, role, location
-
-Action Verb Guidelines:
-STRONG verbs (DO NOT flag as weak):
-- Resolved, Developed, Implemented, Enhanced, Optimized, Designed, Built, Launched, Led, Managed, Achieved, Delivered, Transformed, Established, Streamlined
-
-WEAK verbs (OK to flag):
-- Responsible for, Helped, Assisted, Participated, Involved in, Duties included, Tasks involved
-
-Rewrite Matching Rules:
-- If issue is about DATE FORMAT → rewrite must show corrected date format
-- If issue is about METRICS → rewrite must add specific numbers/percentages
-- If issue is about CLARITY → rewrite must clarify the vague parts
-- NEVER mix up rewrites - each rewrite must match its corresponding issue
-
-Parsing Rules:
-• Detect sections even with non-standard headers
-• Identify formatting issues from text patterns
-• Look for ATS-breaking elements (tables indicated by pipes |, special unicode characters)
-• Check date format consistency (MM/YYYY vs Month YYYY)
-• Identify missing crucial information (dates, locations, metrics)
-• Detect poor bullet point structure (starting with "Responsible for" vs action verbs)
-• Calculate keyword density for technical terms
-• Identify industry and role from content
-
-Content Analysis Rules:
-• Every achievement should have metrics (numbers, percentages, timeframes)
-• Prioritize recent and relevant experience
-• Flag generic descriptions lacking specificity
-• Ensure consistent verb tenses (past for previous, present for current)
-• Check for result-oriented statements vs task lists
-
-Minimum Requirements:
-• Include at least 3-5 strengths unless the resume is truly terrible
-• Include at least 3-4 keyword categories (Technical, Soft Skills, Industry, Tools)
-• For each keyword category, list at least 3-5 actual terms found in the resume
-• Don't flag standard one-line job headers as "table format"
-• Only flag ACTUAL tables (with pipes |, tabs, or grid alignment)
 `.trim();
 
 // Helper function to pre-process resume text
@@ -386,7 +243,7 @@ function preprocessResume(text: string): {
   detectedFormat: string;
   bulletStyle: string;
 } {
-  // Detect bullet point style
+  
   const bulletStyles = {
     dash: /-\s+/g,
     asterisk: /\*\s+/g,
@@ -409,7 +266,7 @@ function preprocessResume(text: string): {
   // Detect format indicators
   const hasMarkdown = /[*_~`#]/.test(text);
   const hasHTML = /<[^>]+>/.test(text);
-  const hasPipes = /\|/.test(text); // Possible table
+  const hasPipes = /\|/.test(text); 
 
   let detectedFormat = 'plain';
   if (hasMarkdown) detectedFormat = 'markdown';
@@ -440,7 +297,6 @@ function detectSections(text: string): string[] {
 
   for (const line of lines) {
     const cleaned = line.trim().toLowerCase();
-    // Check if line might be a header (short, possibly all caps, matches common headers)
     if (cleaned.length < 50 &&
       (line.trim() === line.trim().toUpperCase() ||
         commonHeaders.some(h => cleaned.includes(h)))) {
@@ -451,12 +307,149 @@ function detectSections(text: string): string[] {
   return detectedSections;
 }
 
-// Only create OpenAI client if API key is available
+// Helper to extract keywords from resume text
+function extractKeywordsFromText(text: string): { category: string; terms: string[] }[] {
+  const keywords: { category: string; terms: string[] }[] = [];
+  
+  // Common technical skills and tools
+  const technicalSkills = [
+    // Programming Languages
+    'JavaScript', 'TypeScript', 'Python', 'Java', 'C++', 'C#', 'PHP', 'Ruby', 'Go', 'Rust', 'Swift', 'Kotlin', 'Scala',
+    // Web Technologies
+    'HTML', 'CSS', 'React', 'Angular', 'Vue', 'Node.js', 'Express', 'Django', 'Flask', 'Spring', 'ASP.NET',
+    // Databases
+    'SQL', 'MySQL', 'PostgreSQL', 'MongoDB', 'Redis', 'Oracle', 'SQLite', 'Cassandra',
+    // Cloud & DevOps
+    'AWS', 'Azure', 'GCP', 'Docker', 'Kubernetes', 'Jenkins', 'GitLab', 'GitHub', 'CI/CD', 'Terraform', 'Ansible',
+    // Data & AI
+    'Machine Learning', 'Data Science', 'TensorFlow', 'PyTorch', 'Pandas', 'NumPy', 'Scikit-learn', 'Tableau', 'Power BI',
+    // Other Tools
+    'Git', 'Jira', 'Confluence', 'Slack', 'Figma', 'Adobe Creative Suite', 'Microsoft Office', 'Excel', 'PowerPoint'
+  ];
+  
+  // Soft skills and methodologies
+  const softSkills = [
+    'Leadership', 'Communication', 'Team Management', 'Project Management', 'Problem Solving', 'Critical Thinking',
+    'Agile', 'Scrum', 'Kanban', 'Waterfall', 'Lean', 'Six Sigma', 'Customer Service', 'Sales', 'Marketing',
+    'Strategic Planning', 'Business Development', 'Financial Analysis', 'Risk Management', 'Quality Assurance'
+  ];
+  
+  // Extract technical skills
+  const foundTechnical = technicalSkills.filter(skill => 
+    text.toLowerCase().includes(skill.toLowerCase())
+  );
+  
+  // Extract soft skills
+  const foundSoft = softSkills.filter(skill => 
+    text.toLowerCase().includes(skill.toLowerCase())
+  );
+  
+  if (foundTechnical.length > 0) {
+    keywords.push({
+      category: 'Technical Skills',
+      terms: foundTechnical
+    });
+  }
+  
+  if (foundSoft.length > 0) {
+    keywords.push({
+      category: 'Soft Skills & Methodologies',
+      terms: foundSoft
+    });
+  }
+  
+  return keywords;
+}
+
+// Helper to extract bullet points from resume text
+function extractBulletPoints(text: string): string[] {
+  const bulletPoints: string[] = [];
+  const lines = text.split('\n');
+  
+  for (const line of lines) {
+    const trimmed = line.trim();
+    // Look for lines that start with bullet points or are likely bullet points
+    if (trimmed.match(/^[•\-\*→]\s+/) || 
+        (trimmed.length > 20 && trimmed.length < 200 && !trimmed.match(/^[A-Z][a-z]+:/))) {
+      bulletPoints.push(trimmed);
+    }
+  }
+  
+  return bulletPoints;
+}
+
+// Helper to validate that original text matches resume content
+function validateOriginalText(originalText: string, resumeText: string): string {
+  // Check if the original text is a truncated version of something in the resume
+  const normalizedOriginal = originalText.toLowerCase().trim();
+  const normalizedResume = resumeText.toLowerCase();
+  
+  // If the original text is found exactly in the resume, return it as is
+  if (normalizedResume.includes(normalizedOriginal)) {
+    return originalText;
+  }
+  
+  // Look for a longer version that contains the original text
+  const lines = resumeText.split('\n');
+  for (const line of lines) {
+    const normalizedLine = line.toLowerCase().trim();
+    if (normalizedLine.includes(normalizedOriginal) && normalizedLine.length > normalizedOriginal.length) {
+      // Found a longer version, return the actual line from resume
+      return line.trim();
+    }
+  }
+  
+  // Also check against extracted bullet points
+  const bulletPoints = extractBulletPoints(resumeText);
+  for (const bullet of bulletPoints) {
+    const normalizedBullet = bullet.toLowerCase().trim();
+    if (normalizedBullet.includes(normalizedOriginal) && normalizedBullet.length > normalizedOriginal.length) {
+      // Found a longer version in bullet points, return the actual bullet
+      return bullet;
+    }
+  }
+  
+  // If no match found, return the original (this might be a legitimate short statement)
+  return originalText;
+}
+
+// Helper to validate and fix issue-action pairs
+function validateIssueActionPairs(issues: any[], actions: any[], resumeText: string): { issues: any[], actions: any[] } {
+  // Ensure same length
+  const minLength = Math.min(issues.length, actions.length);
+  issues = issues.slice(0, minLength);
+  actions = actions.slice(0, minLength);
+
+  actions = actions.map((action, index) => {
+    const issue = issues[index];
+    
+    
+    if (action.original !== issue.line) {
+      action.original = issue.line;
+    }
+    
+    
+    const validatedOriginal = validateOriginalText(action.original, resumeText);
+    action.original = validatedOriginal;
+    issue.line = validatedOriginal;
+    
+ 
+    if (action.rewrite === action.original || action.rewrite.length < action.original.length) {
+      
+      action.rewrite = action.original;
+    }
+    
+    return action;
+  });
+
+  return { issues, actions };
+}
+
 const openai = process.env.OPENAI_API_KEY
   ? new OpenAI({
     apiKey: process.env.OPENAI_API_KEY,
-    timeout: 120000, // Increased to 2 minutes
-    maxRetries: 0, // We'll handle retries manually
+    timeout: 60000, 
+    maxRetries: 1, 
   })
   : null;
 
@@ -466,7 +459,7 @@ export async function POST(req: Request) {
     const { success, limit, remaining } = await rateLimit(ip);
 
     if (!success) {
-      const retryMinutes = Math.ceil((limit - remaining) / 10); // Estimate retry time
+      const retryMinutes = Math.ceil((limit - remaining) / 10); 
       const rateLimitError = ErrorTypes.RATE_LIMIT_EXCEEDED(retryMinutes);
       return NextResponse.json(
         {
@@ -499,7 +492,7 @@ export async function POST(req: Request) {
       return handleAPIError(validationError);
     }
 
-    // Validate resume content length with specific guidance
+    
     const contentError = validateContentLength(
       resume,
       'Resume',
@@ -543,27 +536,45 @@ export async function POST(req: Request) {
     const { processedText, detectedFormat, bulletStyle } = preprocessResume(resume);
     const detectedSections = detectSections(processedText);
 
-    // Enhance prompt with detected information
-    let enhancedPrompt = SIMPLE_PROMPT;
-    enhancedPrompt += `\n\nDetected Information:`;
-    enhancedPrompt += `\n- Format: ${format || detectedFormat}`;
-    enhancedPrompt += `\n- Bullet Style: ${bulletStyle}`;
-    enhancedPrompt += `\n- Detected Sections: ${detectedSections.join(', ')}`;
-
-    if (options?.focusArea) {
-      enhancedPrompt += `\n\nPay special attention to the "${options.focusArea}" section.`;
+    // Quick validation for very short resumes
+    if (processedText.length < 100) {
+      return NextResponse.json({
+        score: 0,
+        issues: [{
+          section: "Other",
+          line: "Resume content",
+          text: "Resume is too brief for meaningful analysis",
+          severity: "high",
+          category: "content"
+        }],
+        actions: [{
+          section: "Other",
+          original: "Resume content",
+          rewrite: "Add detailed work experience, education, skills, and achievements sections"
+        }],
+        strengths: [],
+        summary: "Resume needs substantial content for proper analysis",
+        metadata: {
+          analyzedAt: new Date().toISOString(),
+          detectedFormat,
+          bulletStyle,
+          sectionsFound: detectedSections.length,
+        }
+      });
     }
 
+    // Build the prompt
+    let enhancedPrompt = OPTIMIZED_PROMPT;
+    
     if (options?.targetRole) {
-      enhancedPrompt += `\n\nOptimize for this target role: ${options.targetRole}`;
+      enhancedPrompt += `\n\nTarget Role: ${options.targetRole}`;
+      enhancedPrompt += `\nPrioritize skills and experience relevant to this role.`;
     }
 
-    const model = options?.model || "gpt-4o-mini";
-    const temperature = options?.temperature || 0.3; // Slightly higher for better parsing
+    const model = options?.model || "gpt-4o-mini"; // Better for analysis tasks
+    const temperature = options?.temperature || 0.2; // Keep low for consistency
 
     let raw = "";
-    let retries = 0;
-    const maxRetries = 1; // Reduce retries to avoid long delays
 
     if (!openai) {
       const serviceError = ErrorTypes.OPENAI_SERVICE_ERROR();
@@ -581,35 +592,54 @@ export async function POST(req: Request) {
       );
     }
 
-    while (retries <= maxRetries) {
-      try {
-        console.log("Making OpenAI API call with model:", model);
-        const gpt = await openai.chat.completions.create({
-          model,
-          temperature,
-          messages: [
-            { role: "system", content: enhancedPrompt },
-            { role: "user", content: processedText },
-          ],
-          response_format: { type: "json_object" },
-          max_tokens: 1500, // Reduced for faster response
-        });
+    try {
+      
+      // Add timeout to prevent hanging - 45 seconds should be sufficient
+      const gptPromise = openai.chat.completions.create({
+        model,
+        temperature,
+        messages: [
+          { role: "system", content: enhancedPrompt },
+          { role: "user", content: processedText },
+        ],
+        response_format: { type: "json_object" },
+        max_tokens: 2000, // Increased to handle longer responses with complete original text
+      });
 
-        raw = gpt.choices[0]?.message?.content ?? "";
-        console.log("OpenAI response received, length:", raw.length);
-        console.log("OpenAI response first 200 chars:", raw.substring(0, 200));
-        break;
-      } catch (error: any) {
-        console.error('OpenAI API error details:', error);
-        console.error('Error message:', error.message);
-        console.error('Error code:', error.code);
-        console.error('Error type:', error.type);
-        if (retries === maxRetries || !error?.isRetryable) {
-          throw ErrorTypes.OPENAI_SERVICE_ERROR();
-        }
-        retries++;
-        await new Promise(r => setTimeout(r, 1000 * retries));
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('OpenAI timeout')), 45000) 
+      );
+
+      const gpt = await Promise.race([gptPromise, timeoutPromise]) as any;
+      
+      raw = gpt.choices[0]?.message?.content ?? "";
+      
+    } catch (error: any) {
+      console.error('OpenAI API error:', error);
+      
+      if (error.message === 'OpenAI timeout') {
+        const timeoutError = ErrorTypes.PROCESSING_ERROR('analyze resume due to timeout. Please try again.');
+        return handleAPIError(timeoutError);
       }
+      
+      // Check for rate limiting
+      if (error.status === 429 || error.message?.includes('rate limit')) {
+        const rateLimitError = ErrorTypes.OPENAI_SERVICE_ERROR();
+        return NextResponse.json(
+          {
+            error: 'Service is experiencing high demand. Please try again in a moment.',
+            details: {
+              message: rateLimitError.message,
+              code: 'SERVICE_BUSY',
+              action: 'Wait 30 seconds and try again.'
+            },
+            timestamp: new Date().toISOString()
+          },
+          { status: 503 }
+        );
+      }
+      
+      throw ErrorTypes.OPENAI_SERVICE_ERROR();
     }
 
     let parsed: unknown;
@@ -657,89 +687,196 @@ export async function POST(req: Request) {
       );
     }
 
-    // Clean and enhance the audit data
-    const clean = (s: string) => s.replace(/\s*[-–—]\s*$/u, "").trim();
-
-    // Post-process to ensure scoring is consistent and fix mismatched rewrites
+    // Clean and validate the data
     const processedData = result.data;
 
-    // Filter out false "table format" issues
-    processedData.issues = processedData.issues.filter(issue => {
-      // If it's a "table format" issue, check if the line actually contains table indicators
-      if (issue.text.toLowerCase().includes('table format')) {
-        const hasTableIndicators =
-          issue.line.includes('|') ||
-          issue.line.split(/\s{4,}/).length > 3 || // Multiple large spaces
-          issue.line.includes('\t\t'); // Multiple tabs
+    // Validate and fix issue-action pairs
+    const { issues: validatedIssues, actions: validatedActions } = validateIssueActionPairs(
+      processedData.issues,
+      processedData.actions,
+      processedText
+    );
+    
+    processedData.issues = validatedIssues;
+    processedData.actions = validatedActions;
 
-        if (!hasTableIndicators) {
-          console.log('Filtered out false table format issue:', issue.line);
-          return false;
-        }
+         // Smart filtering - keep constructive feedback while removing obvious false positives
+     processedData.issues = processedData.issues.filter((issue, index) => {
+       // Remove false "table format" issues
+       if (issue.text.toLowerCase().includes('table format') && !issue.line.includes('|')) {
+         processedData.actions.splice(index, 1);
+         return false;
+       }
+
+       // Remove false "weak verb" issues for clearly strong verbs
+       const strongVerbs = ['resolved', 'developed', 'implemented', 'enhanced', 'optimized',
+         'designed', 'built', 'launched', 'led', 'managed', 'achieved',
+         'delivered', 'transformed', 'established', 'streamlined', 'created',
+         'executed', 'spearheaded', 'pioneered', 'drove', 'facilitated', 'boosted',
+         'increased', 'improved', 'constructed', 'trained', 'performed', 'deployed',
+         'integrated', 'leveraged', 'engineered', 'architected', 'crafted'];
+
+       const firstWord = issue.line.toLowerCase().replace(/^[•\-\*]\s*/, '').split(/\s+/)[0];
+       if ((issue.text.toLowerCase().includes('weak') || issue.text.toLowerCase().includes('action verb')) 
+           && strongVerbs.includes(firstWord)) {
+         processedData.actions.splice(index, 1);
+         return false;
+       }
+
+       // Keep constructive feedback but ensure accuracy
+       if (issue.text.toLowerCase().includes('metric') || issue.text.toLowerCase().includes('quantif')) {
+         // Check if the original text already has good metrics
+         const hasGoodMetrics = /\d+%|\d+\+|\d+,\d+|\d{2,}%|\$\d+|\d+ users|\d+ students|\d+ scans/i.test(issue.line);
+         if (hasGoodMetrics) {
+           // If it already has metrics, change the feedback to be about enhancement rather than missing
+           issue.text = issue.text.replace(/Missing|missing/, 'Could enhance');
+           issue.severity = 'low'; // Downgrade severity since there are already some metrics
+         }
+       }
+
+       // Ensure the original text is actually what's in the resume
+       // Don't flag issues for text that's already complete or well-written
+       const isCompleteStatement = issue.line.length > 50 && /\d+%|\d+\+|\d+,\d+|\d{2,}%|\$\d+|\d+ users|\d+ students|\d+ scans/i.test(issue.line);
+       if (isCompleteStatement && issue.text.toLowerCase().includes('incomplete')) {
+         processedData.actions.splice(index, 1);
+         return false;
+       }
+
+       return true;
+     });
+
+         // Recalculate score based on filtered issues
+     const highIssues = processedData.issues.filter(i => i.severity === 'high').length;
+     const mediumIssues = processedData.issues.filter(i => i.severity === 'medium').length;
+     const lowIssues = processedData.issues.filter(i => i.severity === 'low').length;
+
+     // Check if resume already has good metrics and strong content
+     const hasGoodMetrics = /\d+%|\d+\+|\d+,\d+|\d{2,}%|\$\d+|\d+ users|\d+ students|\d+ scans/i.test(processedText);
+     const hasStrongVerbs = /(boosted|increased|improved|developed|implemented|led|managed|achieved|delivered|transformed|established|streamlined|created|executed|spearheaded|pioneered|drove|facilitated|resolved|enhanced|optimized|designed|built|launched|constructed|trained|performed|deployed|integrated|leveraged|engineered|architected|crafted)/i.test(processedText);
+     
+     let recalculatedScore = Math.max(0, 100 - (highIssues * 15) - (mediumIssues * 5) - (lowIssues * 2));
+     
+     // Modest bonus for strong resumes, but keep room for improvement
+     if (hasGoodMetrics && hasStrongVerbs) {
+       recalculatedScore = Math.min(95, recalculatedScore + 5); // Cap at 95 to encourage improvement
+     } else if (hasGoodMetrics || hasStrongVerbs) {
+       recalculatedScore = Math.min(90, recalculatedScore + 3); // Cap at 90
+     }
+     
+     // Apply score caps for critical issues
+     const hasHighAtsIssues = processedData.issues.some(
+       i => i.severity === 'high' && i.category.toLowerCase().includes('ats')
+     );
+     
+     if (hasHighAtsIssues && recalculatedScore > 75) {
+       processedData.score = 75;
+     } else if (highIssues >= 3 && recalculatedScore > 70) {
+       processedData.score = 70;
+     } else {
+       processedData.score = recalculatedScore;
+     }
+
+     // Ensure we have exactly 5 issues and actions
+     const targetIssues = 5;
+     const currentIssues = Math.min(processedData.issues.length, processedData.actions.length);
+     
+     if (currentIssues < targetIssues) {
+       // Generate additional constructive feedback
+       const additionalIssues = generateAdditionalFeedback(processedText, processedData.issues, targetIssues - currentIssues);
+       processedData.issues.push(...additionalIssues.issues);
+       processedData.actions.push(...additionalIssues.actions);
+     } else if (currentIssues > targetIssues) {
+       // Keep only the most important issues
+       processedData.issues = processedData.issues.slice(0, targetIssues);
+       processedData.actions = processedData.actions.slice(0, targetIssues);
+     }
+
+    // Clean text helper
+    const clean = (s: string) => s.replace(/\s*[-–—]\s*$/u, "").trim();
+
+    // Extract keywords from resume text to ensure comprehensive coverage
+    const extractedKeywords = extractKeywordsFromText(processedText);
+    
+    // Combine AI-generated keywords with extracted keywords
+    const enhancedKeywords = processedData.keywords || [];
+    
+    // Add extracted keywords that weren't already identified by AI
+    extractedKeywords.forEach(extracted => {
+      const existingCategory = enhancedKeywords.find(k => k.category === extracted.category);
+      if (existingCategory) {
+        // Merge terms, avoiding duplicates
+        const allTerms = [...new Set([...existingCategory.terms, ...extracted.terms])];
+        existingCategory.terms = allTerms;
+      } else {
+        enhancedKeywords.push(extracted);
       }
-
-      // Filter out false "weak verb" issues for strong verbs
-      const strongVerbs = ['resolved', 'developed', 'implemented', 'enhanced', 'optimized',
-        'designed', 'built', 'launched', 'led', 'managed', 'achieved',
-        'delivered', 'transformed', 'established', 'streamlined'];
-
-      if (issue.text.toLowerCase().includes('weak') || issue.text.toLowerCase().includes('less impactful')) {
-        const firstWord = issue.line.toLowerCase().replace(/[•\-\*]\s*/, '').split(' ')[0];
-        if (strongVerbs.includes(firstWord)) {
-          console.log('Filtered out false weak verb issue for:', firstWord);
-          return false;
-        }
-      }
-
-      return true;
     });
 
-    // Ensure issues and actions arrays have same length (simplified schema doesn't have impact field)
-    const minLength = Math.min(processedData.issues.length, processedData.actions.length);
-    processedData.issues = processedData.issues.slice(0, minLength);
-    processedData.actions = processedData.actions.slice(0, minLength);
-
-    // Recalculate score if needed based on issues
-    const highAtsIssues = processedData.issues.filter(
-      i => i.severity === 'high' && i.category.toLowerCase().includes('ats')
-    ).length;
-
-    const highIssuesTotal = processedData.issues.filter(i => i.severity === 'high').length;
-    const mediumIssuesTotal = processedData.issues.filter(i => i.severity === 'medium').length;
-
-    // Apply score caps
-    if (highAtsIssues > 0 && processedData.score > 75) {
-      processedData.score = 75; // Cap at 75 for HIGH ATS issues
+    // Enhance strengths with specific examples from the resume
+    const enhancedStrengths = processedData.strengths || [];
+    
+    // Add strengths based on actual content found in resume
+    const hasQuantifiedAchievements = /\d+%|\d+\+|\d+,\d+|\d{2,}%|\$\d+|\d+ users|\d+ students|\d+ scans/i.test(processedText);
+    const hasStrongActionVerbs = /(boosted|increased|improved|developed|implemented|led|managed|achieved|delivered|transformed|established|streamlined|created|executed|spearheaded|pioneered|drove|facilitated|resolved|enhanced|optimized|designed|built|launched|constructed|trained|performed|deployed|integrated|leveraged|engineered|architected|crafted)/i.test(processedText);
+    const hasTechnicalSkills = enhancedKeywords.some(k => k.category === 'Technical Skills' && k.terms.length > 0);
+    
+    if (hasQuantifiedAchievements && !enhancedStrengths.some(s => s.text.toLowerCase().includes('quantified'))) {
+      enhancedStrengths.push({
+        section: "Experience",
+        text: "Includes quantified achievements with specific metrics",
+        reason: "Resume contains measurable results and impact statements"
+      });
     }
-    if (highIssuesTotal >= 3 && processedData.score > 70) {
-      processedData.score = 70; // Cap at 70 for 3+ HIGH issues
+    
+    if (hasStrongActionVerbs && !enhancedStrengths.some(s => s.text.toLowerCase().includes('action verb'))) {
+      enhancedStrengths.push({
+        section: "Experience",
+        text: "Uses strong action verbs throughout",
+        reason: "Resume employs powerful verbs like 'led', 'developed', 'implemented', 'achieved'"
+      });
+    }
+    
+    if (hasTechnicalSkills && !enhancedStrengths.some(s => s.text.toLowerCase().includes('technical'))) {
+      const techSkills = enhancedKeywords.find(k => k.category === 'Technical Skills');
+      if (techSkills) {
+        enhancedStrengths.push({
+          section: "Skills",
+          text: `Strong technical skills including ${techSkills.terms.slice(0, 5).join(', ')}`,
+          reason: `Demonstrates proficiency in ${techSkills.terms.length} technical areas`
+        });
+      }
     }
 
-    // Convert simplified data to full audit format
+    // Convert to full audit format
     const audit: Audit = {
       score: processedData.score,
       issues: processedData.issues.map((i) => ({
-        section: (i.section === "Format" ? "Other" : i.section) as any, // Type assertion for compatibility
+        section: (i.section === "Format" ? "Other" : i.section) as any,
         line: clean(i.line),
         text: clean(i.text),
         severity: i.severity,
-        category: i.category as any, // Type assertion for compatibility
-        reason: undefined, // Simplified schema doesn't include reason
+        category: i.category as any,
+        reason: undefined,
       })),
       actions: processedData.actions.map((a) => ({
-        section: (a.section === "Format" ? "Other" : a.section) as any, // Type assertion for compatibility
+        section: (a.section === "Format" ? "Other" : a.section) as any,
         original: clean(a.original),
         rewrite: clean(a.rewrite),
-        impact: "medium" as const, // Default impact since simplified schema doesn't include it
-        improvement: undefined, // Simplified schema doesn't include improvement
+        impact: "medium" as const,
+        improvement: undefined,
       })),
-      strengths: processedData.strengths?.map((s) => ({
-        section: (s.section === "Format" ? "Other" : s.section) as any, // Type assertion for compatibility
+      strengths: enhancedStrengths.map((s) => ({
+        section: (s.section === "Format" ? "Other" : s.section) as any,
         text: clean(s.text),
         reason: clean(s.reason),
-      })) || [],
-      summary: processedData.summary || "",
-      // Add metadata about the analysis
+      })),
+      keywords: enhancedKeywords.map((k) => ({
+        category: k.category,
+        terms: k.terms || [],
+        missing: k.missing || [],
+        density: k.density,
+      })),
+      summary: processedData.summary || generateDefaultSummary(processedData.score),
       metadata: {
         analyzedAt: new Date().toISOString(),
         detectedFormat,
@@ -770,6 +907,116 @@ export async function POST(req: Request) {
   } catch (error: any) {
     console.error("Error processing resume:", error);
     return handleAPIError(error);
+  }
+}
+
+function generateAdditionalFeedback(resumeText: string, existingIssues: any[], count: number): { issues: any[], actions: any[] } {
+  const additionalIssues: any[] = [];
+  const additionalActions: any[] = [];
+  
+  // Analyze the resume to find actual sections and content
+  const hasSummary = /summary|objective/i.test(resumeText);
+  const hasSkills = /skills|technologies|languages/i.test(resumeText);
+  const hasProjects = /projects|portfolio/i.test(resumeText);
+  const hasCertifications = /certifications|certificates/i.test(resumeText);
+  
+  // Generate feedback based on what's actually missing or could be improved
+  const feedbackOptions = [];
+  
+  if (!hasSummary) {
+    feedbackOptions.push({
+      section: "Summary",
+      line: "Resume header",
+      text: "Consider adding a professional summary section",
+      severity: "low" as const,
+      category: "structure",
+      original: "Resume header",
+      rewrite: "Add a compelling 2-3 sentence summary highlighting your key strengths and career objectives"
+    });
+  }
+  
+  if (hasSkills) {
+    feedbackOptions.push({
+      section: "Skills",
+      line: "Skills section",
+      text: "Could organize skills by proficiency level",
+      severity: "low" as const,
+      category: "format",
+      original: "Skills section",
+      rewrite: "Organize skills by proficiency level (Expert, Advanced, Intermediate) to show depth of knowledge"
+    });
+  }
+  
+  if (!hasCertifications) {
+    feedbackOptions.push({
+      section: "Education",
+      line: "Education section",
+      text: "Consider adding relevant certifications",
+      severity: "low" as const,
+      category: "content",
+      original: "Education section",
+      rewrite: "Add relevant certifications or additional training to demonstrate continuous learning"
+    });
+  }
+  
+  if (hasProjects) {
+    feedbackOptions.push({
+      section: "Projects",
+      line: "Project descriptions",
+      text: "Could add business impact context",
+      severity: "low" as const,
+      category: "content",
+      original: "Project descriptions",
+      rewrite: "Add business impact context to show how your technical work drives organizational value"
+    });
+  }
+  
+  // Generic improvement suggestions that don't fabricate information
+  feedbackOptions.push({
+    section: "Experience",
+    line: "Job descriptions",
+    text: "Consider adding industry-specific keywords",
+    severity: "low" as const,
+    category: "keyword",
+    original: "Job descriptions",
+    rewrite: "Incorporate more industry-specific keywords and technologies to improve ATS optimization"
+  });
+
+  // Filter out feedback that might conflict with existing issues
+  const existingSections = existingIssues.map(issue => issue.section);
+  const availableFeedback = feedbackOptions.filter(feedback => 
+    !existingSections.includes(feedback.section)
+  );
+
+  // Add the requested number of additional feedback items
+  for (let i = 0; i < Math.min(count, availableFeedback.length); i++) {
+    const feedback = availableFeedback[i];
+    additionalIssues.push({
+      section: feedback.section,
+      line: feedback.line,
+      text: feedback.text,
+      severity: feedback.severity,
+      category: feedback.category
+    });
+    additionalActions.push({
+      section: feedback.section,
+      original: feedback.original,
+      rewrite: feedback.rewrite
+    });
+  }
+
+  return { issues: additionalIssues, actions: additionalActions };
+}
+
+function generateDefaultSummary(score: number): string {
+  if (score >= 85) {
+    return "Excellent resume! Your content is well-structured with strong achievements. Minor refinements could make it perfect.";
+  } else if (score >= 70) {
+    return "Good foundation! Focus on adding more quantified achievements and ensuring consistent formatting throughout.";
+  } else if (score >= 50) {
+    return "Your resume has potential. Priority improvements: add metrics to achievements, use stronger action verbs, and enhance keyword optimization.";
+  } else {
+    return "Significant improvements needed. Focus on quantifying achievements, improving structure, and adding relevant keywords for your target role.";
   }
 }
 

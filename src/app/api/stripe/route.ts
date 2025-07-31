@@ -41,7 +41,6 @@ export async function POST(req: NextRequest) {
 
 // Create checkout session
 async function createCheckoutSession(priceId: string, userId: string) {
-  console.log('Creating checkout session:', { priceId, userId });
 
   // Check if Stripe client is available
   if (!stripe) {
@@ -80,7 +79,6 @@ async function createCheckoutSession(priceId: string, userId: string) {
     },
   });
 
-  console.log('Checkout session created:', session.url);
   return NextResponse.json({ url: session.url });
 }
 
@@ -230,8 +228,6 @@ async function verifySession(sessionId: string, userId: string) {
     // Don't fail the request if we can't record the session, 
     // but log it for monitoring
   }
-
-  console.log(`Successfully upgraded user ${userId} to Pro plan`);
 
   return NextResponse.json({
     success: true,

@@ -37,8 +37,7 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: "Missing audio blob" }, { status: 400 });
         }
 
-        // Log audio details for debugging
-        console.log(`Received audio file: name=<span class="math-inline">\{audioEntry\.name\}, size\=</span>{audioEntry.size}, type=${audioEntry.type}`);
+        // Validate audio file
 
         // Check for empty file
          if (audioEntry.size === 0) {
@@ -80,7 +79,7 @@ export async function POST(req: NextRequest) {
             // });
 
             // --- Option B: Try passing the File object directly (Recommended) ---
-             console.log("Attempting transcription with File object...");
+     
              const whisperResponse = await openai.audio.transcriptions.create({
                  model: "whisper-1",
                  file: audioEntry, // Pass the File object directly
@@ -88,7 +87,7 @@ export async function POST(req: NextRequest) {
              });
 
             transcript = whisperResponse.text;
-            console.log("Whisper Transcription Successful:", transcript);
+    
 
             // Handle potentially empty transcriptions from Whisper
             if (!transcript || transcript.trim().length === 0) {
@@ -123,7 +122,7 @@ export async function POST(req: NextRequest) {
                 max_tokens: 100
             });
             reply = chatResp.choices[0]?.message?.content?.trim() ?? "";
-            console.log("GPT Reply Successful:", reply);
+    
 
             if (!reply) {
                 console.warn("GPT returned an empty reply.");
@@ -147,7 +146,7 @@ export async function POST(req: NextRequest) {
 
 
         // --- 7) Return transcript and reply (Recommended) ---
-         console.log("Sending response to client:", { transcript, reply });
+ 
          return NextResponse.json({ transcript, reply }, { status: 200 });
 
         // --- Alternative: Return updated history (If client relies on it) ---
