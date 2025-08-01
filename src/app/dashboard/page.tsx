@@ -24,6 +24,7 @@ interface Tool {
   icon: React.ReactNode;
   available: boolean;
   isPro?: boolean;
+  status?: "coming_soon" | "unavailable";
 }
 
 export default function DashboardPage() {
@@ -39,7 +40,9 @@ export default function DashboardPage() {
     const checkUserAndPlan = async () => {
       try {
         if (!supabase) {
-          setError("Authentication service is not available. Please try again later.");
+          setError(
+            "Authentication service is not available. Please try again later."
+          );
           setLoading(false);
           return;
         }
@@ -117,7 +120,9 @@ export default function DashboardPage() {
 
     if (planType === "free") {
       if (!supabase) {
-        setError("Authentication service is not available. Please try again later.");
+        setError(
+          "Authentication service is not available. Please try again later."
+        );
         return;
       }
       await supabase
@@ -272,9 +277,10 @@ export default function DashboardPage() {
       title: "Interview Prep",
       description:
         "Practice with AI-generated questions & live mock interviews",
-      href: "/interview",
-      available: true,
+      href: "#",
+      available: false,
       isPro: true,
+      status: "unavailable",
       icon: (
         <svg
           className="w-6 h-6"
@@ -296,6 +302,7 @@ export default function DashboardPage() {
       description: "Enhance your LinkedIn profile for maximum visibility",
       href: "#",
       available: false,
+      status: "coming_soon",
       icon: (
         <svg
           className="w-6 h-6"
@@ -317,6 +324,7 @@ export default function DashboardPage() {
       description: "Get data-driven salary insights and negotiation tips",
       href: "#",
       available: false,
+      status: "coming_soon",
       icon: (
         <svg
           className="w-6 h-6"
@@ -436,7 +444,13 @@ export default function DashboardPage() {
             {tools.map((tool) => (
               <div
                 key={tool.title}
-                className={`relative ${!tool.available ? "opacity-60" : ""}`}
+                className={`relative ${
+                  !tool.available
+                    ? tool.status === "unavailable"
+                      ? "opacity-50"
+                      : "opacity-60"
+                    : ""
+                }`}
               >
                 <div
                   className={`bg-[#1a1a1a] rounded-xl p-6 h-full flex flex-col
@@ -448,10 +462,16 @@ export default function DashboardPage() {
                   }
                 `}
                 >
-                  {/* Coming Soon Badge */}
+                  {/* Status Badge */}
                   {!tool.available && (
-                    <span className="absolute -top-3 right-4 px-3 py-1 bg-[#2a2a2a] text-gray-500 text-xs font-medium rounded-full uppercase tracking-wider">
-                      Soon
+                    <span
+                      className={`absolute -top-3 right-4 px-3 py-1 text-xs font-medium rounded-full uppercase tracking-wider ${
+                        tool.status === "unavailable"
+                          ? "bg-red-900/50 text-red-400 border border-red-800/50"
+                          : "bg-[#2a2a2a] text-gray-500"
+                      }`}
+                    >
+                      {tool.status === "unavailable" ? "Unavailable" : "Soon"}
                     </span>
                   )}
 
@@ -496,10 +516,15 @@ export default function DashboardPage() {
                   ) : (
                     <button
                       disabled
-                      className="w-full px-4 py-3 bg-[#2a2a2a] text-gray-600 font-medium rounded-lg
-                        cursor-not-allowed"
+                      className={`w-full px-4 py-3 font-medium rounded-lg cursor-not-allowed ${
+                        tool.status === "unavailable"
+                          ? "bg-red-900/20 text-red-400 border border-red-800/30"
+                          : "bg-[#2a2a2a] text-gray-600"
+                      }`}
                     >
-                      Coming Soon
+                      {tool.status === "unavailable"
+                        ? "Currently Unavailable"
+                        : "Coming Soon"}
                     </button>
                   )}
                 </div>
