@@ -311,7 +311,7 @@ export default function AuthPage() {
             By continuing, you agree to our Terms of Service and Privacy Policy
           </p>
           <a
-            href="#"
+            href="/contact"
             className="text-gray-500 text-xs hover:text-gray-400 transition"
           >
             Having trouble? Contact support
