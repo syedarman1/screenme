@@ -14,11 +14,20 @@ const ContactPage = () => {
   const [submitStatus, setSubmitStatus] = useState<
     "idle" | "success" | "error"
   >("idle");
+  const [errorMessage, setErrorMessage] = useState<string>("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Client-side validation
+    if (formData.message.length < 10) {
+      setErrorMessage("Message must be at least 10 characters long");
+      return;
+    }
+    
     setIsSubmitting(true);
     setSubmitStatus("idle");
+    setErrorMessage("");
 
     try {
       const response = await fetch("/api/contact", {
@@ -32,13 +41,28 @@ const ContactPage = () => {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || "Failed to send message");
+        if (data.details && data.details.length > 0) {
+          const firstError = data.details[0];
+          if (firstError.path.includes('message')) {
+            setErrorMessage("Message must be at least 10 characters long");
+          } else if (firstError.path.includes('name')) {
+            setErrorMessage("Name must be at least 2 characters long");
+          } else if (firstError.path.includes('email')) {
+            setErrorMessage("Please enter a valid email address");
+          } else {
+            setErrorMessage(firstError.message || "Please check your input");
+          }
+        } else {
+          setErrorMessage(data.error || "Failed to send message");
+        }
+        setSubmitStatus("error");
+      } else {
+        setSubmitStatus("success");
+        setFormData({ name: "", email: "", subject: "", message: "" });
       }
-
-      setSubmitStatus("success");
-      setFormData({ name: "", email: "", subject: "", message: "" });
     } catch (error: any) {
       console.error("Contact form error:", error);
+      setErrorMessage("Network error. Please try again.");
       setSubmitStatus("error");
     } finally {
       setIsSubmitting(false);
@@ -59,7 +83,6 @@ const ContactPage = () => {
   return (
     <div className="min-h-screen bg-[var(--background)]">
       <div className="container mx-auto px-6 py-20">
-        {/* Header */}
         <div className="text-center mb-16">
           <motion.h1
             initial={{ opacity: 0, y: 20 }}
@@ -81,7 +104,6 @@ const ContactPage = () => {
 
         <div className="max-w-6xl mx-auto">
           <div className="grid lg:grid-cols-3 gap-12">
-            {/* Contact Form */}
             <motion.div
               initial={{ opacity: 0, x: -30 }}
               animate={{ opacity: 1, x: 0 }}
@@ -144,59 +166,60 @@ const ContactPage = () => {
                       onChange={handleInputChange}
                       required
                       rows={5}
+                      maxLength={2000}
                       className="w-full px-4 py-4 bg-[#0a0a0a] border border-[#2a2a2a] rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-[var(--accent)] transition-colors resize-none"
-                      placeholder="Tell us how we can help you..."
+                      placeholder="Tell us how we can help you... (minimum 10 characters)"
                     />
+                    <div className="flex justify-between items-center mt-2">
+                      <span className="text-xs text-gray-500">
+                        Minimum 10 characters required
+                      </span>
+                      <span className="text-xs text-gray-500">
+                        {formData.message.length}/2000
+                      </span>
+                    </div>
                   </div>
 
                   <button
                     disabled={isSubmitting}
-                    className="w-full bg-[var(--accent)] text-black font-medium py-4 px-6 rounded-lg hover:bg-[#e6b800] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full bg-[var(--accent)] text-black font-medium py-4 px-6 rounded-lg hover:bg-[#e6b800] transition-all duration-900 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {isSubmitting ? (
                       <div className="flex items-center justify-center">
                         <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-black mr-2"></div>
                         Sending...
                       </div>
+                    ) : submitStatus === "success" ? (
+                      <motion.div
+                        initial={{ scale: 0.8, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        transition={{ duration: 0.3 }}
+                        className="flex items-center justify-center"
+                      >
+                        Sent ✓
+                      </motion.div>
                     ) : (
                       "Send Message"
                     )}
                   </button>
 
-                  <AnimatePresence>
-                    {submitStatus === "success" && (
-                      <motion.div
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -10 }}
-                        className="bg-green-900/20 border border-green-800 text-green-300 px-4 py-3 rounded-lg text-center"
-                      >
-                         Message sent successfully! We'll get back to you within 24 hours.
-                      </motion.div>
-                    )}
-                    {submitStatus === "error" && (
-                      <motion.div
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -10 }}
-                        className="bg-red-900/20 border border-red-800 text-red-300 px-4 py-3 rounded-lg text-center"
-                      >
-                         Something went wrong. Please try again or email us directly.
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
+                  {errorMessage && (
+                    <div className="text-red-400 text-sm text-center">
+                      {errorMessage}
+                    </div>
+                  )}
+
+
                 </form>
               </div>
             </motion.div>
 
-            {/* Sidebar */}
             <motion.div
               initial={{ opacity: 0, x: 30 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.6, delay: 0.3 }}
               className="space-y-8"
             >
-              {/* Email Contact */}
               <div className="bg-[#1a1a1a] rounded-2xl p-6 border border-[#2a2a2a]">
                 <div className="flex items-center mb-4">
                   <div className="w-10 h-10 bg-[var(--accent)] rounded-lg flex items-center justify-center text-black text-lg mr-3">
@@ -216,7 +239,6 @@ const ContactPage = () => {
                 </p>
               </div>
 
-              {/* Response Times */}
               <div className="bg-[#1a1a1a] rounded-2xl p-6 border border-[#2a2a2a]">
                 <h3 className="text-lg font-medium text-white mb-4">
                   Response Times
@@ -237,7 +259,6 @@ const ContactPage = () => {
                 </div>
               </div>
 
-              {/* FAQ Section */}
               <div className="bg-[#1a1a1a] rounded-2xl p-6 border border-[#2a2a2a]">
                 <h3 className="text-lg font-medium text-white mb-6">
                   Frequently Asked Questions
