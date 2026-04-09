@@ -156,6 +156,24 @@
   --orange-400: #ff9f0a;
 }
 
+/* ─── Theme transition — smooth 300ms crossfade ──────────────── */
+html[data-theme] *,
+html[data-theme] *::before,
+html[data-theme] *::after {
+  transition: background-color 300ms ease, color 300ms ease, border-color 300ms ease, box-shadow 300ms ease, fill 300ms ease, stroke 300ms ease;
+}
+/* Suppress transitions on initial page load */
+html.no-theme-transition *,
+html.no-theme-transition *::before,
+html.no-theme-transition *::after {
+  transition: none !important;
+}
+/* Don't transition animations/transforms that are already animating */
+html[data-theme] .animate-spin,
+html[data-theme] [class*="transition-transform"] {
+  transition: background-color 300ms ease, color 300ms ease;
+}
+
 /* ─── Dark mode overrides for hardcoded Tailwind utilities ──── */
 
 /* Backgrounds */
@@ -211,7 +229,16 @@
 [data-theme="dark"] .ring-black\/\[0\.08\] { --tw-ring-color: rgba(255, 255, 255, 0.08) !important; }
 
 /* Hamburger lines */
-[data-theme="dark"] .bg-\[\#1d1d1f\] { background-color: #f5f5f7 !important; }
+[data-theme="dark"] .bg-\[\#1d1d1f\]:not(.google-btn) { background-color: #f5f5f7 !important; }
+
+/* Google sign-in button — invert to light button in dark mode */
+[data-theme="dark"] .google-btn {
+  background-color: #f5f5f7 !important;
+  color: #1d1d1f !important;
+}
+[data-theme="dark"] .google-btn:hover {
+  background-color: #e5e5ea !important;
+}
 
 /* Gradient text override */
 [data-theme="dark"] .text-gradient {

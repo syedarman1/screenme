@@ -16,12 +16,22 @@ export default function ThemeProvider({ children }: { children: React.ReactNode 
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    // Suppress transition on initial load so theme doesn't fade in
+    document.documentElement.classList.add("no-theme-transition");
+
     const stored = localStorage.getItem("screenme-theme") as Theme | null;
     const preferred = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
     const initial = stored || preferred;
     setTheme(initial);
     document.documentElement.setAttribute("data-theme", initial);
     setMounted(true);
+
+    // Re-enable transitions after first paint
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        document.documentElement.classList.remove("no-theme-transition");
+      });
+    });
   }, []);
 
   const toggle = () => {
