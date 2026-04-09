@@ -660,7 +660,39 @@ export async function POST(req: Request) {
       }, { status: formatError.status });
     }
 
-    const result = SimpleAuditSchema.safeParse(parsed);
+    // Sanitize before validation — GPT occasionally returns null/non-string values
+    const safe = parsed as any;
+    if (Array.isArray(safe?.issues)) {
+      safe.issues = safe.issues
+        .filter((i: any) => i && typeof i.section === "string" && typeof i.line === "string" && typeof i.text === "string")
+        .slice(0, 15);
+    }
+    if (Array.isArray(safe?.actions)) {
+      safe.actions = safe.actions
+        .filter((a: any) => a && typeof a.section === "string" && typeof a.original === "string" && typeof a.rewrite === "string")
+        .slice(0, 15);
+    }
+    if (Array.isArray(safe?.strengths)) {
+      safe.strengths = safe.strengths
+        .filter((s: any) => s && typeof s.section === "string" && typeof s.text === "string" && typeof s.reason === "string")
+        .slice(0, 10);
+    }
+    if (Array.isArray(safe?.keywords)) {
+      safe.keywords = safe.keywords
+        .filter((k: any) => k && typeof k.category === "string" && k.category.length >= 1 && Array.isArray(k.terms))
+        .map((k: any) => ({
+          ...k,
+          category: String(k.category),
+          terms: k.terms.filter((t: any) => typeof t === "string" && t.length >= 1).map(String),
+          missing: Array.isArray(k.missing)
+            ? k.missing.filter((t: any) => typeof t === "string" && t.length >= 1).map(String)
+            : [],
+        }))
+        .filter((k: any) => k.terms.length > 0)
+        .slice(0, 10);
+    }
+
+    const result = SimpleAuditSchema.safeParse(safe);
     if (!result.success) {
       console.error("Schema validation errors:", result.error.format());
       console.error("Raw parsed data:", JSON.stringify(parsed, null, 2).substring(0, 1000));

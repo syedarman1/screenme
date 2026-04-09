@@ -81,14 +81,14 @@ const ContactPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[var(--background)]">
+    <div className="min-h-screen bg-[#f5f5f7]">
       <div className="container mx-auto px-6 py-20">
         <div className="text-center mb-16">
           <motion.h1
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
-            className="text-4xl md:text-5xl font-light text-white mb-4"
+            className="text-4xl md:text-5xl font-light text-[#1d1d1f] mb-4"
           >
             Contact Us
           </motion.h1>
@@ -96,7 +96,7 @@ const ContactPage = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.1 }}
-            className="text-lg text-gray-400 max-w-2xl mx-auto"
+            className="text-lg text-[#86868b] max-w-2xl mx-auto"
           >
             Have questions about ScreenMe? We're here to help you succeed in your career journey.
           </motion.p>
@@ -110,8 +110,8 @@ const ContactPage = () => {
               transition={{ duration: 0.6, delay: 0.2 }}
               className="lg:col-span-2"
             >
-              <div className="bg-[#1a1a1a] rounded-2xl p-8 border border-[#2a2a2a]">
-                <h2 className="text-2xl font-light text-white mb-8">
+              <div className="bg-white rounded-2xl p-8 border border-black/[0.08]">
+                <h2 className="text-2xl font-light text-[#1d1d1f] mb-8">
                   Send us a message
                 </h2>
 
@@ -124,7 +124,7 @@ const ContactPage = () => {
                         value={formData.name}
                         onChange={handleInputChange}
                         required
-                        className="w-full px-4 py-4 bg-[#0a0a0a] border border-[#2a2a2a] rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-[var(--accent)] transition-colors"
+                        className="w-full px-4 py-4 bg-white border border-black/[0.08] rounded-xl text-[#1d1d1f] placeholder-[#aeaeb2] focus:outline-none focus:border-[#0071e3]/60 transition-colors"
                         placeholder="Your name"
                       />
                     </div>
@@ -135,7 +135,7 @@ const ContactPage = () => {
                         value={formData.email}
                         onChange={handleInputChange}
                         required
-                        className="w-full px-4 py-4 bg-[#0a0a0a] border border-[#2a2a2a] rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-[var(--accent)] transition-colors"
+                        className="w-full px-4 py-4 bg-white border border-black/[0.08] rounded-xl text-[#1d1d1f] placeholder-[#aeaeb2] focus:outline-none focus:border-[#0071e3]/60 transition-colors"
                         placeholder="Email address"
                       />
                     </div>
@@ -147,7 +147,7 @@ const ContactPage = () => {
                       value={formData.subject}
                       onChange={handleInputChange}
                       required
-                      className="w-full px-4 py-4 bg-[#0a0a0a] border border-[#2a2a2a] rounded-lg text-white focus:outline-none focus:border-[var(--accent)] transition-colors"
+                      className="w-full px-4 py-4 bg-white border border-black/[0.08] rounded-xl text-[#1d1d1f] focus:outline-none focus:border-[#0071e3]/60 transition-colors"
                     >
                       <option value="">Select a topic</option>
                       <option value="resume-help">Resume Help</option>
@@ -167,14 +167,14 @@ const ContactPage = () => {
                       required
                       rows={5}
                       maxLength={2000}
-                      className="w-full px-4 py-4 bg-[#0a0a0a] border border-[#2a2a2a] rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-[var(--accent)] transition-colors resize-none"
+                      className="w-full px-4 py-4 bg-white border border-black/[0.08] rounded-xl text-[#1d1d1f] placeholder-[#aeaeb2] focus:outline-none focus:border-[#0071e3]/60 transition-colors resize-none"
                       placeholder="Tell us how we can help you... (minimum 10 characters)"
                     />
                     <div className="flex justify-between items-center mt-2">
-                      <span className="text-xs text-gray-500">
+                      <span className="text-xs text-[#6e6e73]">
                         Minimum 10 characters required
                       </span>
-                      <span className="text-xs text-gray-500">
+                      <span className="text-xs text-[#6e6e73]">
                         {formData.message.length}/2000
                       </span>
                     </div>
@@ -220,82 +220,85 @@ const ContactPage = () => {
               transition={{ duration: 0.6, delay: 0.3 }}
               className="space-y-8"
             >
-              <div className="bg-[#1a1a1a] rounded-2xl p-6 border border-[#2a2a2a]">
+              <div className="bg-white rounded-2xl p-6 border border-black/[0.08]">
                 <div className="flex items-center mb-4">
-                  <div className="w-10 h-10 bg-[var(--accent)] rounded-lg flex items-center justify-center text-black text-lg mr-3">
-                    📧
+                  <div className="w-10 h-10 bg-[#0071e3]/[0.08] border border-[#0071e3]/20 rounded-xl flex items-center justify-center mr-3">
+                    <svg width="18" height="18" viewBox="0 0 24 24" className="stroke-[#0071e3] fill-none" strokeWidth="1.5">
+                      <polyline points="22,6 12,13 2,6" />
+                      <rect x="2" y="6" width="20" height="14" rx="2" ry="2" />
+                    </svg>
                   </div>
                   <div>
-                    <h3 className="text-lg font-medium text-white">
+                    <h3 className="text-lg font-medium text-[#1d1d1f]">
                       Email Support
                     </h3>
-                    <p className="text-sm text-gray-400">
+                    <p className="text-sm text-[#86868b]">
                       help@screenme.dev
                     </p>
                   </div>
                 </div>
-                <p className="text-sm text-gray-500">
+                <p className="text-sm text-[#6e6e73]">
                   We typically respond within 24 hours
                 </p>
               </div>
 
-              <div className="bg-[#1a1a1a] rounded-2xl p-6 border border-[#2a2a2a]">
-                <h3 className="text-lg font-medium text-white mb-4">
+              <div className="bg-white rounded-2xl p-6 border border-black/[0.08]">
+                <h3 className="text-lg font-medium text-[#1d1d1f] mb-4">
                   Response Times
                 </h3>
                 <div className="space-y-3">
                   <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-400">General inquiries</span>
+                    <span className="text-sm text-[#86868b]">General inquiries</span>
                     <span className="text-sm text-[var(--accent)] font-medium">24 hours</span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-400">Technical support</span>
+                    <span className="text-sm text-[#86868b]">Technical support</span>
                     <span className="text-sm text-[var(--accent)] font-medium">12 hours</span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-400">Urgent issues</span>
+                    <span className="text-sm text-[#86868b]">Urgent issues</span>
                     <span className="text-sm text-[var(--accent)] font-medium">4 hours</span>
                   </div>
                 </div>
               </div>
 
-              <div className="bg-[#1a1a1a] rounded-2xl p-6 border border-[#2a2a2a]">
-                <h3 className="text-lg font-medium text-white mb-6">
+              <div className="bg-white rounded-2xl p-6 border border-black/[0.08]">
+                <h3 className="text-lg font-medium text-[#1d1d1f] mb-6">
                   Frequently Asked Questions
                 </h3>
                 <div className="space-y-6">
                   <div>
-                    <h4 className="font-medium text-white mb-2">
+                    <h4 className="font-medium text-[#1d1d1f] mb-2">
                       How accurate is the resume scoring?
                     </h4>
-                    <p className="text-sm text-gray-400 leading-relaxed">
+                    <p className="text-sm text-[#86868b] leading-relaxed">
                       Our AI analyzes resumes using industry best practices and ATS optimization standards to provide accurate, actionable feedback.
                     </p>
                   </div>
                   
                   <div>
-                    <h4 className="font-medium text-white mb-2">
+                    <h4 className="font-medium text-[#1d1d1f] mb-2">
                       Can I use this for any industry?
                     </h4>
-                    <p className="text-sm text-gray-400 leading-relaxed">
+                    <p className="text-sm text-[#86868b] leading-relaxed">
                       Yes! Our system adapts to different industries and job levels, providing tailored recommendations for your specific field.
                     </p>
                   </div>
                   
                   <div>
-                    <h4 className="font-medium text-white mb-2">
+                    <h4 className="font-medium text-[#1d1d1f] mb-2">
                       Is my data secure?
                     </h4>
-                    <p className="text-sm text-gray-400 leading-relaxed">
+                    <p className="text-sm text-[#86868b] leading-relaxed">
                       Absolutely. We use enterprise-grade security and never share your information with third parties.
                     </p>
                   </div>
 
                   <div>
-                    <h4 className="font-medium text-white mb-2">
+                    <h4 className="font-medium text-[#1d1d1f] mb-2">
                       How many resumes can I analyze?
                     </h4>
-                    <p className="text-sm text-gray-400 leading-relaxed">
+                    <p className="text-sm text-[#86868b] leading-relaxed">
                       Free users can analyze up to 3 resumes per month. Premium users get unlimited analysis and advanced features.
                     </p>
                   </div>

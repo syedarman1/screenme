@@ -1,192 +1,186 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { supabase } from "../lib/supabaseClient";
 
-type PricingPlan = {
-  title: string;
-  price: string;
-  period?: string;
-  features: string[];
-  buttonText: string;
-  isFeatured?: boolean;
-  priceId?: string; // Optional, only for plans requiring payment
-  onClick?: () => void;
-};
+const EASE = [0.16, 1, 0.3, 1] as const;
 
-const PRICING_PLANS: PricingPlan[] = [
+const TIERS = [
   {
-    title: "Free",
+    id: "free",
+    name: "Free",
     price: "$0",
-    period: "/mo",
+    period: "/month",
+    desc: "Everything you need to get started.",
     features: [
-      "3× Resume scans per month",
-      "2× Cover letter per month",
-      "2× Job-match analysis per month",
-      "Basic tone only",
+      "3 resume scans / month",
+      "2 cover letters / month",
+      "2 job-match analyses / month",
+      "Professional tone only",
       "Email support",
     ],
-    buttonText: "Get Started",
+    cta: "Get started free",
+    featured: false,
   },
   {
-    title: "Pro",
+    id: "pro",
+    name: "Pro",
     price: "$15",
-    period: "/mo",
+    period: "/month",
+    desc: "Unlimited access. No caps, no compromises.",
     features: [
       "Unlimited resume scans",
       "Unlimited cover letters",
-      "Unlimited job-match analysis",
+      "Unlimited job-match analyses",
       "Unlimited interview prep Q&A",
-      "All tone options (Professional, Enthusiastic, Concise)",
-      "Live voice interview practice",
+      "All tone options",
+      "Live voice mock interviews",
+      "Priority support",
     ],
-    buttonText: "Go Pro",
-    isFeatured: true,
-    priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO,
+    cta: "Upgrade to Pro",
+    featured: true,
   },
   {
-    title: "Enterprise",
+    id: "enterprise",
+    name: "Enterprise",
     price: "Custom",
+    period: "",
+    desc: "For teams and organisations.",
     features: [
-      "All Pro features",
-      "Team seats & usage analytics",
+      "Everything in Pro",
+      "Team seats & analytics",
       "Dedicated support & SLAs",
+      "Custom integrations",
     ],
-    buttonText: "Contact Us",
+    cta: "Contact us",
+    featured: false,
   },
 ];
 
-const PricingCard = ({ plan }: { plan: PricingPlan }) => {
+const Check = () => (
+  <svg className="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+  </svg>
+);
+
+export default function PricingSection() {
   const router = useRouter();
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
+  const [authed, setAuthed] = useState<boolean | null>(null);
+  const [busy,   setBusy]   = useState(false);
 
   useEffect(() => {
-    const checkAuth = async () => {
-      if (!supabase) return;
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      setIsAuthenticated(!!session);
-    };
-    checkAuth();
+    if (!supabase) return;
+    supabase.auth.getSession().then(({ data }) => setAuthed(!!data.session));
   }, []);
 
-  const handleCheckoutRedirect = () => {
-    // Handle Enterprise plan - redirect to contact page
-    if (plan.title === "Enterprise") {
-      router.push("/contact");
-      return;
-    }
+  const handleCta = async (tier: typeof TIERS[number]) => {
+    if (tier.id === "enterprise") { router.push("/contact"); return; }
+    if (tier.id === "free")       { router.push(authed ? "/dashboard" : "/login"); return; }
 
-    if (isAuthenticated === null) {
-      return; // Still loading auth state
-    }
-
-    if (!isAuthenticated) {
-      // Store priceId if it exists (for Pro plan), then redirect to login
-      if (plan.priceId) {
-        localStorage.setItem("selectedPriceId", plan.priceId);
-      }
+    if (!authed) {
+      if (process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO)
+        localStorage.setItem("selectedPriceId", process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO);
       router.push("/login");
       return;
     }
-
-    // Authenticated users go to dashboard
-    if (plan.priceId) {
-      localStorage.setItem("selectedPriceId", plan.priceId);
-    }
-    router.push("/dashboard");
+    if (!process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO) return;
+    setBusy(true);
+    try {
+      const { data: { user } } = await supabase!.auth.getUser();
+      const res = await fetch("/api/stripe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO, userId: user?.id }),
+      });
+      const { url } = await res.json();
+      if (url) window.location.href = url;
+    } finally { setBusy(false); }
   };
 
   return (
-    <div
-      className={`
-        bg-[var(--neutral-800)] p-6 rounded-lg text-center
-        border-2 ${
-          plan.isFeatured
-            ? "border-[var(--accent)] scale-105"
-            : "border-[var(--neutral-700)]"
-        }
-        flex flex-col transition-transform duration-200 ease-in-out
-      `}
-    >
-      <h3 className="text-xl font-semibold text-[var(--foreground)] mb-2">
-        {plan.title}
-      </h3>
+    <section id="pricing" className="py-32 bg-[#f5f5f7] border-t border-black/[0.05] relative overflow-hidden">
+      <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[500px] rounded-full bg-[#0071e3] opacity-[0.04] blur-[130px]" />
+      </div>
 
-      <p className="text-3xl font-bold text-[var(--foreground)] mb-4">
-        {plan.price}
-        {plan.period && (
-          <span className="text-sm font-normal text-[var(--gray-400)]">
-            {plan.period}
-          </span>
-        )}
-      </p>
+      <div className="max-w-6xl mx-auto px-6">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.55, ease: EASE }}
+          className="text-center mb-16"
+        >
+          <p className="text-xs font-semibold uppercase tracking-widest text-[#0071e3] mb-4">Pricing</p>
+          <h2 className="text-4xl md:text-5xl font-semibold tracking-tight text-[#1d1d1f] mb-3">
+            Simple pricing.
+          </h2>
+          <p className="text-[#6e6e73] text-base">Start free. Upgrade when you're ready. Cancel anytime.</p>
+        </motion.div>
 
-      <ul className="text-[var(--gray-300)] mb-6 space-y-2 text-sm text-left px-4 flex-grow">
-        {plan.features.map((feature, i) => (
-          <li key={i} className="flex items-start gap-2">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-4 w-4 text-[var(--accent)] flex-shrink-0 mt-0.5"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={3}
+        <div className="grid md:grid-cols-3 gap-4 items-start">
+          {TIERS.map((tier, i) => (
+            <motion.div
+              key={tier.id}
+              initial={{ opacity: 0, y: 24 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.45, delay: i * 0.07, ease: EASE }}
+              className={`relative rounded-2xl flex flex-col gap-6 overflow-hidden
+                ${tier.featured
+                  ? "bg-[#0071e3] p-px shadow-xl"
+                  : ""
+                }`}
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M5 13l4 4L19 7"
-              />
-            </svg>
-            <span>{feature}</span>
-          </li>
-        ))}
-      </ul>
+              <div className={`flex flex-col gap-6 p-7 h-full rounded-2xl
+                ${tier.featured
+                  ? "bg-[#003d80]"
+                  : "bg-white border border-black/[0.08] shadow-sm"
+                }`}
+              >
+                {tier.featured && (
+                  <span className="absolute top-0 left-1/2 -translate-x-1/2 text-[10px] font-bold uppercase tracking-widest px-3 py-1 bg-[#0071e3] text-white rounded-b-xl">
+                    Most popular
+                  </span>
+                )}
 
-      <button
-        onClick={handleCheckoutRedirect}
-        className="
-          mt-auto bg-[var(--accent)] text-black font-semibold px-6 py-2 rounded-lg
-          relative overflow-hidden transition-all duration-300
-          hover:opacity-90 hover:shadow-lg pricing-button
-        "
-      >
-        {plan.buttonText}
-      </button>
-    </div>
-  );
-};
+                <div className="pt-2">
+                  <p className={`text-xs font-semibold uppercase tracking-widest mb-3 ${tier.featured ? "text-[#60a5fa]" : "text-[#6e6e73]"}`}>
+                    {tier.name}
+                  </p>
+                  <div className="flex items-end gap-1.5 mb-2">
+                    <span className={`text-4xl font-semibold tabular-nums ${tier.featured ? "text-white" : "text-[#1d1d1f]"}`}>{tier.price}</span>
+                    {tier.period && <span className={`text-sm mb-1 ${tier.featured ? "text-[#93c5fd]" : "text-[#86868b]"}`}>{tier.period}</span>}
+                  </div>
+                  <p className={`text-sm ${tier.featured ? "text-[#93c5fd]" : "text-[#6e6e73]"}`}>{tier.desc}</p>
+                </div>
 
-export default function PricingSection() {
-  return (
-    <section id="pricing" className="py-20 bg-[var(--background)]">
-      <style>{`
-        @keyframes bubble {
-          0% {
-            transform: translateX(-100%);
-          }
-          100% {
-            transform: translateX(100%);
-          }
-        }
-        .pricing-button::before {
-          content: '';
-          position: absolute;
-          inset: 0;
-          background: linear-gradient(to right, transparent, rgba(255, 255, 255, 0.2), transparent);
-          animation: bubble 3s infinite linear;
-        }
-      `}</style>
-      <div className="container mx-auto px-6">
-        <h2 className="text-3xl md:text-4xl font-bold text-[var(--foreground)] text-center mb-12">
-          Simple, Transparent Pricing
-        </h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 items-stretch">
-          {PRICING_PLANS.map((plan) => (
-            <PricingCard key={plan.title} plan={plan} />
+                <ul className="flex flex-col gap-2.5 flex-1">
+                  {tier.features.map((f, j) => (
+                    <li key={j} className="flex items-center gap-3">
+                      <span className={tier.featured ? "text-[#60a5fa]" : "text-[#0071e3]"}>
+                        <Check />
+                      </span>
+                      <span className={`text-sm ${tier.featured ? "text-[#e0f2fe]" : "text-[#6e6e73]"}`}>{f}</span>
+                    </li>
+                  ))}
+                </ul>
+
+                <button
+                  onClick={() => handleCta(tier)}
+                  disabled={busy && tier.id === "pro"}
+                  className={`pricing-button relative w-full py-3 rounded-xl text-sm font-semibold transition-all duration-200 cursor-pointer disabled:opacity-50
+                    ${tier.featured
+                      ? "bg-white text-[#003d80] hover:bg-[#f0f8ff]"
+                      : "bg-[#0071e3]/8 border border-[#0071e3]/20 text-[#0071e3] hover:bg-[#0071e3]/14"
+                    }`}
+                >
+                  {busy && tier.id === "pro" ? "Loading…" : tier.cta}
+                </button>
+              </div>
+            </motion.div>
           ))}
         </div>
       </div>

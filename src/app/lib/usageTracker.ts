@@ -1,7 +1,7 @@
 
 import { supabase } from './supabaseClient';
 
-export type FeatureType = 'resume_scan' | 'cover_letter' | 'job_match' | 'interview_prep';
+export type FeatureType = 'resume_scan' | 'cover_letter' | 'job_match' | 'interview_prep' | 'resume_tailor';
 
 export interface UsageCheckResult {
   allowed: boolean;
@@ -15,6 +15,7 @@ interface UserUsageData {
   cover_letters: number;
   job_matches: number;
   interview_preps: number;
+  resume_tailors: number;
   last_reset?: string;
 }
 
@@ -39,7 +40,7 @@ export async function checkUsageLimit(userId: string, feature: FeatureType): Pro
 
     const { data: usageData, error: usageError } = await supabase
       .from('user_usage')
-      .select('resume_scans, cover_letters, job_matches, interview_preps, last_reset')
+      .select('resume_scans, cover_letters, job_matches, interview_preps, resume_tailors, last_reset')
       .eq('user_id', userId)
       .single();
 
@@ -60,6 +61,7 @@ export async function checkUsageLimit(userId: string, feature: FeatureType): Pro
           cover_letters: 0,
           job_matches: 0,
           interview_preps: 0,
+          resume_tailors: 0,
           last_reset: new Date().toISOString()
         }, { onConflict: 'user_id' });
     }
@@ -70,7 +72,8 @@ export async function checkUsageLimit(userId: string, feature: FeatureType): Pro
       resume_scans: 0,
       cover_letters: 0,
       job_matches: 0,
-      interview_preps: 0
+      interview_preps: 0,
+      resume_tailors: 0,
     };
 
     // Pro users have unlimited access
@@ -81,9 +84,10 @@ export async function checkUsageLimit(userId: string, feature: FeatureType): Pro
     // Feature limits for free users
     const limits = {
       resume_scan: 3,        // Free users get 3 resume scans per month
-      cover_letter: 2,       // Free users get 2 cover letters per month  
+      cover_letter: 2,       // Free users get 2 cover letters per month
       job_match: 2,          // Free users get 2 job matches per month
-      interview_prep: 0      // Free users get 0 interview prep (Pro only)
+      interview_prep: 0,     // Free users get 0 interview prep (Pro only)
+      resume_tailor: 2,      // Free users get 2 resume tailors per month
     };
 
     const limit = limits[feature];
@@ -132,6 +136,7 @@ export async function incrementUsage(userId: string, feature: FeatureType): Prom
           cover_letters: feature === 'cover_letter' ? 1 : 0,
           job_matches: feature === 'job_match' ? 1 : 0,
           interview_preps: feature === 'interview_prep' ? 1 : 0,
+          resume_tailors: feature === 'resume_tailor' ? 1 : 0,
           last_reset: new Date().toISOString()
         }, { onConflict: 'user_id' });
 
@@ -242,6 +247,7 @@ export async function resetMonthlyUsage(): Promise<number | null> {
         cover_letters: 0,
         job_matches: 0,
         interview_preps: 0,
+        resume_tailors: 0,
         last_reset: new Date().toISOString(),
         updated_at: new Date().toISOString()
       })
@@ -287,11 +293,12 @@ export async function debugUserStatus(userId: string) {
 
 // Helper function to map feature types to database field names
 function getUsageFieldName(feature: FeatureType): string {
-  const fieldMap = {
+  const fieldMap: Record<FeatureType, string> = {
     resume_scan: 'resume_scans',
     cover_letter: 'cover_letters',
     job_match: 'job_matches',
-    interview_prep: 'interview_preps'
+    interview_prep: 'interview_preps',
+    resume_tailor: 'resume_tailors',
   };
   return fieldMap[feature];
 }

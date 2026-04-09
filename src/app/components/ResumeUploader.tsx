@@ -1,7 +1,7 @@
 // src/app/components/ResumeUploader.tsx
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import * as pdfjsLib from "pdfjs-dist/legacy/build/pdf";
 
 interface ResumeUploaderProps {
@@ -9,22 +9,21 @@ interface ResumeUploaderProps {
   simple?: boolean;
 }
 
-export default function ResumeUploader({
-  onResumeSubmit,
-  simple = false,
-}: ResumeUploaderProps) {
-  const [file, setFile]           = useState<File | null>(null);
-  const [loading, setLoading]     = useState(false);
-  const [error, setError]         = useState<string | null>(null);
-  const [charCount, setCharCount] = useState(0);
+export default function ResumeUploader({ onResumeSubmit, simple = false }: ResumeUploaderProps) {
+  const [file, setFile]             = useState<File | null>(null);
+  const [loading, setLoading]       = useState(false);
+  const [error, setError]           = useState<string | null>(null);
+  const [charCount, setCharCount]   = useState(0);
+  const [pasteText, setPasteText]   = useState("");
+  const [dragging, setDragging]     = useState(false);
+  const [mode, setMode]             = useState<"upload" | "paste">("upload");
+  const inputRef                    = useRef<HTMLInputElement>(null);
 
-  // Always load the worker from the official CDN
   useEffect(() => {
-    pdfjsLib.GlobalWorkerOptions.workerSrc = 
+    pdfjsLib.GlobalWorkerOptions.workerSrc =
       `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
   }, []);
 
-  // Extract plain text from each page of a PDF
   const extractTextFromPDF = async (data: ArrayBuffer): Promise<string> => {
     try {
       const pdf = await pdfjsLib.getDocument({ data }).promise;
@@ -37,29 +36,24 @@ export default function ResumeUploader({
       return txt;
     } catch (e) {
       console.error("PDF.js error:", e);
-      throw new Error("Could not extract text—maybe it’s image-only or the worker failed to load.");
+      throw new Error("Could not extract text — this may be an image-based PDF. Try pasting your resume text instead.");
     }
   };
 
-  // Handle file selection
   const handleFile = async (f: File | null) => {
     if (!f) return;
     setFile(f);
     setLoading(true);
     setError(null);
-
     try {
       const txt =
         f.type === "application/pdf"
           ? await extractTextFromPDF(await f.arrayBuffer())
           : await f.text();
-
-      console.log("Extracted resume characters →", txt.length);
       setCharCount(txt.length);
       onResumeSubmit(txt);
     } catch (err: any) {
       setError(err.message);
-      // reset so user can retry or paste
       setFile(null);
       setCharCount(0);
       onResumeSubmit("");
@@ -68,75 +62,176 @@ export default function ResumeUploader({
     }
   };
 
-  // Clear the current file
   const handleClear = () => {
     setFile(null);
     setError(null);
     setCharCount(0);
+    setPasteText("");
     onResumeSubmit("");
-    const inp = document.getElementById("file-input") as HTMLInputElement;
-    if (inp) inp.value = "";
+    if (inputRef.current) inputRef.current.value = "";
   };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragging(false);
+    const f = e.dataTransfer.files?.[0];
+    if (f && (f.type === "application/pdf" || f.type === "text/plain")) {
+      handleFile(f);
+    } else {
+      setError("Please drop a PDF or TXT file.");
+    }
+  };
+
+  const handlePaste = (val: string) => {
+    setPasteText(val);
+    setCharCount(val.length);
+    onResumeSubmit(val);
+  };
+
+  const wordCount = charCount > 0
+    ? Math.round(charCount / 5)
+    : 0;
 
   return (
     <div className="space-y-4">
-      {/* File picker */}
-      <div>
-        <label className="block mb-1 text-gray-200 font-semibold">
-          Upload Resume (PDF or TXT)
-        </label>
-        <div className="flex items-center gap-3">
-          <label
-            htmlFor="file-input"
-            className={`px-4 py-2 bg-[var(--accent)] text-black rounded-lg cursor-pointer ${
-              loading ? "opacity-50 cursor-not-allowed" : ""
-            }`}
-          >
-            {loading ? "Processing…" : file?.name ?? "Choose File"}
-          </label>
-          <input
-            id="file-input"
-            type="file"
-            accept=".pdf,.txt"
-            className="hidden"
-            disabled={loading}
-            onChange={(e) => handleFile(e.target.files?.[0] ?? null)}
-          />
-          {file && !loading && (
+      {/* Mode toggle */}
+      {!simple && (
+        <div className="flex gap-1 p-1 bg-[#f5f5f7] rounded-xl w-fit">
+          {(["upload", "paste"] as const).map((m) => (
             <button
-              onClick={handleClear}
-              className="px-3 py-1 bg-gray-700 text-gray-300 rounded-lg"
+              key={m}
+              onClick={() => setMode(m)}
+              className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                mode === m
+                  ? "bg-white text-[#1d1d1f] shadow-sm"
+                  : "text-[#6e6e73] hover:text-[#1d1d1f]"
+              }`}
             >
-              Clear
+              {m === "upload" ? "Upload File" : "Paste Text"}
             </button>
-          )}
-        </div>
-      </div>
-
-      {/* user guidance */}
-      {charCount === 0 && file && !loading && (
-        <div className="p-3 bg-red-900 bg-opacity-60 text-red-300 rounded" role="alert">
-          Could not extract text—maybe it’s an image-only PDF or the worker failed. You can paste below instead.
+          ))}
         </div>
       )}
 
-      {/* Paste fallback */}
-      {!simple && (
-        <div>
-          <label className="block mb-1 text-gray-200 font-semibold">
-            Or paste resume text
-          </label>
+      {/* Upload mode */}
+      {(mode === "upload" || simple) && (
+        <>
+          {!file ? (
+            <div
+              onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+              onDragLeave={() => setDragging(false)}
+              onDrop={handleDrop}
+              onClick={() => inputRef.current?.click()}
+              className={`relative flex flex-col items-center justify-center gap-3 p-10 rounded-2xl border-2 border-dashed cursor-pointer transition-all ${
+                dragging
+                  ? "border-[#0071e3] bg-[#f0f7ff]"
+                  : "border-[#d2d2d7] bg-[#f9f9fb] hover:border-[#0071e3] hover:bg-[#f0f7ff]"
+              }`}
+            >
+              <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-colors ${
+                dragging ? "bg-[#0071e3]/10" : "bg-white border border-[#e0e0e5]"
+              }`}>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none"
+                  className={dragging ? "stroke-[#0071e3]" : "stroke-[#6e6e73]"} strokeWidth="1.5">
+                  <path d="M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2" />
+                  <polyline points="16 6 12 2 8 6" />
+                  <line x1="12" y1="2" x2="12" y2="15" />
+                </svg>
+              </div>
+              <div className="text-center">
+                <p className="font-semibold text-[#1d1d1f] text-sm">
+                  {dragging ? "Drop your resume here" : "Drop your resume or click to browse"}
+                </p>
+                <p className="text-[#86868b] text-xs mt-1">PDF or TXT · Max 10MB</p>
+              </div>
+              <input
+                ref={inputRef}
+                id="file-input"
+                type="file"
+                accept=".pdf,.txt"
+                className="hidden"
+                disabled={loading}
+                onChange={(e) => handleFile(e.target.files?.[0] ?? null)}
+              />
+            </div>
+          ) : (
+            <div className="flex items-center justify-between px-5 py-4 bg-[#f0f7ff] border border-[#0071e3]/20 rounded-2xl">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 bg-[#0071e3]/10 rounded-xl flex items-center justify-center flex-shrink-0">
+                  {loading ? (
+                    <div className="w-4 h-4 border-2 border-t-[#0071e3] border-r-[#0071e3]/30 border-b-transparent border-l-transparent rounded-full animate-spin" />
+                  ) : (
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="stroke-[#0071e3]" strokeWidth="2">
+                      <path d="M4 2h10l6 6v14H4V2z" />
+                      <path d="M14 2v6h6" />
+                    </svg>
+                  )}
+                </div>
+                <div>
+                  <p className="text-[#1d1d1f] text-sm font-medium">{file.name}</p>
+                  {!loading && charCount > 0 && (
+                    <p className="text-[#86868b] text-xs">~{wordCount.toLocaleString()} words extracted</p>
+                  )}
+                  {loading && <p className="text-[#0071e3] text-xs">Extracting text…</p>}
+                </div>
+              </div>
+              {!loading && (
+                <button
+                  onClick={handleClear}
+                  className="text-[#6e6e73] hover:text-[#1d1d1f] transition-colors p-1"
+                  aria-label="Remove file"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              )}
+            </div>
+          )}
+        </>
+      )}
+
+      {/* Paste mode */}
+      {mode === "paste" && !simple && (
+        <div className="relative">
           <textarea
-            rows={6}
-            disabled={!!file || loading}
-            onChange={(e) => {
-              const t = e.target.value;
-              setCharCount(t.length);
-              onResumeSubmit(t);
-            }}
-            placeholder="Paste your resume text here…"
-            className="w-full bg-[#1c1c1c] text-gray-200 p-3 rounded-lg border border-gray-700"
+            rows={8}
+            value={pasteText}
+            onChange={(e) => handlePaste(e.target.value)}
+            placeholder="Paste your full resume text here — include all sections: experience, education, skills, achievements…"
+            className="w-full bg-white text-[#1d1d1f] placeholder-[#b0b0b8] p-4 rounded-2xl border border-[#d2d2d7] focus:outline-none focus:border-[#0071e3] focus:ring-2 focus:ring-[#0071e3]/10 text-sm leading-relaxed resize-none transition-all"
           />
+          {pasteText.length > 0 && (
+            <div className="flex items-center justify-between mt-2 px-1">
+              <span className="text-xs text-[#86868b]">~{Math.round(pasteText.length / 5).toLocaleString()} words</span>
+              <button
+                onClick={handleClear}
+                className="text-xs text-[#6e6e73] hover:text-[#1d1d1f] transition-colors"
+              >
+                Clear
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Error */}
+      {error && (
+        <div className="flex items-start gap-3 p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm" role="alert">
+          <svg className="w-4 h-4 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <span>{error}</span>
+        </div>
+      )}
+
+      {/* Extraction warning */}
+      {charCount === 0 && file && !loading && !error && (
+        <div className="flex items-start gap-3 p-4 bg-amber-50 border border-amber-200 rounded-xl text-amber-700 text-sm" role="alert">
+          <svg className="w-4 h-4 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+          </svg>
+          <span>Couldn&apos;t extract text — this may be an image-based PDF. Switch to &quot;Paste Text&quot; and paste your resume manually.</span>
         </div>
       )}
     </div>

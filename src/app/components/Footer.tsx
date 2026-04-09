@@ -1,19 +1,31 @@
+import React from "react";
+import Link from "next/link";
 
-import React from 'react';
+const LINKS = [
+  { label: "Features",  href: "/#features"  },
+  { label: "Pricing",   href: "/#pricing"   },
+  { label: "Contact",   href: "/contact"    },
+  { label: "Dashboard", href: "/dashboard"  },
+];
 
-const Footer = () => {
+export default function Footer() {
   return (
-    <footer className="bg-[#111111] py-6">
-      <div className="container mx-auto px-6 text-center">
-        <div className="mb-3 flex justify-center space-x-6">
-          <a href="#" className="text-gray-100 hover:text-[var(--accent)] transition duration-200">About</a>
-          <a href="/contact" className="text-gray-100 hover:text-[var(--accent)] transition duration-200">Contact</a>
-          <a href="#" className="text-gray-100 hover:text-[var(--accent)] transition duration-200">Terms</a>
-        </div>
-        <p className="text-gray-400 text-sm">© {new Date().getFullYear()} ScreenMe. All rights reserved.</p>
+    <footer className="border-t border-black/[0.06] bg-[#f5f5f7] py-10">
+      <div className="max-w-6xl mx-auto px-6 flex flex-col sm:flex-row items-center justify-between gap-6">
+        <span className="text-sm font-semibold text-[#1d1d1f]">
+          Screen<span className="text-[#0071e3]">Me</span>
+        </span>
+
+        <nav className="flex flex-wrap justify-center gap-x-7 gap-y-2">
+          {LINKS.map(({ label, href }) => (
+            <Link key={label} href={href} className="text-xs text-[#86868b] hover:text-[#1d1d1f] transition-colors">
+              {label}
+            </Link>
+          ))}
+        </nav>
+
+        <p className="text-xs text-[#aeaeb2]">© {new Date().getFullYear()} ScreenMe</p>
       </div>
     </footer>
   );
-};
-
-export default Footer;
+}

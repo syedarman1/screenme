@@ -2,120 +2,269 @@
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
-import { supabase } from "../lib/supabaseClient"; // Adjust path if needed
-import { useRouter } from "next/navigation";
+import { supabase } from "../lib/supabaseClient";
+import { useRouter, usePathname } from "next/navigation";
+import { type User } from "@supabase/supabase-js";
+import ThemeToggle from "./ThemeToggle";
 
-const DynamicNavbar = () => {
-  const [isScrolled, setIsScrolled] = useState(false);
-  const [user, setUser] = useState<any>(null);
+const NAV_LINKS = [
+  { href: "/#features",  label: "Features"  },
+  { href: "/#pricing",   label: "Pricing"   },
+  { href: "/contact",    label: "Contact"   },
+];
 
-  const router = useRouter();
+export default function DynamicNavbar() {
+  const [scrolled,     setScrolled]     = useState(false);
+  const [user,         setUser]         = useState<User | null>(null);
+  const [mobileOpen,   setMobileOpen]   = useState(false);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const router   = useRouter();
+  const pathname = usePathname();
 
-  // Change navbar background on scroll
   useEffect(() => {
-    const handleScroll = () => {
-      if (window.scrollY > 10) {
-        setIsScrolled(true);
-      } else {
-        setIsScrolled(false);
-      }
-    };
-
-    window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
+    const onScroll = () => setScrolled(window.scrollY > 12);
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  // Fetch current user from Supabase on mount
   useEffect(() => {
-    if (supabase) {
-      supabase.auth.getUser().then(({ data }) => {
-        setUser(data?.user || null);
-      });
-    }
+    if (!supabase) return;
+    supabase.auth.getUser().then(({ data }) => setUser(data?.user ?? null));
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (_e, session) => setUser(session?.user ?? null)
+    );
+    return () => subscription.unsubscribe();
   }, []);
 
-  // Sign out logic
+  useEffect(() => { setMobileOpen(false); }, [pathname]);
+
   const handleSignOut = async () => {
-    if (supabase) {
-      await supabase.auth.signOut();
-      router.push("/login");
-    }
+    if (!supabase) return;
+    await supabase.auth.signOut();
+    router.push("/");
   };
 
   return (
-    <nav
-      className={`
-        fixed w-full top-0 z-50
-        transition-all duration-300
-        flex items-center
-        ${
-          isScrolled
-            ? "bg-[#212121]/80 h-14 shadow-md backdrop-blur-sm"
-            : "bg-transparent h-30"
-        }
-      `}
-    >
-      <div className="container mx-auto px-6 flex justify-between items-center h-full">
-        {/* Updated Logo using an image */}
-        <Link href="/#home" className="pt-2">
-          <img src="/logo.png" alt="ScreenMe Logo" className="h-36 auto" />
-        </Link>
+    <>
+      {/* ── Bar ── */}
+      <nav
+        aria-label="Main navigation"
+        className={`
+          fixed top-0 inset-x-0 z-50
+          transition-all duration-300
+          ${scrolled
+            ? "h-12 bg-white/80 backdrop-blur-2xl border-b border-black/[0.08] shadow-sm"
+            : "h-16 bg-transparent"
+          }
+        `}
+      >
+        <div className="max-w-6xl mx-auto px-6 h-full flex items-center justify-between">
 
-        {/* Navigation Links and Right Section */}
-        <div className="space-x-8 flex items-center">
+          {/* Wordmark */}
           <Link
-            href="/#home"
-            className="text-gray-100 hover:text-[var(--accent)] transition duration-200"
+            href="/"
+            className="text-[#1d1d1f] font-semibold text-lg tracking-tight hover:text-[#0071e3] transition-colors duration-200"
+            aria-label="ScreenMe home"
           >
-            Home
+            Screen<span className="text-[#0071e3]">Me</span>
           </Link>
-          <Link
-            href="/#features"
-            className="text-gray-100 hover:text-[var(--accent)] transition duration-200"
-          >
-            Features
-          </Link>
-          <Link
-            href="/#pricing"
-            className="text-gray-100 hover:text-[var(--accent)] transition duration-200"
-          >
-            Pricing
-          </Link>
-          {user ? (
-            // If user is signed in, display their profile picture with a hover dropdown
-            <div className="relative group">
-              <img
-                src={user.user_metadata?.avatar_url || "/pfp-placeholder.png"}
-                alt="Profile"
-                className="w-10 h-10 rounded-full cursor-pointer"
-              />
-              <div className="absolute right-0 mt-2 w-36 bg-[#2a2a2a] rounded-md shadow-lg py-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                <Link
-                  href="/dashboard"
-                  className="block px-4 py-2 text-sm text-white hover:bg-gray-800"
-                >
-                  Dashboard
-                </Link>
+
+          {/* Desktop links */}
+          <nav className="hidden md:flex items-center gap-7">
+            {NAV_LINKS.map(({ href, label }) => (
+              <Link
+                key={label}
+                href={href}
+                className="text-sm font-medium text-[#6e6e73] hover:text-[#1d1d1f] transition-colors duration-200"
+              >
+                {label}
+              </Link>
+            ))}
+          </nav>
+
+          {/* Desktop right */}
+          <div className="hidden md:flex items-center gap-3">
+            <ThemeToggle />
+            {user ? (
+              <div className="relative">
                 <button
-                  onClick={handleSignOut}
-                  className="block w-full text-left px-4 py-2 text-sm text-white hover:bg-gray-800"
+                  onClick={() => setDropdownOpen(o => !o)}
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-black/[0.08] bg-white hover:border-black/[0.14] hover:shadow-sm transition-all duration-200 cursor-pointer"
+                  aria-haspopup="true"
+                  aria-expanded={dropdownOpen}
                 >
-                  Sign Out
+                  <div className="w-6 h-6 rounded-full bg-[#0071e3] flex items-center justify-center text-white text-xs font-semibold shrink-0">
+                    {(user.user_metadata?.full_name || user.email || "U")[0].toUpperCase()}
+                  </div>
+                  <span className="text-sm text-[#1d1d1f] max-w-[96px] truncate">
+                    {user.user_metadata?.full_name?.split(" ")[0] || user.email?.split("@")[0]}
+                  </span>
+                  <svg className={`w-3 h-3 text-[#86868b] transition-transform duration-200 ${dropdownOpen ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                  </svg>
                 </button>
+
+                {/* Click-away overlay */}
+                {dropdownOpen && (
+                  <div className="fixed inset-0 z-40" onClick={() => setDropdownOpen(false)} />
+                )}
+
+                {/* Dropdown */}
+                {dropdownOpen && (
+                  <div className="absolute right-0 top-full mt-1.5 w-44 bg-white border border-black/[0.08] rounded-2xl shadow-lg py-1.5 z-50">
+                    <Link
+                      href="/dashboard"
+                      onClick={() => setDropdownOpen(false)}
+                      className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-[#6e6e73] hover:text-[#1d1d1f] hover:bg-[#f5f5f7] transition-colors rounded-xl mx-1"
+                    >
+                      <svg className="w-4 h-4 text-[#0071e3]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h7" />
+                      </svg>
+                      Dashboard
+                    </Link>
+                    <Link
+                      href="/applications"
+                      onClick={() => setDropdownOpen(false)}
+                      className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-[#6e6e73] hover:text-[#1d1d1f] hover:bg-[#f5f5f7] transition-colors rounded-xl mx-1"
+                    >
+                      <svg className="w-4 h-4 text-[#0071e3]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                      </svg>
+                      Applications
+                    </Link>
+                    <Link
+                      href="/resumes"
+                      onClick={() => setDropdownOpen(false)}
+                      className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-[#6e6e73] hover:text-[#1d1d1f] hover:bg-[#f5f5f7] transition-colors rounded-xl mx-1"
+                    >
+                      <svg className="w-4 h-4 text-[#0071e3]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+                      </svg>
+                      My Resumes
+                    </Link>
+                    <Link
+                      href="/tailor"
+                      onClick={() => setDropdownOpen(false)}
+                      className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-[#6e6e73] hover:text-[#1d1d1f] hover:bg-[#f5f5f7] transition-colors rounded-xl mx-1"
+                    >
+                      <svg className="w-4 h-4 text-[#0071e3]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                      </svg>
+                      Resume Tailor
+                    </Link>
+                    <div className="my-1 mx-3 border-t border-black/[0.06]" />
+                    <button
+                      onClick={() => { setDropdownOpen(false); handleSignOut(); }}
+                      className="flex w-full items-center gap-2.5 px-4 py-2.5 text-sm text-[#ff3b30] hover:bg-[#f5f5f7] transition-colors rounded-xl mx-1 cursor-pointer"
+                    >
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                      </svg>
+                      Sign out
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <>
+                <Link
+                  href="/login"
+                  className="text-sm font-medium text-[#6e6e73] hover:text-[#1d1d1f] transition-colors duration-200 px-3 py-1.5"
+                >
+                  Sign in
+                </Link>
+                <Link
+                  href="/login"
+                  className="text-sm font-semibold px-5 py-2 rounded-full bg-[#0071e3] text-white hover:bg-[#0077ed] transition-colors duration-200 cursor-pointer shadow-sm"
+                >
+                  Get started
+                </Link>
+              </>
+            )}
+          </div>
+
+          {/* Mobile right: theme + hamburger */}
+          <div className="md:hidden flex items-center gap-2">
+            <ThemeToggle />
+            <button
+              className="flex flex-col justify-center items-center w-9 h-9 gap-[5px] cursor-pointer"
+            onClick={() => setMobileOpen(v => !v)}
+            aria-label={mobileOpen ? "Close menu" : "Open menu"}
+            aria-expanded={mobileOpen}
+          >
+            <span className={`block w-5 h-[1.5px] bg-[#1d1d1f] transition-all duration-300 origin-center ${mobileOpen ? "rotate-45 translate-y-[6.5px]" : ""}`} />
+            <span className={`block w-5 h-[1.5px] bg-[#1d1d1f] transition-all duration-300 ${mobileOpen ? "opacity-0 scale-x-0" : ""}`} />
+            <span className={`block w-5 h-[1.5px] bg-[#1d1d1f] transition-all duration-300 origin-center ${mobileOpen ? "-rotate-45 -translate-y-[6.5px]" : ""}`} />
+          </button>
+          </div>
+        </div>
+      </nav>
+
+      {/* ── Mobile drawer ── */}
+      <div className={`fixed inset-0 z-40 md:hidden ${mobileOpen ? "pointer-events-auto" : "pointer-events-none"}`}>
+        {/* Backdrop */}
+        <div
+          className={`absolute inset-0 bg-black/30 backdrop-blur-sm transition-opacity duration-300 ${mobileOpen ? "opacity-100" : "opacity-0"}`}
+          onClick={() => setMobileOpen(false)}
+        />
+        {/* Panel */}
+        <div className={`absolute right-0 top-0 h-full w-72 bg-white border-l border-black/[0.08]
+          flex flex-col pt-20 pb-10 px-5 shadow-2xl
+          transform transition-transform duration-300 ease-out
+          ${mobileOpen ? "translate-x-0" : "translate-x-full"}`}
+        >
+          {user && (
+            <div className="flex items-center gap-3 mb-8 pb-6 border-b border-black/[0.06]">
+              <div className="w-10 h-10 rounded-full bg-[#0071e3] flex items-center justify-center text-white font-bold text-sm shrink-0">
+                {(user.user_metadata?.full_name || user.email || "U")[0].toUpperCase()}
+              </div>
+              <div className="overflow-hidden">
+                <p className="text-sm font-medium text-[#1d1d1f] truncate">
+                  {user.user_metadata?.full_name || user.email?.split("@")[0]}
+                </p>
+                <p className="text-xs text-[#86868b] truncate">{user.email}</p>
               </div>
             </div>
-          ) : (
-            <Link
-              href="/login"
-              className="text-gray-100 hover:text-[var(--accent)] transition duration-200"
-            >
-              Login/Signup
-            </Link>
           )}
+
+          <div className="flex flex-col gap-1 flex-1">
+            {NAV_LINKS.map(({ href, label }) => (
+              <Link key={label} href={href}
+                className="text-[#6e6e73] hover:text-[#1d1d1f] hover:bg-[#f5f5f7] px-3 py-3 rounded-xl text-sm font-medium transition-colors"
+              >{label}</Link>
+            ))}
+            {user ? (
+              <>
+                <Link href="/dashboard"
+                  className="text-[#6e6e73] hover:text-[#1d1d1f] hover:bg-[#f5f5f7] px-3 py-3 rounded-xl text-sm font-medium transition-colors"
+                >Dashboard</Link>
+                <Link href="/applications"
+                  className="text-[#6e6e73] hover:text-[#1d1d1f] hover:bg-[#f5f5f7] px-3 py-3 rounded-xl text-sm font-medium transition-colors"
+                >Applications</Link>
+                <Link href="/resumes"
+                  className="text-[#6e6e73] hover:text-[#1d1d1f] hover:bg-[#f5f5f7] px-3 py-3 rounded-xl text-sm font-medium transition-colors"
+                >My Resumes</Link>
+                <Link href="/tailor"
+                  className="text-[#6e6e73] hover:text-[#1d1d1f] hover:bg-[#f5f5f7] px-3 py-3 rounded-xl text-sm font-medium transition-colors"
+                >Resume Tailor</Link>
+                <div className="flex-1" />
+                <button onClick={handleSignOut}
+                  className="text-left text-[#ff3b30] hover:bg-[#f5f5f7] px-3 py-3 rounded-xl text-sm font-medium transition-colors cursor-pointer"
+                >Sign out</button>
+              </>
+            ) : (
+              <div className="mt-6 flex flex-col gap-2.5">
+                <Link href="/login"
+                  className="text-center px-4 py-2.5 rounded-xl border border-black/[0.10] text-[#1d1d1f] text-sm font-medium hover:bg-[#f5f5f7] transition-colors"
+                >Sign in</Link>
+                <Link href="/login"
+                  className="text-center px-4 py-2.5 rounded-xl bg-[#0071e3] text-white text-sm font-semibold hover:bg-[#0077ed] transition-colors"
+                >Get started</Link>
+              </div>
+            )}
+          </div>
         </div>
       </div>
-    </nav>
+    </>
   );
-};
-
-export default DynamicNavbar;
+}

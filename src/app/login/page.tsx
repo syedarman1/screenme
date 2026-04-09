@@ -3,320 +3,214 @@
 import React, { useState } from "react";
 import { supabase } from "../lib/supabaseClient";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 export default function AuthPage() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
-  const [showCreateOption, setShowCreateOption] = useState(false);
+  const [email,        setEmail]        = useState("");
+  const [password,     setPassword]     = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [error,        setError]        = useState<string | null>(null);
+  const [message,      setMessage]      = useState<string | null>(null);
+  const [loading,      setLoading]      = useState(false);
+  const [showCreate,   setShowCreate]   = useState(false);
+  const [showForgot,   setShowForgot]   = useState(false);
   const router = useRouter();
 
-  const handleCreateAccount = async () => {
-    if (!email || !password) {
-      setError("Please enter both email and password");
-      return;
-    }
+  const clear = () => { setError(null); setMessage(null); };
 
-    if (!supabase) {
-      setError("Authentication service is not available. Please try again later.");
-      return;
-    }
-
-    setLoading(true);
-    setError(null);
-    setMessage(null);
-
+  const handleForgot = async () => {
+    if (!email) { setError("Enter your email address above first."); return; }
+    if (!supabase) return;
+    setLoading(true); clear();
     try {
-      const { error: signUpError } = await supabase.auth.signUp({
-        email,
-        password,
+      const { error: e } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/dashboard`,
       });
-
-      if (signUpError) {
-        setError(signUpError.message);
-      } else {
-        setMessage(
-          "Account created! Please check your email to verify your account."
-        );
-        setShowCreateOption(false);
-      }
-    } catch (err: any) {
-      setError(err.message || "An unexpected error occurred");
-    } finally {
-      setLoading(false);
-    }
+      if (e) setError(e.message);
+      else { setMessage("Reset link sent — check your inbox."); setShowForgot(false); }
+    } catch (err: any) { setError(err.message); }
+    finally { setLoading(false); }
   };
 
-  const handleAuth = async (e: React.FormEvent) => {
+  const handleCreate = async () => {
+    if (!email || !password) { setError("Please enter email and password."); return; }
+    if (!supabase) return;
+    setLoading(true); clear();
+    try {
+      const { error: e } = await supabase.auth.signUp({ email, password });
+      if (e) setError(e.message);
+      else { setMessage("Account created! Check your email to verify."); setShowCreate(false); }
+    } catch (err: any) { setError(err.message); }
+    finally { setLoading(false); }
+  };
+
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    if (!email || !password) {
-      setError("Please enter both email and password");
-      return;
-    }
-
-    if (!supabase) {
-      setError("Authentication service is not available. Please try again later.");
-      return;
-    }
-
-    setLoading(true);
-    setError(null);
-    setMessage(null);
-
+    if (!email || !password) { setError("Please enter email and password."); return; }
+    if (!supabase) return;
+    setLoading(true); clear(); setShowCreate(false);
     try {
-      // First try to sign in
-      const { error: signInError } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
-      if (signInError) {
-        // If email not confirmed
-        if (signInError.message.includes("Email not confirmed")) {
-          setError("Please check your email and click the confirmation link.");
-          return;
-        }
-
-        // For invalid credentials, show option to create account
-        if (signInError.message.includes("Invalid login credentials")) {
-          setError(
-            "Invalid email or password. Please check your credentials and try again."
-          );
-          setShowCreateOption(true);
-          return;
-        }
-
-        setError(signInError.message);
-      } else {
-        // Successful sign in
-        router.push("/dashboard");
-      }
-    } catch (err: any) {
-      setError(err.message || "An unexpected error occurred");
-    } finally {
-      setLoading(false);
-    }
+      const { error: e } = await supabase.auth.signInWithPassword({ email, password });
+      if (e) {
+        if (e.message.includes("Email not confirmed")) setError("Verify your email before signing in.");
+        else if (e.message.includes("Invalid login credentials")) { setError("Invalid email or password."); setShowCreate(true); }
+        else setError(e.message);
+      } else router.push("/dashboard");
+    } catch (err: any) { setError(err.message); }
+    finally { setLoading(false); }
   };
 
-  const handleGoogleOAuth = async () => {
-    if (!supabase) {
-      setError("Authentication service is not available. Please try again later.");
-      return;
-    }
-
-    setLoading(true);
-    setError(null);
-    setMessage(null);
-
+  const handleGoogle = async () => {
+    if (!supabase) return;
+    setLoading(true); clear();
     try {
-      const { error } = await supabase.auth.signInWithOAuth({
+      const { error: e } = await supabase.auth.signInWithOAuth({
         provider: "google",
-        options: {
-          redirectTo: `${window.location.origin}/dashboard`,
-        },
+        options: { redirectTo: `${window.location.origin}/dashboard` },
       });
-
-      if (error) {
-        setError(error.message);
-      }
-    } catch (err: any) {
-      setError(err.message || "Failed to authenticate with Google");
-    } finally {
-      setLoading(false);
-    }
+      if (e) setError(e.message);
+    } catch (err: any) { setError(err.message); }
+    finally { setLoading(false); }
   };
 
   return (
-    <div className="min-h-screen bg-[#0a0a0a] flex flex-col items-center justify-center p-4">
-      <div className="w-full max-w-md">
-        {/* Header */}
+    <div className="min-h-[100dvh] bg-[#f5f5f7] flex flex-col items-center justify-center p-4 relative overflow-hidden">
+      {/* Subtle blue glow */}
+      <div aria-hidden className="pointer-events-none absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[400px] bg-[#0071e3] opacity-[0.06] rounded-full blur-[100px]" />
+
+      <div className="w-full max-w-sm relative z-10">
+        {/* Wordmark */}
         <div className="text-center mb-8">
-          <h2 className="text-2xl font-light text-white">
-            Welcome to ScreenMe
-          </h2>
+          <Link href="/" className="inline-block text-xl font-semibold text-[#1d1d1f] tracking-tight">
+            Screen<span className="text-[#0071e3]">Me</span>
+          </Link>
+          <h1 className="text-2xl font-semibold text-[#1d1d1f] mt-5 mb-1 tracking-tight">Welcome back</h1>
+          <p className="text-sm text-[#86868b]">Sign in to your account</p>
         </div>
 
-        <div className="bg-[#1a1a1a] rounded-xl p-8 border border-[#2a2a2a]">
-          {/* Google OAuth Button - Primary */}
+        <div className="rounded-2xl border border-black/[0.08] bg-white shadow-md p-7 flex flex-col gap-4">
+          {/* Google */}
           <button
-            onClick={handleGoogleOAuth}
+            onClick={handleGoogle}
             disabled={loading}
-            className="w-full bg-white text-gray-900 font-medium py-3 rounded-lg hover:bg-gray-100 
-                     transition duration-200 flex items-center justify-center gap-3 disabled:opacity-50"
+            className="w-full bg-[#1d1d1f] text-white font-medium py-2.5 rounded-xl hover:bg-[#2d2d2f]
+                     transition-colors duration-200 flex items-center justify-center gap-2.5 text-sm disabled:opacity-50 cursor-pointer"
           >
-            <svg className="w-5 h-5" viewBox="0 0 24 24">
-              <path
-                fill="#4285F4"
-                d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-              />
-              <path
-                fill="#34A853"
-                d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-              />
-              <path
-                fill="#FBBC05"
-                d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
-              />
-              <path
-                fill="#EA4335"
-                d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-              />
+            <svg className="w-4 h-4" viewBox="0 0 24 24" aria-hidden>
+              <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+              <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+              <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+              <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
             </svg>
-            {loading && <span className="animate-spin">⟳</span>}
             Continue with Google
           </button>
 
-          <div className="relative my-6">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-[#2a2a2a]"></div>
-            </div>
-            <div className="relative flex justify-center text-sm">
-              <span className="px-2 bg-[#1a1a1a] text-gray-500">
-                or continue with email
-              </span>
-            </div>
+          <div className="flex items-center gap-3">
+            <div className="flex-1 h-px bg-black/[0.06]" />
+            <span className="text-xs text-[#aeaeb2]">or</span>
+            <div className="flex-1 h-px bg-black/[0.06]" />
           </div>
 
-          {/* Error/Success Messages */}
+          {/* Alerts */}
           {error && (
-            <div className="mb-4 p-3 bg-red-900/20 border border-red-900/50 rounded-lg">
-              <p className="text-red-400 text-sm">{error}</p>
+            <div role="alert" className="p-3 rounded-xl border border-[#ff3b30]/20 bg-[#ff3b30]/[0.06]">
+              <p className="text-sm text-[#ff3b30]">{error}</p>
             </div>
           )}
-
           {message && (
-            <div className="mb-4 p-3 bg-green-900/20 border border-green-900/50 rounded-lg">
-              <p className="text-green-400 text-sm">{message}</p>
+            <div role="status" className="p-3 rounded-xl border border-[#0071e3]/20 bg-[#0071e3]/[0.06]">
+              <p className="text-sm text-[#0071e3]">{message}</p>
             </div>
           )}
 
-          {/* Email/Password Form */}
-          <form onSubmit={handleAuth} className="space-y-3">
-            <input
-              type="email"
-              placeholder="Email address"
-              className="w-full bg-[#0a0a0a] text-white placeholder-gray-500 p-3 rounded-lg 
-                       border border-[#2a2a2a] focus:outline-none focus:border-[var(--accent)] 
-                       transition-colors"
-              value={email}
-              onChange={(e) => {
-                setEmail(e.target.value);
-                if (error) setError(null);
-                if (message) setMessage(null);
-                if (showCreateOption) setShowCreateOption(false);
-              }}
-              required
-            />
-            <input
-              type="password"
-              placeholder="Password (min 6 characters)"
-              className="w-full bg-[#0a0a0a] text-white placeholder-gray-500 p-3 rounded-lg 
-                       border border-[#2a2a2a] focus:outline-none focus:border-[var(--accent)] 
-                       transition-colors"
-              value={password}
-              onChange={(e) => {
-                setPassword(e.target.value);
-                if (error) setError(null);
-                if (message) setMessage(null);
-                if (showCreateOption) setShowCreateOption(false);
-              }}
-              minLength={6}
-              required
-            />
+          {/* Form */}
+          <form onSubmit={handleLogin} className="flex flex-col gap-3" noValidate>
+            <div>
+              <label htmlFor="email" className="block text-xs font-medium text-[#6e6e73] mb-1.5">Email</label>
+              <input
+                id="email" type="email" autoComplete="email" required
+                placeholder="you@example.com"
+                className="w-full bg-[#f5f5f7] text-[#1d1d1f] placeholder-[#aeaeb2] px-3.5 py-2.5 rounded-xl
+                         border border-black/[0.08] focus:outline-none focus:border-[#0071e3]/60 focus:bg-white
+                         transition-colors text-sm"
+                value={email}
+                onChange={e => { setEmail(e.target.value); clear(); setShowCreate(false); }}
+              />
+            </div>
+
+            <div>
+              <label htmlFor="password" className="block text-xs font-medium text-[#6e6e73] mb-1.5">Password</label>
+              <div className="relative">
+                <input
+                  id="password" type={showPassword ? "text" : "password"} autoComplete="current-password" required
+                  placeholder="••••••"
+                  minLength={6}
+                  className="w-full bg-[#f5f5f7] text-[#1d1d1f] placeholder-[#aeaeb2] px-3.5 py-2.5 pr-10 rounded-xl
+                           border border-black/[0.08] focus:outline-none focus:border-[#0071e3]/60 focus:bg-white
+                           transition-colors text-sm"
+                  value={password}
+                  onChange={e => { setPassword(e.target.value); clear(); setShowCreate(false); }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(v => !v)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[#86868b] hover:text-[#6e6e73] transition-colors cursor-pointer"
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                >
+                  {showPassword
+                    ? <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.242 4.242L9.88 9.88" /></svg>
+                    : <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" /><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                  }
+                </button>
+              </div>
+            </div>
 
             <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-[var(--accent)] text-black font-semibold py-3 rounded-lg 
-                       hover:bg-[#e6b800] transition duration-200 disabled:opacity-50 
-                       disabled:cursor-not-allowed flex items-center justify-center"
+              type="submit" disabled={loading}
+              className="w-full bg-[#0071e3] text-white font-semibold py-2.5 rounded-xl
+                       hover:bg-[#0077ed] transition-colors duration-200 disabled:opacity-50 text-sm
+                       flex items-center justify-center gap-2 cursor-pointer mt-1 shadow-sm"
             >
-              {loading ? (
-                <span className="flex items-center gap-2">
-                  <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
-                    <circle
-                      className="opacity-25"
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      strokeWidth="4"
-                      fill="none"
-                    />
-                    <path
-                      className="opacity-75"
-                      fill="currentColor"
-                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                    />
-                  </svg>
-                  Processing...
-                </span>
-              ) : (
-                "Continue"
-              )}
+              {loading && <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>}
+              {loading ? "Signing in…" : "Continue"}
             </button>
           </form>
 
-          {/* Create Account Option - Only show when login fails */}
-          {showCreateOption && (
-            <div className="mt-4 pt-4 border-t border-[#2a2a2a]">
-              <p className="text-center text-gray-400 text-sm mb-3">
-                Don't have an account yet?
-              </p>
-              <button
-                onClick={handleCreateAccount}
-                disabled={loading}
-                className="w-full bg-[var(--accent)] text-black font-semibold py-3 rounded-lg 
-                          hover:bg-[#e6b800] transition duration-200 disabled:opacity-50 
-                          disabled:cursor-not-allowed flex items-center justify-center"
-              >
-                {loading ? (
-                  <span className="flex items-center gap-2">
-                    <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
-                      <circle
-                        className="opacity-25"
-                        cx="12"
-                        cy="12"
-                        r="10"
-                        stroke="currentColor"
-                        strokeWidth="4"
-                        fill="none"
-                      />
-                      <path
-                        className="opacity-75"
-                        fill="currentColor"
-                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                      />
-                    </svg>
-                    Creating Account...
-                  </span>
-                ) : (
-                  "Create New Account"
-                )}
+          {/* Forgot */}
+          <div className="text-right -mt-1">
+            <button type="button" onClick={() => setShowForgot(v => !v)}
+              className="text-xs text-[#86868b] hover:text-[#6e6e73] transition-colors cursor-pointer">
+              Forgot password?
+            </button>
+          </div>
+
+          {showForgot && (
+            <div className="pt-3 border-t border-black/[0.06] flex flex-col gap-2">
+              <p className="text-xs text-[#86868b]">Enter your email above and we'll send a reset link.</p>
+              <button type="button" onClick={handleForgot} disabled={loading}
+                className="w-full bg-[#f5f5f7] border border-black/[0.08] text-[#6e6e73] hover:text-[#1d1d1f] hover:bg-[#ebebf0]
+                          font-medium py-2.5 rounded-xl transition-colors text-sm cursor-pointer disabled:opacity-50">
+                {loading ? "Sending…" : "Send reset email"}
               </button>
             </div>
           )}
 
-          <p className="text-center text-gray-500 text-xs mt-6">
-            New users will receive a verification email
-          </p>
+          {showCreate && (
+            <div className="pt-3 border-t border-black/[0.06] flex flex-col gap-2">
+              <p className="text-xs text-[#86868b] text-center">Don't have an account?</p>
+              <button type="button" onClick={handleCreate} disabled={loading}
+                className="w-full bg-[#f5f5f7] border border-black/[0.08] text-[#1d1d1f] hover:bg-[#ebebf0]
+                          font-medium py-2.5 rounded-xl transition-colors text-sm cursor-pointer disabled:opacity-50">
+                {loading ? "Creating…" : "Create account"}
+              </button>
+            </div>
+          )}
         </div>
 
-        {/* Footer */}
-        <div className="text-center mt-6 space-y-2">
-          <p className="text-gray-600 text-xs">
-            By continuing, you agree to our Terms of Service and Privacy Policy
-          </p>
-          <a
-            href="/contact"
-            className="text-gray-500 text-xs hover:text-gray-400 transition"
-          >
-            Having trouble? Contact support
-          </a>
-        </div>
+        <p className="text-center text-[#aeaeb2] text-xs mt-5">
+          By continuing you agree to our{" "}
+          <Link href="/contact" className="hover:text-[#6e6e73] transition-colors">Terms of Service</Link>
+        </p>
       </div>
     </div>
   );

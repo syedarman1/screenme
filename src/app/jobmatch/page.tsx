@@ -1,523 +1,489 @@
-// src/app/job-match/page.tsx
+// src/app/jobmatch/page.tsx
 "use client";
 
-import React, {
-  useState,
-  useMemo,
-  useCallback,
-  useRef,
-  useEffect,
-} from "react";
+import React, { useState, useCallback, useRef } from "react";
 import ResumeUploader from "../components/ResumeUploader";
 import { motion, AnimatePresence } from "framer-motion";
 import { CircularProgressbar, buildStyles } from "react-circular-progressbar";
 import "react-circular-progressbar/dist/styles.css";
-import confetti from "canvas-confetti";
 import PlanChecker from "../components/PlanChecker";
 import { supabase } from "../lib/supabaseClient";
 
+type ActiveTab = "matched" | "missing" | "gaps" | "actions";
+
 type MatchResult = {
   matchScore: number;
+  summary?: string;
   matchedSkills: string[];
   missingSkills: string[];
   gaps: string[];
   actions: string[];
 };
 
-const MIN_INPUT_LENGTH = 50;
-const STOP_WORDS = new Set([
-  "with",
-  "that",
-  "the",
-  "and",
-  "for",
-  "you",
-  "will",
-  "from",
-]);
+const MIN_LEN = 50;
+
+function scoreInfo(s: number) {
+  if (s >= 80) return { color: "#34c759", label: "Strong Match",   badge: "bg-emerald-50 text-emerald-700 border border-emerald-200" };
+  if (s >= 60) return { color: "#ff9f0a", label: "Decent Match",   badge: "bg-amber-50 text-amber-700 border border-amber-200" };
+  if (s >= 40) return { color: "#0071e3", label: "Partial Match",  badge: "bg-[#f0f7ff] text-[#0071e3] border border-[#0071e3]/20" };
+  return        { color: "#ff3b30", label: "Low Match",    badge: "bg-red-50 text-red-700 border border-red-200" };
+}
+
+function CopyButton({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <button
+      onClick={() => { navigator.clipboard.writeText(text); setCopied(true); setTimeout(() => setCopied(false), 2000); }}
+      className={`shrink-0 p-1.5 rounded-lg transition-colors ${copied ? "text-emerald-600" : "text-[#aeaeb2] hover:text-[#0071e3] hover:bg-[#f0f7ff]"}`}
+      title="Copy"
+    >
+      {copied ? (
+        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+        </svg>
+      ) : (
+        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+        </svg>
+      )}
+    </button>
+  );
+}
 
 export default function JobMatchPage() {
-  const [resumeTxt, setResumeTxt] = useState("");
-  const [jdTxt, setJdTxt] = useState("");
-  const [result, setResult] = useState<MatchResult | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [showTips, setShowTips] = useState(true);
-  const [activeTab, setActiveTab] = useState<
-    "matched" | "missing" | "gaps" | "actions"
-  >("matched");
-  const scoreRef = useRef<HTMLDivElement>(null);
+  const [resumeTxt, setResumeTxt]   = useState("");
+  const [jdTxt, setJdTxt]           = useState("");
+  const [result, setResult]         = useState<MatchResult | null>(null);
+  const [loading, setLoading]       = useState(false);
+  const [error, setError]           = useState<string | null>(null);
+  const [activeTab, setActiveTab]   = useState<ActiveTab>("matched");
+  const resultsRef                  = useRef<HTMLDivElement>(null);
+  const [jobUrl, setJobUrl]         = useState("");
+  const [urlLoading, setUrlLoading] = useState(false);
+  const [urlError, setUrlError]     = useState<string | null>(null);
 
-  const resumeWords = useMemo(() => {
-    return Array.from(
-      new Set(
-        resumeTxt
-          .toLowerCase()
-          .split(/\W+/)
-          .filter((w) => w.length > 3 && !STOP_WORDS.has(w))
-      )
-    );
-  }, [resumeTxt]);
-
-  useEffect(() => {
-    if (result?.matchScore && result.matchScore >= 80 && scoreRef.current) {
-      const rect = scoreRef.current.getBoundingClientRect();
-      confetti({
-        particleCount: 100,
-        spread: 70,
-        origin: {
-          x: (rect.left + rect.width / 2) / window.innerWidth,
-          y: (rect.top + rect.height / 2) / window.innerHeight,
-        },
+  const parseUrl = async () => {
+    if (!jobUrl.trim()) return;
+    setUrlLoading(true);
+    setUrlError(null);
+    try {
+      const res = await fetch("/api/parseJobUrl", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: jobUrl.trim() }),
       });
+      const data = await res.json();
+      if (!res.ok) { setUrlError(data.error); return; }
+      if (data.description) setJdTxt(data.description);
+    } catch {
+      setUrlError("Failed to fetch job posting. Paste the description manually.");
+    } finally {
+      setUrlLoading(false);
     }
-  }, [result?.matchScore]);
+  };
 
-  const resetForm = useCallback(() => {
-    setResumeTxt("");
-    setJdTxt("");
-    setResult(null);
+  const submit = useCallback(async () => {
     setError(null);
-    setActiveTab("matched");
-  }, []);
-
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
-
-    if (resumeTxt.trim().length < MIN_INPUT_LENGTH) {
-      setError(`Resume must be at least ${MIN_INPUT_LENGTH} characters.`);
-      return;
-    }
-    if (jdTxt.trim().length < MIN_INPUT_LENGTH) {
-      setError(
-        `Job description must be at least ${MIN_INPUT_LENGTH} characters.`
-      );
-      return;
-    }
+    if (resumeTxt.trim().length < MIN_LEN) { setError(`Resume must be at least ${MIN_LEN} characters.`); return; }
+    if (jdTxt.trim().length < MIN_LEN)     { setError(`Job description must be at least ${MIN_LEN} characters.`); return; }
 
     setLoading(true);
     setResult(null);
 
     try {
-      // Get current user
-      if (!supabase) {
-        throw new Error("Authentication service not available");
-      }
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+      if (!supabase) throw new Error("Authentication service not available");
+      const { data: { user } } = await supabase.auth.getUser();
 
       const r = await fetch("/api/jobMatch", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          resume: resumeTxt,
-          job: jdTxt,
-          userId: user?.id,
-        }),
+        body: JSON.stringify({ resume: resumeTxt, job: jdTxt, userId: user?.id }),
       });
 
       const data = await r.json();
-
-      if (!r.ok) {
-        throw new Error(data.error || "Unknown server error");
-      }
-
-      if (
-        typeof data.matchScore !== "number" ||
-        !Array.isArray(data.matchedSkills) ||
-        !Array.isArray(data.missingSkills) ||
-        !Array.isArray(data.gaps) ||
-        !Array.isArray(data.actions)
-      ) {
-        throw new Error("API returned unexpected data");
-      }
-
+      if (!r.ok) throw new Error(data.error || "Unknown server error");
       setResult(data as MatchResult);
       setActiveTab("matched");
+      setTimeout(() => resultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 150);
     } catch (err: any) {
       setError(err.message || "An unexpected error occurred");
     } finally {
       setLoading(false);
     }
-  };
+  }, [resumeTxt, jdTxt]);
 
-  const getScoreColor = (score: number) => {
-    if (score >= 80) return "var(--score-excellent)";
-    if (score >= 50) return "var(--score-good)";
-    return "var(--score-needs-work)";
-  };
+  const reset = () => { setResumeTxt(""); setJdTxt(""); setResult(null); setError(null); };
 
-  const getScoreLabel = (score: number) => {
-    if (score >= 80) return "High Match";
-    if (score >= 50) return "Medium Match";
-    return "Low Match";
-  };
+  const info  = result ? scoreInfo(result.matchScore) : null;
+  const tabs: { id: ActiveTab; label: string; count: number }[] = result ? [
+    { id: "matched", label: "Matched",  count: result.matchedSkills.length },
+    { id: "missing", label: "Missing",  count: result.missingSkills.length },
+    { id: "gaps",    label: "Gaps",     count: result.gaps.length },
+    { id: "actions", label: "Actions",  count: result.actions.length },
+  ] : [];
 
   return (
-    <div className="min-h-screen bg-[var(--background)] text-[var(--foreground)] pt-16 pb-16">
-      <header className="max-w-5xl mx-auto text-center mb-8 px-6">
-        <div className="flex justify-center mb-4">
-          <div className="h-16 w-16 bg-[var(--accent)] rounded-xl flex items-center justify-center shadow-lg">
-            <svg
-              width="32"
-              height="32"
-              viewBox="0 0 24 24"
-              className="stroke-black fill-none"
-              strokeWidth="2"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              {/* magnifying glass to represent “match analysis” */}
-              <circle cx="11" cy="11" r="8" />
-              <line x1="21" y1="21" x2="16.65" y2="16.65" />
-            </svg>
-          </div>
+    <div className="min-h-screen bg-[#f5f5f7] text-[#1d1d1f] pt-16 pb-24 px-4">
+
+      {/* Header */}
+      <header className="max-w-2xl mx-auto text-center mb-12">
+        <div className="inline-flex items-center justify-center w-14 h-14 rounded-[18px] bg-[#0071e3]/[0.08] border border-[#0071e3]/15 mb-6">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="stroke-[#0071e3]" strokeWidth="1.5">
+            <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
+          </svg>
         </div>
-        <h1 className="text-4xl md:text-5xl font-bold tracking-tight text-[var(--accent)]">
-          Job Match Scanner
+        <h1 className="text-5xl font-semibold tracking-tight text-[#1d1d1f] mb-3">
+          Job Match Analyzer
         </h1>
-        <p className="mt-3 text-lg text-[var(--gray-300)] max-w-2xl mx-auto">
-          Upload or paste your resume and a job description to see how well they
-          match.
+        <p className="text-[#6e6e73] text-lg leading-relaxed max-w-lg mx-auto">
+          See exactly how well your resume aligns with a job — and get a specific action plan to close every gap.
         </p>
       </header>
 
-      {showTips && (
-        <div className="max-w-5xl mx-auto mb-8 px-6">
-          <div className="bg-[var(--neutral-800)]/30 border border-[var(--neutral-700)] rounded-xl p-4 relative">
-            <button
-              className="absolute top-2 right-2 text-[var(--gray-400)] hover:text-[var(--foreground)]"
-              onClick={() => setShowTips(false)}
-            >
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M6 18L18 6M6 6l12 12"
-                />
-              </svg>
-            </button>
-            <h3 className="text-lg font-medium text-[var(--yellow-300)] mb-2">
-              Quick Job Match Tips
-            </h3>
-            <ul className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm text-[var(--gray-300)]">
-              <li className="flex items-start gap-2">
-                <span className="text-[var(--yellow-300)] flex-shrink-0">
-                  ✓
-                </span>
-                <span>Highlight skills that match the job description</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="text-[var(--yellow-300)] flex-shrink-0">
-                  ✓
-                </span>
-                <span>Use keywords from the job posting</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="text-[var(--yellow-300)] flex-shrink-0">
-                  ✓
-                </span>
-                <span>Quantify achievements relevant to the role</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="text-[var(--yellow-300)] flex-shrink-0">
-                  ✓
-                </span>
-                <span>Tailor your resume to each job application</span>
-              </li>
-            </ul>
-          </div>
-        </div>
-      )}
-
-      <section className="w-full max-w-5xl mx-auto px-6">
+      {/* Input form */}
+      <section className="max-w-2xl mx-auto">
         <PlanChecker feature="job_match">
-          <div className="bg-[var(--neutral-800)] rounded-xl border border-[var(--neutral-700)] p-6 shadow-xl">
-            <h2 className="text-xl font-semibold text-[var(--gray-200)] mb-4">
-              Upload Your Resume
-            </h2>
-            <ResumeUploader onResumeSubmit={setResumeTxt} simple={true} />
-            <div className="mt-6">
-              <label
-                htmlFor="jd-input"
-                className="block mb-2 font-semibold text-[var(--gray-200)]"
-              >
+          <div className="bg-white rounded-3xl border border-black/[0.06] shadow-sm p-8 space-y-7">
+
+            {/* Resume */}
+            <div>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="font-semibold text-[#1d1d1f]">Your Resume</h2>
+                {resumeTxt && (
+                  <span className="text-xs text-emerald-600 font-medium flex items-center gap-1">
+                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>
+                    Resume loaded
+                  </span>
+                )}
+              </div>
+              <ResumeUploader onResumeSubmit={setResumeTxt} />
+            </div>
+
+            {/* Divider */}
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-[#f0f0f5]" /></div>
+              <div className="relative flex justify-center">
+                <span className="px-3 bg-white text-xs text-[#aeaeb2] font-medium">then</span>
+              </div>
+            </div>
+
+            {/* Job Description */}
+            <div>
+              <label htmlFor="jd-input" className="block mb-2 font-semibold text-[#1d1d1f] text-sm">
                 Job Description
+                <span className="ml-1.5 text-xs font-normal text-[#86868b]">— paste a URL or the full posting</span>
               </label>
+
+              {/* URL parser */}
+              <div className="flex items-center gap-2 mb-3">
+                <div className="relative flex-1">
+                  <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#aeaeb2]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244" />
+                  </svg>
+                  <input
+                    value={jobUrl}
+                    onChange={e => setJobUrl(e.target.value)}
+                    onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); parseUrl(); } }}
+                    placeholder="Paste LinkedIn, Indeed, or Greenhouse URL..."
+                    className="w-full bg-[#f9f9fb] text-[#1d1d1f] placeholder-[#b0b0b8] pl-9 pr-3 py-2.5 rounded-xl border border-[#d2d2d7] focus:outline-none focus:border-[#0071e3] focus:ring-2 focus:ring-[#0071e3]/10 text-sm transition-all"
+                  />
+                </div>
+                <button
+                  onClick={parseUrl}
+                  disabled={urlLoading || !jobUrl.trim()}
+                  className="px-4 py-2.5 rounded-xl bg-[#0071e3] text-white text-sm font-semibold hover:bg-[#0077ed] disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center gap-1.5 shrink-0"
+                >
+                  {urlLoading ? (
+                    <svg className="animate-spin h-3.5 w-3.5" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8h8a8 8 0 01-16 0z" /></svg>
+                  ) : (
+                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
+                  )}
+                  {urlLoading ? "Parsing…" : "Import"}
+                </button>
+              </div>
+              {urlError && (
+                <p className="text-xs text-red-500 mb-2">{urlError}</p>
+              )}
+
               <textarea
                 id="jd-input"
-                name="jobDescription"
                 value={jdTxt}
                 onChange={(e) => setJdTxt(e.target.value)}
                 rows={7}
-                placeholder="Paste the job description here…"
-                aria-required
-                className="w-full bg-[var(--neutral-900)] text-[var(--gray-200)] placeholder-[var(--gray-500)] p-3 rounded-lg border border-[var(--neutral-700)] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
+                placeholder="Or paste the full job description here — include responsibilities, requirements, and qualifications…"
+                className="w-full bg-[#f9f9fb] text-[#1d1d1f] placeholder-[#b0b0b8] p-4 rounded-2xl border border-[#d2d2d7] focus:outline-none focus:border-[#0071e3] focus:ring-2 focus:ring-[#0071e3]/10 resize-none text-sm leading-relaxed transition-all"
               />
+              {jdTxt.length > 0 && (
+                <p className="text-right text-xs text-[#aeaeb2] mt-1">{jdTxt.length} characters</p>
+              )}
             </div>
-            <div className="flex space-x-4 mt-6">
+
+            {/* Actions */}
+            <div className="flex gap-3">
               <button
-                type="submit"
-                disabled={loading}
+                disabled={loading || !resumeTxt || jdTxt.trim().length < MIN_LEN}
                 onClick={submit}
-                className="flex-1 px-6 py-3 bg-[var(--accent)] text-black font-semibold rounded-lg transition transform duration-200 hover:-translate-y-1 hover:shadow-xl disabled:opacity-50"
-                aria-disabled={loading}
+                className="flex-1 py-3.5 rounded-2xl text-white bg-[#0071e3] font-semibold disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#0077ed] active:scale-[.98] transition-all flex items-center justify-center gap-2 text-sm"
               >
-                {loading ? "Analyzing…" : "Analyze Match"}
+                {loading ? (
+                  <>
+                    <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8h8a8 8 0 01-16 0z" />
+                    </svg>
+                    Analyzing…
+                  </>
+                ) : "Analyze Match"}
               </button>
-              <button
-                type="button"
-                onClick={resetForm}
-                disabled={loading}
-                className="px-6 py-3 bg-[var(--neutral-700)] text-[var(--gray-300)] font-semibold rounded-lg transition hover:bg-[var(--neutral-600)] disabled:opacity-50"
-              >
-                Clear
-              </button>
+              {(resumeTxt || jdTxt || result) && (
+                <button
+                  onClick={reset}
+                  disabled={loading}
+                  className="px-5 py-3.5 rounded-2xl bg-[#f5f5f7] text-[#6e6e73] font-semibold border border-[#e0e0e5] hover:bg-[#ebebf0] transition-colors disabled:opacity-40 text-sm"
+                >
+                  Clear
+                </button>
+              )}
             </div>
           </div>
         </PlanChecker>
       </section>
 
-      <section
-        className="w-full max-w-5xl mx-auto mt-8 px-6"
-        aria-live="polite"
-        aria-busy={loading}
-      >
+      {/* Status */}
+      <div className="max-w-2xl mx-auto mt-5" aria-live="polite">
         <AnimatePresence mode="wait">
           {loading && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              className="p-8 bg-[var(--neutral-800)] rounded-xl border border-[var(--neutral-700)] shadow-xl flex flex-col items-center gap-4"
-            >
-              <div className="relative w-20 h-20">
-                <div className="absolute inset-0 border-4 border-t-[var(--accent)] border-r-[var(--accent)] border-b-[var(--neutral-700)] border-l-[var(--neutral-700)] rounded-full animate-spin" />
+            <motion.div key="loading" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }}
+              className="p-10 bg-white rounded-3xl border border-black/[0.06] shadow-sm flex flex-col items-center gap-5">
+              <div className="relative w-14 h-14">
+                <div className="absolute inset-0 rounded-full border-[3px] border-[#e8e8ed]" />
+                <div className="absolute inset-0 rounded-full border-[3px] border-t-[#0071e3] border-r-[#0071e3]/20 border-b-transparent border-l-transparent animate-spin" />
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" className="stroke-[#0071e3]" strokeWidth="1.5">
+                    <circle cx="11" cy="11" r="7" /><line x1="19" y1="19" x2="15" y2="15" />
+                  </svg>
+                </div>
               </div>
               <div className="text-center">
-                <h3 className="text-xl font-medium text-[var(--gray-200)]">
-                  Analyzing your match...
-                </h3>
-                <p className="text-[var(--gray-400)] mt-2">
-                  Our AI is comparing your resume to the job description
-                </p>
+                <p className="font-semibold text-[#1d1d1f]">Analyzing your match…</p>
+                <p className="text-[#86868b] text-sm mt-1">Comparing skills, experience, and requirements</p>
               </div>
             </motion.div>
           )}
-        </AnimatePresence>
-        <AnimatePresence mode="wait">
-          {error && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              className="p-4 bg-[var(--red-900)]/30 border border-[var(--red-800)] text-[var(--red-300)] rounded-lg flex items-center justify-center mt-8"
-              role="alert"
-            >
-              <svg
-                className="h-5 w-5 mr-2"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
+          {error && !loading && (
+            <motion.div key="error" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+              className="flex items-start gap-3 p-5 bg-red-50 border border-red-200 text-red-700 rounded-2xl text-sm" role="alert">
+              <svg className="h-5 w-5 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
               {error}
             </motion.div>
           )}
         </AnimatePresence>
-      </section>
+      </div>
 
+      {/* Results */}
       <AnimatePresence>
-        {result && (
-          <motion.section
-            initial={{ opacity: 0, y: 40 }}
-            animate={{ opacity: 1, y: 0, transition: { delay: 0.2 } }}
-            className="w-full max-w-5xl mx-auto mt-8 px-6"
+        {result && info && (
+          <motion.div
+            ref={resultsRef}
+            key="results"
+            initial={{ opacity: 0, y: 24 }}
+            animate={{ opacity: 1, y: 0, transition: { duration: 0.4, ease: "easeOut" } }}
+            className="max-w-2xl mx-auto mt-6 space-y-4"
           >
-            <div className="bg-[var(--neutral-800)] rounded-xl border border-[var(--neutral-700)] shadow-xl overflow-hidden">
-              <div className="bg-[var(--neutral-700)]/50 p-6 border-b border-[var(--neutral-700)]">
-                <div className="flex flex-col md:flex-row gap-6 items-center">
-                  <div ref={scoreRef} className="w-36 h-36 flex-shrink-0">
+
+            {/* Score card */}
+            <div className="bg-white rounded-3xl border border-black/[0.06] shadow-sm p-8">
+              <div className="flex flex-col sm:flex-row items-center sm:items-start gap-7">
+
+                {/* Score ring */}
+                <div className="relative flex-shrink-0">
+                  <div className="w-32 h-32">
                     <CircularProgressbar
                       value={result.matchScore}
-                      text={`${result.matchScore}`}
+                      text={`${result.matchScore}%`}
                       styles={buildStyles({
-                        textSize: "24px",
-                        pathColor: getScoreColor(result.matchScore),
-                        textColor: getScoreColor(result.matchScore),
-                        trailColor: "var(--trail-color)",
+                        textSize: "22px",
+                        pathColor: info.color,
+                        textColor: "#1d1d1f",
+                        trailColor: "#f0f0f5",
+                        pathTransitionDuration: 1,
                       })}
                     />
                   </div>
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-2">
-                      <h2 className="text-2xl font-bold text-[var(--gray-100)]">
-                        Match Score
-                      </h2>
-                      <span
-                        className="px-3 py-1 rounded-full text-sm font-medium"
-                        style={{
-                          backgroundColor: `${getScoreColor(
-                            result.matchScore
-                          )}30`,
-                          color: getScoreColor(result.matchScore),
-                        }}
-                      >
-                        {getScoreLabel(result.matchScore)}
-                      </span>
-                    </div>
-                    <p className="text-[var(--gray-300)] leading-relaxed">
-                      {result.matchScore >= 80
-                        ? "Great match! Your resume aligns well with the job description."
-                        : result.matchScore >= 50
-                        ? "Decent match, but there are areas to improve for a stronger fit."
-                        : "Low match. Significant updates to your resume may be needed."}
-                    </p>
+                  <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 whitespace-nowrap">
+                    <span className={`px-3 py-0.5 rounded-full text-xs font-semibold ${info.badge}`}>
+                      {info.label}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Details */}
+                <div className="flex-1 text-center sm:text-left">
+                  <h2 className="text-2xl font-bold text-[#1d1d1f] mb-2">Match Score</h2>
+                  <p className="text-[#6e6e73] text-sm leading-relaxed mb-5">
+                    {result.summary || (
+                      result.matchScore >= 80 ? "Excellent alignment. Your resume is well-matched — focus on refining your top talking points before applying." :
+                      result.matchScore >= 60 ? "Good foundation. A few targeted updates could significantly strengthen your application." :
+                      result.matchScore >= 40 ? "Partial match. Review the gaps and missing skills, and tailor your resume before applying." :
+                      "Significant gaps exist. Consider upskilling in the areas below or targeting roles that better fit your background."
+                    )}
+                  </p>
+
+                  <div className="flex flex-wrap justify-center sm:justify-start gap-2">
+                    <span className="flex items-center gap-1.5 px-3 py-1 bg-emerald-50 border border-emerald-200 rounded-full text-xs font-medium text-emerald-700">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                      {result.matchedSkills.length} matched
+                    </span>
+                    <span className="flex items-center gap-1.5 px-3 py-1 bg-red-50 border border-red-200 rounded-full text-xs font-medium text-red-700">
+                      <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
+                      {result.missingSkills.length} missing
+                    </span>
+                    <span className="flex items-center gap-1.5 px-3 py-1 bg-[#f0f7ff] border border-[#0071e3]/20 rounded-full text-xs font-medium text-[#0071e3]">
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#0071e3]" />
+                      {result.actions.length} actions
+                    </span>
                   </div>
                 </div>
               </div>
+            </div>
 
-              <div className="border-b border-[var(--neutral-700)]">
-                <div className="flex overflow-x-auto">
+            {/* Analysis card */}
+            <div className="bg-white rounded-3xl border border-black/[0.06] shadow-sm overflow-hidden">
+
+              {/* Tabs */}
+              <div className="flex border-b border-[#f0f0f5] px-2">
+                {tabs.map((tab) => (
                   <button
-                    className={`px-6 py-3 text-sm font-medium whitespace-nowrap ${
-                      activeTab === "matched"
-                        ? "border-b-2 border-[var(--accent)] text-[var(--accent)]"
-                        : "text-[var(--gray-400)] hover:text-[var(--gray-300)]"
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    className={`flex items-center gap-2 px-5 py-4 text-sm font-semibold transition-colors relative whitespace-nowrap ${
+                      activeTab === tab.id
+                        ? "text-[#0071e3] after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-full after:h-[2px] after:bg-[#0071e3]"
+                        : "text-[#86868b] hover:text-[#1d1d1f]"
                     }`}
-                    onClick={() => setActiveTab("matched")}
                   >
-                    Matched Skills ({result.matchedSkills.length})
+                    {tab.label}
+                    <span className={`px-1.5 py-0.5 rounded-full text-xs font-semibold leading-none ${
+                      activeTab === tab.id ? "bg-[#0071e3]/10 text-[#0071e3]" : "bg-[#f0f0f5] text-[#86868b]"
+                    }`}>
+                      {tab.count}
+                    </span>
                   </button>
-                  <button
-                    className={`px-6 py-3 text-sm font-medium whitespace-nowrap ${
-                      activeTab === "missing"
-                        ? "border-b-2 border-[var(--accent)] text-[var(--accent)]"
-                        : "text-[var(--gray-400)] hover:text-[var(--gray-300)]"
-                    }`}
-                    onClick={() => setActiveTab("missing")}
-                  >
-                    Missing Skills ({result.missingSkills.length})
-                  </button>
-                  <button
-                    className={`px-6 py-3 text-sm font-medium whitespace-nowrap ${
-                      activeTab === "gaps"
-                        ? "border-b-2 border-[var(--accent)] text-[var(--accent)]"
-                        : "text-[var(--gray-400)] hover:text-[var(--gray-300)]"
-                    }`}
-                    onClick={() => setActiveTab("gaps")}
-                  >
-                    Gaps ({result.gaps.length})
-                  </button>
-                  <button
-                    className={`px-6 py-3 text-sm font-medium whitespace-nowrap ${
-                      activeTab === "actions"
-                        ? "border-b-2 border-[var(--accent)] text-[var(--accent)]"
-                        : "text-[var(--gray-400)] hover:text-[var(--gray-300)]"
-                    }`}
-                    onClick={() => setActiveTab("actions")}
-                  >
-                    Actions ({result.actions.length})
-                  </button>
-                </div>
+                ))}
               </div>
 
               <div className="p-6">
+
+                {/* Matched Skills */}
                 {activeTab === "matched" && (
-                  <RenderList
-                    items={result.matchedSkills}
-                    emptyText="No skills matched."
-                    color="text-[var(--green-400)]"
-                  />
+                  result.matchedSkills.length === 0 ? (
+                    <div className="py-10 text-center">
+                      <p className="text-[#86868b]">No matching skills detected. Try expanding your resume with more relevant experience.</p>
+                    </div>
+                  ) : (
+                    <>
+                      <p className="text-sm text-[#6e6e73] mb-4">Skills and qualifications present in both your resume and the job description.</p>
+                      <div className="flex flex-wrap gap-2">
+                        {result.matchedSkills.map((skill, i) => (
+                          <span key={i} className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-full text-sm font-medium">
+                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                            </svg>
+                            {skill}
+                          </span>
+                        ))}
+                      </div>
+                    </>
+                  )
                 )}
+
+                {/* Missing Skills */}
                 {activeTab === "missing" && (
-                  <RenderList
-                    items={result.missingSkills}
-                    emptyText="No missing skills."
-                    color="text-[var(--red-400)]"
-                  />
+                  result.missingSkills.length === 0 ? (
+                    <div className="py-10 text-center">
+                      <p className="text-[#86868b]">No missing skills detected — great coverage!</p>
+                    </div>
+                  ) : (
+                    <>
+                      <p className="text-sm text-[#6e6e73] mb-4">Skills required by the job description that aren&apos;t visible in your resume. Add them if you have the experience.</p>
+                      <div className="flex flex-wrap gap-2">
+                        {result.missingSkills.map((skill, i) => (
+                          <span key={i} className="flex items-center gap-1.5 px-3 py-1.5 bg-red-50 text-red-700 border border-red-200 rounded-full text-sm font-medium">
+                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                            </svg>
+                            {skill}
+                          </span>
+                        ))}
+                      </div>
+                    </>
+                  )
                 )}
+
+                {/* Gaps */}
                 {activeTab === "gaps" && (
-                  <RenderList
-                    items={result.gaps}
-                    emptyText="No major gaps."
-                    color="text-[var(--yellow-400)]"
-                  />
+                  result.gaps.length === 0 ? (
+                    <div className="py-10 text-center">
+                      <p className="text-[#86868b]">No significant gaps — strong alignment with this role!</p>
+                    </div>
+                  ) : (
+                    <>
+                      <p className="text-sm text-[#6e6e73] mb-4">Specific differences between what the role requires and what your resume shows.</p>
+                      <ul className="space-y-3">
+                        {result.gaps.map((gap, i) => (
+                          <li key={i} className="flex items-start gap-3 p-4 bg-[#fafafa] border border-[#e8e8ed] rounded-2xl">
+                            <div className="w-6 h-6 rounded-full bg-[#0071e3]/10 border border-[#0071e3]/20 flex items-center justify-center shrink-0 mt-0.5">
+                              <span className="text-[#0071e3] text-xs font-bold">{i + 1}</span>
+                            </div>
+                            <p className="text-[#1d1d1f] text-sm leading-relaxed">{gap}</p>
+                          </li>
+                        ))}
+                      </ul>
+                    </>
+                  )
                 )}
+
+                {/* Actions */}
                 {activeTab === "actions" && (
-                  <RenderList
-                    items={result.actions}
-                    emptyText="No action items suggested."
-                    color="text-[var(--accent)]"
-                  />
+                  result.actions.length === 0 ? (
+                    <div className="py-10 text-center">
+                      <p className="text-[#86868b]">No actions needed — you&apos;re already a strong match!</p>
+                    </div>
+                  ) : (
+                    <>
+                      <p className="text-sm text-[#6e6e73] mb-4">Specific resume edits to make before you apply. Copy any item to keep as a to-do.</p>
+                      <ul className="space-y-2">
+                        {result.actions.map((action, i) => (
+                          <li key={i} className="flex items-start gap-3 p-4 bg-[#fafafa] border border-[#e8e8ed] rounded-2xl hover:border-[#0071e3]/30 hover:bg-[#f0f7ff] transition-colors group">
+                            <div className="w-5 h-5 rounded border-2 border-[#d2d2d7] group-hover:border-[#0071e3] shrink-0 mt-0.5 flex items-center justify-center transition-colors">
+                              <svg className="w-3 h-3 text-[#0071e3] opacity-0 group-hover:opacity-100 transition-opacity" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                              </svg>
+                            </div>
+                            <p className="text-[#1d1d1f] text-sm leading-relaxed flex-1">{action}</p>
+                            <CopyButton text={action} />
+                          </li>
+                        ))}
+                      </ul>
+                    </>
+                  )
                 )}
               </div>
 
-              <div className="border-t border-[var(--neutral-700)] p-4 bg-[var(--neutral-900)]/50">
-                <p className="text-[var(--gray-400)] text-sm text-center">
-                  <span className="text-[var(--accent)]">Pro Tip:</span> Tailor
-                  your resume to include keywords and skills from the job
-                  description to boost your match score!
+              <div className="border-t border-[#f0f0f5] px-6 py-4 bg-[#fafafa]">
+                <p className="text-xs text-[#aeaeb2] text-center">
+                  Tailor your resume to each application. Even a 10-point score improvement can double your callback rate.
                 </p>
               </div>
             </div>
-          </motion.section>
+
+          </motion.div>
         )}
       </AnimatePresence>
-    </div>
-  );
-}
-
-function RenderList({
-  items,
-  emptyText,
-  color,
-}: {
-  items: string[];
-  emptyText: string;
-  color: string;
-}) {
-  return (
-    <div className="p-6 bg-[var(--neutral-800)]/30 border border-[var(--neutral-700)] rounded-lg">
-      {items.length === 0 ? (
-        <div className="text-center text-[var(--gray-400)]">
-          <svg
-            className="h-12 w-12 mx-auto mb-3"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth="2"
-              d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-            />
-          </svg>
-          <p>{emptyText}</p>
-        </div>
-      ) : (
-        <ul className="list-disc list-inside space-y-2">
-          {items.map((item, i) => (
-            <li key={i} className={`text-[var(--gray-200)] ${color}`}>
-              {item}
-            </li>
-          ))}
-        </ul>
-      )}
     </div>
   );
 }

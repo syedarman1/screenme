@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 interface PlanCheckerProps {
   children: React.ReactNode;
   requiredPlan?: "free" | "pro";
-  feature?: "resume_scan" | "cover_letter" | "job_match" | "interview_prep";
+  feature?: "resume_scan" | "cover_letter" | "job_match" | "interview_prep" | "resume_tailor";
   onUpgradeClick?: () => void;
 }
 
@@ -17,7 +17,6 @@ export default function PlanChecker({
   feature,
   onUpgradeClick,
 }: PlanCheckerProps) {
-  const [user, setUser] = useState<any>(null);
   const [allowed, setAllowed] = useState<boolean>(true);
   const [loading, setLoading] = useState<boolean>(true);
   const [debugInfo, setDebugInfo] = useState<any>(null);
@@ -26,26 +25,19 @@ export default function PlanChecker({
   useEffect(() => {
     async function checkAccess() {
       if (!supabase) {
-        console.log("Supabase client not available");
         setAllowed(false);
         setLoading(false);
         return;
       }
 
       try {
-        const {
-          data: { user },
-        } = await supabase.auth.getUser();
+        const { data: { user } } = await supabase.auth.getUser();
 
         if (!user) {
-          console.log("No authenticated user found");
           setAllowed(false);
           setLoading(false);
           return;
         }
-
-        console.log(`Checking access for user: ${user.id}`);
-        setUser(user);
 
         if (requiredPlan === "pro") {
           const { data: planUsageData, error } = await supabase.rpc(
@@ -53,63 +45,35 @@ export default function PlanChecker({
             { p_user_id: user.id }
           );
 
-          console.log("Pro plan check - planUsageData:", planUsageData);
+          if (error) { setAllowed(false); return; }
 
-          if (error) {
-            console.error("Error checking pro plan:", error);
-            setAllowed(false);
-            return;
-          }
-
-          // FIXED: planUsageData is an array, access first element
           const planData = planUsageData?.[0];
           if (!planData || planData.plan !== "pro") {
-            console.log(`User plan: ${planData?.plan || "unknown"} - not pro`);
             setAllowed(false);
             return;
           }
-
-          console.log("User has pro plan - access granted");
           setAllowed(true);
         } else if (feature) {
-          // Check feature usage limits
-          console.log(`Checking feature usage for: ${feature}`);
-
           const { data: canUse, error } = await supabase.rpc(
             "can_use_feature",
             { p_user_id: user.id, p_feature: feature }
           );
 
-          console.log(`Can use ${feature}:`, canUse);
+          if (error) { setAllowed(false); return; }
 
-          if (error) {
-            console.error("Error checking feature usage:", error);
-            setAllowed(false);
-            return;
+          if (process.env.NODE_ENV === "development") {
+            const { data: debugData } = await supabase.rpc("debug_user_status", {
+              p_user_id: user.id,
+            });
+            setDebugInfo(debugData?.[0]);
           }
 
-          // Also get debug info for troubleshooting
-          const { data: debugData } = await supabase.rpc("debug_user_status", {
-            p_user_id: user.id,
-          });
-
-          console.log("Debug info:", debugData?.[0]);
-          setDebugInfo(debugData?.[0]);
-
-          if (!canUse) {
-            console.log(`User cannot use ${feature} - limit reached`);
-            setAllowed(false);
-            return;
-          }
-
-          console.log(`User can use ${feature} - access granted`);
+          if (!canUse) { setAllowed(false); return; }
           setAllowed(true);
         } else {
-          // No specific checks needed for free plan
           setAllowed(true);
         }
-      } catch (err) {
-        console.error("Access check error:", err);
+      } catch {
         setAllowed(false);
       } finally {
         setLoading(false);
@@ -121,116 +85,74 @@ export default function PlanChecker({
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center p-8">
-        <div className="text-[var(--gray-400)]">Checking access...</div>
+      <div className="flex items-center justify-center p-12">
+        <svg className="animate-spin h-6 w-6 text-[#0071e3]" fill="none" viewBox="0 0 24 24">
+          <circle className="opacity-20" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+          <path className="opacity-80" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+        </svg>
       </div>
     );
   }
 
   if (!allowed) {
-    return (
-      <div
-        className={`flex items-center justify-center ${
-          requiredPlan === "pro" ? "min-h-[700px]" : "min-h-[300px]"
-        }`}
-      >
-        <div className="relative overflow-hidden bg-gradient-to-br from-[var(--neutral-900)] to-[var(--neutral-800)] border border-[var(--neutral-700)] rounded-2xl p-6 text-center shadow-2xl w-[800px] h-80 flex flex-col justify-center">
-          {/* Decorative background elements */}
-          <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-[var(--accent)] to-yellow-600 rounded-full opacity-10 blur-2xl transform translate-x-10 -translate-y-10"></div>
-          <div className="absolute bottom-0 left-0 w-16 h-16 bg-gradient-to-tr from-blue-500 to-purple-600 rounded-full opacity-10 blur-xl transform -translate-x-8 translate-y-8"></div>
+    const featureLabel = feature?.replace(/_/g, " ") || "this feature";
 
-          {/* Crown/Star icon */}
-          <div className="relative mx-auto w-12 h-12 mb-4 flex items-center justify-center">
-            <div className="absolute inset-0 bg-gradient-to-r from-[var(--accent)] to-yellow-500 rounded-xl opacity-20 blur-sm"></div>
-            <div className="relative bg-gradient-to-r from-[var(--accent)] to-yellow-500 rounded-lg p-2">
-              <svg
-                className="w-8 h-8 text-black"
-                fill="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-              </svg>
-            </div>
+    return (
+      <div className={`flex items-center justify-center ${requiredPlan === "pro" ? "min-h-[600px]" : "min-h-[300px]"}`}>
+        <div className="bg-white rounded-3xl border border-black/[0.08] shadow-sm p-10 text-center max-w-md w-full">
+
+          {/* Icon */}
+          <div className="mx-auto w-14 h-14 rounded-2xl bg-[#0071e3]/[0.08] border border-[#0071e3]/15 flex items-center justify-center mb-5">
+            <svg className="w-7 h-7 text-[#0071e3]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.455 2.456L21.75 6l-1.036.259a3.375 3.375 0 00-2.455 2.456z" />
+            </svg>
           </div>
 
-          <h3 className="text-xl font-bold text-white mb-2 tracking-tight">
+          <h3 className="text-xl font-semibold text-[#1d1d1f] mb-2">
             {requiredPlan === "pro" ? "Pro Feature" : "Usage Limit Reached"}
           </h3>
 
-          <p className="text-[var(--gray-300)] mb-4 text-sm">
+          <p className="text-sm text-[#6e6e73] mb-6 leading-relaxed">
             {requiredPlan === "pro"
-              ? "Unlock powerful features with Pro"
-              : `Get unlimited ${feature?.replace("_", " ")}s with Pro`}
+              ? "This feature requires a Pro subscription to access."
+              : `You've used all your free ${featureLabel}s this month. Upgrade to Pro for unlimited access.`}
           </p>
 
-          {/* Benefits list */}
-          <div className="bg-[var(--neutral-800)]/50 rounded-lg p-3 mb-4 text-left">
-            <div className="space-y-1 text-xs">
-              <div className="flex items-center text-[var(--gray-300)]">
-                <svg
-                  className="w-3 h-3 text-green-400 mr-2 flex-shrink-0"
-                  fill="currentColor"
-                  viewBox="0 0 20 20"
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-                Unlimited resume analysis
-              </div>
-              <div className="flex items-center text-[var(--gray-300)]">
-                <svg
-                  className="w-3 h-3 text-green-400 mr-2 flex-shrink-0"
-                  fill="currentColor"
-                  viewBox="0 0 20 20"
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-                AI interview preparation
-              </div>
-              <div className="flex items-center text-[var(--gray-300)]">
-                <svg
-                  className="w-3 h-3 text-green-400 mr-2 flex-shrink-0"
-                  fill="currentColor"
-                  viewBox="0 0 20 20"
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-                Cover letters & job matching
-              </div>
+          {/* Benefits */}
+          <div className="bg-[#f5f5f7] rounded-2xl p-4 mb-6 text-left">
+            <p className="text-xs font-semibold text-[#1d1d1f] mb-3 uppercase tracking-wider">Pro includes</p>
+            <div className="space-y-2.5">
+              {[
+                "Unlimited resume scans & tailoring",
+                "Unlimited cover letters & job matching",
+                "AI mock interview with voice",
+                "Unlimited applications & saved resumes",
+              ].map((benefit) => (
+                <div key={benefit} className="flex items-center gap-2.5">
+                  <svg className="w-4 h-4 text-[#34c759] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                  </svg>
+                  <span className="text-sm text-[#1d1d1f]">{benefit}</span>
+                </div>
+              ))}
             </div>
           </div>
 
-          {/* Debug info for troubleshooting (remove in production) */}
+          {/* Debug (dev only) */}
           {debugInfo && process.env.NODE_ENV === "development" && (
-            <details className="mb-2 text-left">
-              <summary className="cursor-pointer text-xs text-[var(--gray-500)]">
-                Debug Info (Dev Only)
-              </summary>
-              <pre className="text-xs text-[var(--gray-600)] mt-1 overflow-auto">
+            <details className="mb-4 text-left">
+              <summary className="cursor-pointer text-xs text-[#aeaeb2]">Debug Info</summary>
+              <pre className="text-xs text-[#86868b] mt-1 overflow-auto bg-[#f5f5f7] p-2 rounded-lg">
                 {JSON.stringify(debugInfo, null, 2)}
               </pre>
             </details>
           )}
 
           <button
-            onClick={() =>
-              onUpgradeClick ? onUpgradeClick() : router.push("/dashboard")
-            }
-            className="relative w-full bg-gradient-to-r from-[var(--accent)] to-yellow-500 text-black font-bold py-3 px-6 rounded-lg hover:from-yellow-400 hover:to-yellow-600 transform hover:scale-105 transition-all duration-200 shadow-lg hover:shadow-xl group text-sm"
+            onClick={() => onUpgradeClick ? onUpgradeClick() : router.push("/dashboard")}
+            className="w-full py-3.5 rounded-2xl bg-[#0071e3] hover:bg-[#0077ed] text-white font-semibold text-sm transition-colors cursor-pointer"
           >
-            <span className="relative z-10">Upgrade to Pro ✨</span>
-            <div className="absolute inset-0 bg-gradient-to-r from-yellow-400 to-yellow-600 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200"></div>
+            Upgrade to Pro — $15/mo
           </button>
         </div>
       </div>
