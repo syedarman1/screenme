@@ -156,27 +156,27 @@ export default function JobMatchPage() {
   };
 
   return (
-    <div className=”min-h-screen bg-black text-white pt-16 pb-16”>
+    <div className=”min-h-screen bg-[#f5f5f7] text-[#1d1d1f] pt-16 pb-16”>
       <header className=”max-w-5xl mx-auto text-center mb-8 px-6”>
-        <div className=”inline-flex items-center justify-center h-12 w-12 bg-[#fdc806]/10 border border-[#fdc806]/20 rounded-2xl mb-5”>
-          <svg width=”22” height=”22” viewBox=”0 0 24 24” className=”stroke-[#fdc806] fill-none” strokeWidth=”1.5”>
+        <div className=”inline-flex items-center justify-center h-12 w-12 bg-[#0071e3]/[0.08] border border-[#0071e3]/20 rounded-2xl mb-5”>
+          <svg width=”22” height=”22” viewBox=”0 0 24 24” className=”stroke-[#0071e3] fill-none” strokeWidth=”1.5”>
             <circle cx=”11” cy=”11” r=”8” />
             <line x1=”21” y1=”21” x2=”16.65” y2=”16.65” />
           </svg>
         </div>
-        <h1 className=”text-4xl md:text-5xl font-semibold tracking-tight text-white”>
+        <h1 className=”text-4xl md:text-5xl font-semibold tracking-tight text-[#1d1d1f]”>
           Job Match Analyzer
         </h1>
-        <p className=”mt-3 text-base text-[#52525b] max-w-2xl mx-auto”>
+        <p className=”mt-3 text-base text-[#6e6e73] max-w-2xl mx-auto”>
           Compare your resume against any job description to see your match score and gaps.
         </p>
       </header>
 
       {showTips && (
         <div className="max-w-5xl mx-auto mb-8 px-6">
-          <div className="bg-[#0a0a0a] border border-white/[0.07] rounded-xl p-4 relative">
+          <div className="bg-white border border-black/[0.08] rounded-xl p-4 relative">
             <button
-              className="absolute top-2 right-2 text-[#71717a] hover:text-[#a1a1aa]"
+              className="absolute top-2 right-2 text-[#86868b] hover:text-[#6e6e73]"
               onClick={() => setShowTips(false)}
             >
               <svg
@@ -193,30 +193,30 @@ export default function JobMatchPage() {
                 />
               </svg>
             </button>
-            <h3 className="text-lg font-medium text-[#fdc806] mb-2">
+            <h3 className="text-lg font-medium text-[#0071e3] mb-2">
               Quick Job Match Tips
             </h3>
-            <ul className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm text-[#a1a1aa]">
+            <ul className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm text-[#6e6e73]">
               <li className="flex items-start gap-2">
-                <span className="text-[#fdc806] flex-shrink-0">
+                <span className="text-[#0071e3] flex-shrink-0">
                   ✓
                 </span>
                 <span>Highlight skills that match the job description</span>
               </li>
               <li className="flex items-start gap-2">
-                <span className="text-[#fdc806] flex-shrink-0">
+                <span className="text-[#0071e3] flex-shrink-0">
                   ✓
                 </span>
                 <span>Use keywords from the job posting</span>
               </li>
               <li className="flex items-start gap-2">
-                <span className="text-[#fdc806] flex-shrink-0">
+                <span className="text-[#0071e3] flex-shrink-0">
                   ✓
                 </span>
                 <span>Quantify achievements relevant to the role</span>
               </li>
               <li className="flex items-start gap-2">
-                <span className="text-[#fdc806] flex-shrink-0">
+                <span className="text-[#0071e3] flex-shrink-0">
                   ✓
                 </span>
                 <span>Tailor your resume to each job application</span>
@@ -228,15 +228,15 @@ export default function JobMatchPage() {
 
       <section className="w-full max-w-5xl mx-auto px-6">
         <PlanChecker feature="job_match">
-          <div className="bg-[#0a0a0a] rounded-xl border border-white/[0.07] p-6 shadow-xl">
-            <h2 className="text-xl font-semibold text-white mb-4">
+          <div className="bg-white rounded-xl border border-black/[0.08] p-6 shadow-xl">
+            <h2 className="text-xl font-semibold text-[#1d1d1f] mb-4">
               Upload Your Resume
             </h2>
             <ResumeUploader onResumeSubmit={setResumeTxt} simple={true} />
             <div className="mt-6">
               <label
                 htmlFor="jd-input"
-                className="block mb-2 font-semibold text-white"
+                className="block mb-2 font-semibold text-[#1d1d1f]"
               >
                 Job Description
               </label>
@@ -248,7 +248,7 @@ export default function JobMatchPage() {
                 rows={7}
                 placeholder="Paste the job description here…"
                 aria-required
-                className="w-full bg-black/50 text-white placeholder-[#3f3f46] p-3 rounded-lg border border-white/[0.07] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
+                className="w-full bg-[#f5f5f7] text-[#1d1d1f] placeholder-[#aeaeb2] p-3 rounded-lg border border-black/[0.08] focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
               />
             </div>
             <div className="flex space-x-4 mt-6">
@@ -265,7 +265,7 @@ export default function JobMatchPage() {
                 type="button"
                 onClick={resetForm}
                 disabled={loading}
-                className="px-6 py-3 bg-white/[0.06] text-[#a1a1aa] font-semibold rounded-lg transition hover:bg-white/[0.09] disabled:opacity-50"
+                className="px-6 py-3 bg-[#f5f5f7] text-[#6e6e73] font-semibold rounded-lg transition hover:bg-[#ebebf0] disabled:opacity-50"
               >
                 Clear
               </button>
@@ -285,16 +285,16 @@ export default function JobMatchPage() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
-              className="p-8 bg-[#0a0a0a] rounded-xl border border-white/[0.07] shadow-xl flex flex-col items-center gap-4"
+              className="p-8 bg-white rounded-xl border border-black/[0.08] shadow-xl flex flex-col items-center gap-4"
             >
               <div className="relative w-20 h-20">
-                <div className="absolute inset-0 border-4 border-t-[#fdc806] border-r-[#fdc806] border-b-transparent border-l-transparent rounded-full animate-spin" />
+                <div className="absolute inset-0 border-4 border-t-[#0071e3] border-r-[#0071e3] border-b-transparent border-l-transparent rounded-full animate-spin" />
               </div>
               <div className="text-center">
-                <h3 className="text-xl font-medium text-white">
+                <h3 className="text-xl font-medium text-[#1d1d1f]">
                   Analyzing your match...
                 </h3>
-                <p className="text-[#71717a] mt-2">
+                <p className="text-[#86868b] mt-2">
                   Our AI is comparing your resume to the job description
                 </p>
               </div>
@@ -336,8 +336,8 @@ export default function JobMatchPage() {
             animate={{ opacity: 1, y: 0, transition: { delay: 0.2 } }}
             className="w-full max-w-5xl mx-auto mt-8 px-6"
           >
-            <div className="bg-[#0a0a0a] rounded-xl border border-white/[0.07] shadow-xl overflow-hidden">
-              <div className="bg-white/[0.03] p-6 border-b border-white/[0.07]">
+            <div className="bg-white rounded-xl border border-black/[0.08] shadow-xl overflow-hidden">
+              <div className="bg-black/[0.02] p-6 border-b border-black/[0.08]">
                 <div className="flex flex-col md:flex-row gap-6 items-center">
                   <div ref={scoreRef} className="w-36 h-36 flex-shrink-0">
                     <CircularProgressbar
@@ -347,13 +347,13 @@ export default function JobMatchPage() {
                         textSize: "24px",
                         pathColor: getScoreColor(result.matchScore),
                         textColor: getScoreColor(result.matchScore),
-                        trailColor: "var(--trail-color)",
+                        trailColor: "#e8e8ed",
                       })}
                     />
                   </div>
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-2">
-                      <h2 className="text-2xl font-bold text-white">
+                      <h2 className="text-2xl font-bold text-[#1d1d1f]">
                         Match Score
                       </h2>
                       <span
@@ -368,7 +368,7 @@ export default function JobMatchPage() {
                         {getScoreLabel(result.matchScore)}
                       </span>
                     </div>
-                    <p className="text-[#a1a1aa] leading-relaxed">
+                    <p className="text-[#6e6e73] leading-relaxed">
                       {result.matchScore >= 80
                         ? "Great match! Your resume aligns well with the job description."
                         : result.matchScore >= 50
@@ -379,13 +379,13 @@ export default function JobMatchPage() {
                 </div>
               </div>
 
-              <div className="border-b border-white/[0.07]">
+              <div className="border-b border-black/[0.08]">
                 <div className="flex overflow-x-auto">
                   <button
                     className={`px-6 py-3 text-sm font-medium whitespace-nowrap ${
                       activeTab === "matched"
                         ? "border-b-2 border-[var(--accent)] text-[var(--accent)]"
-                        : "text-[#71717a] hover:text-[#a1a1aa]"
+                        : "text-[#86868b] hover:text-[#6e6e73]"
                     }`}
                     onClick={() => setActiveTab("matched")}
                   >
@@ -395,7 +395,7 @@ export default function JobMatchPage() {
                     className={`px-6 py-3 text-sm font-medium whitespace-nowrap ${
                       activeTab === "missing"
                         ? "border-b-2 border-[var(--accent)] text-[var(--accent)]"
-                        : "text-[#71717a] hover:text-[#a1a1aa]"
+                        : "text-[#86868b] hover:text-[#6e6e73]"
                     }`}
                     onClick={() => setActiveTab("missing")}
                   >
@@ -405,7 +405,7 @@ export default function JobMatchPage() {
                     className={`px-6 py-3 text-sm font-medium whitespace-nowrap ${
                       activeTab === "gaps"
                         ? "border-b-2 border-[var(--accent)] text-[var(--accent)]"
-                        : "text-[#71717a] hover:text-[#a1a1aa]"
+                        : "text-[#86868b] hover:text-[#6e6e73]"
                     }`}
                     onClick={() => setActiveTab("gaps")}
                   >
@@ -415,7 +415,7 @@ export default function JobMatchPage() {
                     className={`px-6 py-3 text-sm font-medium whitespace-nowrap ${
                       activeTab === "actions"
                         ? "border-b-2 border-[var(--accent)] text-[var(--accent)]"
-                        : "text-[#71717a] hover:text-[#a1a1aa]"
+                        : "text-[#86868b] hover:text-[#6e6e73]"
                     }`}
                     onClick={() => setActiveTab("actions")}
                   >
@@ -443,21 +443,21 @@ export default function JobMatchPage() {
                   <RenderList
                     items={result.gaps}
                     emptyText="No major gaps."
-                    color="text-[#fdc806]"
+                    color="text-[#0071e3]"
                   />
                 )}
                 {activeTab === "actions" && (
                   <RenderList
                     items={result.actions}
                     emptyText="No action items suggested."
-                    color="text-[#fdc806]"
+                    color="text-[#0071e3]"
                   />
                 )}
               </div>
 
-              <div className="border-t border-white/[0.07] p-4 bg-black/20">
-                <p className="text-[#71717a] text-sm text-center">
-                  <span className="text-[#fdc806]">Pro Tip:</span> Tailor
+              <div className="border-t border-black/[0.08] p-4 bg-black/20">
+                <p className="text-[#86868b] text-sm text-center">
+                  <span className="text-[#0071e3]">Pro Tip:</span> Tailor
                   your resume to include keywords and skills from the job
                   description to boost your match score!
                 </p>
@@ -480,9 +480,9 @@ function RenderList({
   color: string;
 }) {
   return (
-    <div className="p-6 bg-white/[0.02] border border-white/[0.07] rounded-xl">
+    <div className="p-6 bg-black/[0.02] border border-black/[0.08] rounded-xl">
       {items.length === 0 ? (
-        <div className="text-center text-[#71717a]">
+        <div className="text-center text-[#86868b]">
           <svg
             className="h-12 w-12 mx-auto mb-3"
             fill="none"
@@ -501,7 +501,7 @@ function RenderList({
       ) : (
         <ul className="list-disc list-inside space-y-2">
           {items.map((item, i) => (
-            <li key={i} className={`text-white ${color}`}>
+            <li key={i} className={`text-[#1d1d1f] ${color}`}>
               {item}
             </li>
           ))}

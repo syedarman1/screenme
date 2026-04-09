@@ -6,14 +6,14 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 
 export default function AuthPage() {
-  const [email,             setEmail]             = useState("");
-  const [password,          setPassword]          = useState("");
-  const [showPassword,      setShowPassword]      = useState(false);
-  const [error,             setError]             = useState<string | null>(null);
-  const [message,           setMessage]           = useState<string | null>(null);
-  const [loading,           setLoading]           = useState(false);
-  const [showCreate,        setShowCreate]        = useState(false);
-  const [showForgot,        setShowForgot]        = useState(false);
+  const [email,        setEmail]        = useState("");
+  const [password,     setPassword]     = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [error,        setError]        = useState<string | null>(null);
+  const [message,      setMessage]      = useState<string | null>(null);
+  const [loading,      setLoading]      = useState(false);
+  const [showCreate,   setShowCreate]   = useState(false);
+  const [showForgot,   setShowForgot]   = useState(false);
   const router = useRouter();
 
   const clear = () => { setError(null); setMessage(null); };
@@ -74,26 +74,26 @@ export default function AuthPage() {
   };
 
   return (
-    <div className="min-h-[100dvh] bg-black flex flex-col items-center justify-center p-4 relative overflow-hidden">
-      {/* Glow */}
-      <div aria-hidden className="pointer-events-none absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[400px] bg-[#fdc806] opacity-[0.05] rounded-full blur-[100px]" />
+    <div className="min-h-[100dvh] bg-[#f5f5f7] flex flex-col items-center justify-center p-4 relative overflow-hidden">
+      {/* Subtle blue glow */}
+      <div aria-hidden className="pointer-events-none absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[400px] bg-[#0071e3] opacity-[0.06] rounded-full blur-[100px]" />
 
       <div className="w-full max-w-sm relative z-10">
         {/* Wordmark */}
         <div className="text-center mb-8">
-          <Link href="/" className="inline-block text-xl font-semibold text-white tracking-tight">
-            Screen<span className="text-[#fdc806]">Me</span>
+          <Link href="/" className="inline-block text-xl font-semibold text-[#1d1d1f] tracking-tight">
+            Screen<span className="text-[#0071e3]">Me</span>
           </Link>
-          <h1 className="text-2xl font-semibold text-white mt-5 mb-1 tracking-tight">Welcome back</h1>
-          <p className="text-sm text-[#52525b]">Sign in to your account</p>
+          <h1 className="text-2xl font-semibold text-[#1d1d1f] mt-5 mb-1 tracking-tight">Welcome back</h1>
+          <p className="text-sm text-[#86868b]">Sign in to your account</p>
         </div>
 
-        <div className="rounded-2xl border border-white/[0.08] bg-[#0a0a0a] p-7 flex flex-col gap-4">
+        <div className="rounded-2xl border border-black/[0.08] bg-white shadow-md p-7 flex flex-col gap-4">
           {/* Google */}
           <button
             onClick={handleGoogle}
             disabled={loading}
-            className="w-full bg-white text-[#0a0a0a] font-medium py-2.5 rounded-xl hover:bg-gray-100
+            className="w-full bg-[#1d1d1f] text-white font-medium py-2.5 rounded-xl hover:bg-[#2d2d2f]
                      transition-colors duration-200 flex items-center justify-center gap-2.5 text-sm disabled:opacity-50 cursor-pointer"
           >
             <svg className="w-4 h-4" viewBox="0 0 24 24" aria-hidden>
@@ -106,32 +106,32 @@ export default function AuthPage() {
           </button>
 
           <div className="flex items-center gap-3">
-            <div className="flex-1 h-px bg-white/[0.06]" />
-            <span className="text-xs text-[#3f3f46]">or</span>
-            <div className="flex-1 h-px bg-white/[0.06]" />
+            <div className="flex-1 h-px bg-black/[0.06]" />
+            <span className="text-xs text-[#aeaeb2]">or</span>
+            <div className="flex-1 h-px bg-black/[0.06]" />
           </div>
 
           {/* Alerts */}
           {error && (
-            <div role="alert" className="p-3 rounded-xl border border-red-500/20 bg-red-500/8">
-              <p className="text-sm text-red-400">{error}</p>
+            <div role="alert" className="p-3 rounded-xl border border-[#ff3b30]/20 bg-[#ff3b30]/[0.06]">
+              <p className="text-sm text-[#ff3b30]">{error}</p>
             </div>
           )}
           {message && (
-            <div role="status" className="p-3 rounded-xl border border-[#fdc806]/20 bg-[#fdc806]/8">
-              <p className="text-sm text-[#fdc806]">{message}</p>
+            <div role="status" className="p-3 rounded-xl border border-[#0071e3]/20 bg-[#0071e3]/[0.06]">
+              <p className="text-sm text-[#0071e3]">{message}</p>
             </div>
           )}
 
           {/* Form */}
           <form onSubmit={handleLogin} className="flex flex-col gap-3" noValidate>
             <div>
-              <label htmlFor="email" className="block text-xs font-medium text-[#71717a] mb-1.5">Email</label>
+              <label htmlFor="email" className="block text-xs font-medium text-[#6e6e73] mb-1.5">Email</label>
               <input
                 id="email" type="email" autoComplete="email" required
                 placeholder="you@example.com"
-                className="w-full bg-black/50 text-white placeholder-[#3f3f46] px-3.5 py-2.5 rounded-xl
-                         border border-white/[0.08] focus:outline-none focus:border-[#fdc806]/50
+                className="w-full bg-[#f5f5f7] text-[#1d1d1f] placeholder-[#aeaeb2] px-3.5 py-2.5 rounded-xl
+                         border border-black/[0.08] focus:outline-none focus:border-[#0071e3]/60 focus:bg-white
                          transition-colors text-sm"
                 value={email}
                 onChange={e => { setEmail(e.target.value); clear(); setShowCreate(false); }}
@@ -139,14 +139,14 @@ export default function AuthPage() {
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-xs font-medium text-[#71717a] mb-1.5">Password</label>
+              <label htmlFor="password" className="block text-xs font-medium text-[#6e6e73] mb-1.5">Password</label>
               <div className="relative">
                 <input
                   id="password" type={showPassword ? "text" : "password"} autoComplete="current-password" required
                   placeholder="••••••"
                   minLength={6}
-                  className="w-full bg-black/50 text-white placeholder-[#3f3f46] px-3.5 py-2.5 pr-10 rounded-xl
-                           border border-white/[0.08] focus:outline-none focus:border-[#fdc806]/50
+                  className="w-full bg-[#f5f5f7] text-[#1d1d1f] placeholder-[#aeaeb2] px-3.5 py-2.5 pr-10 rounded-xl
+                           border border-black/[0.08] focus:outline-none focus:border-[#0071e3]/60 focus:bg-white
                            transition-colors text-sm"
                   value={password}
                   onChange={e => { setPassword(e.target.value); clear(); setShowCreate(false); }}
@@ -154,7 +154,7 @@ export default function AuthPage() {
                 <button
                   type="button"
                   onClick={() => setShowPassword(v => !v)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[#52525b] hover:text-[#a1a1aa] transition-colors cursor-pointer"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[#86868b] hover:text-[#6e6e73] transition-colors cursor-pointer"
                   aria-label={showPassword ? "Hide password" : "Show password"}
                 >
                   {showPassword
@@ -167,9 +167,9 @@ export default function AuthPage() {
 
             <button
               type="submit" disabled={loading}
-              className="w-full bg-[#fdc806] text-black font-semibold py-2.5 rounded-xl
-                       hover:bg-[#fdd835] transition-colors duration-200 disabled:opacity-50 text-sm
-                       flex items-center justify-center gap-2 cursor-pointer mt-1"
+              className="w-full bg-[#0071e3] text-white font-semibold py-2.5 rounded-xl
+                       hover:bg-[#0077ed] transition-colors duration-200 disabled:opacity-50 text-sm
+                       flex items-center justify-center gap-2 cursor-pointer mt-1 shadow-sm"
             >
               {loading && <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>}
               {loading ? "Signing in…" : "Continue"}
@@ -179,28 +179,27 @@ export default function AuthPage() {
           {/* Forgot */}
           <div className="text-right -mt-1">
             <button type="button" onClick={() => setShowForgot(v => !v)}
-              className="text-xs text-[#3f3f46] hover:text-[#71717a] transition-colors cursor-pointer">
+              className="text-xs text-[#86868b] hover:text-[#6e6e73] transition-colors cursor-pointer">
               Forgot password?
             </button>
           </div>
 
           {showForgot && (
-            <div className="pt-3 border-t border-white/[0.06] flex flex-col gap-2">
-              <p className="text-xs text-[#52525b]">Enter your email above and we'll send a reset link.</p>
+            <div className="pt-3 border-t border-black/[0.06] flex flex-col gap-2">
+              <p className="text-xs text-[#86868b]">Enter your email above and we'll send a reset link.</p>
               <button type="button" onClick={handleForgot} disabled={loading}
-                className="w-full bg-white/[0.06] border border-white/[0.08] text-[#a1a1aa] hover:text-white hover:bg-white/[0.09]
+                className="w-full bg-[#f5f5f7] border border-black/[0.08] text-[#6e6e73] hover:text-[#1d1d1f] hover:bg-[#ebebf0]
                           font-medium py-2.5 rounded-xl transition-colors text-sm cursor-pointer disabled:opacity-50">
                 {loading ? "Sending…" : "Send reset email"}
               </button>
             </div>
           )}
 
-          {/* Create account */}
           {showCreate && (
-            <div className="pt-3 border-t border-white/[0.06] flex flex-col gap-2">
-              <p className="text-xs text-[#52525b] text-center">Don't have an account?</p>
+            <div className="pt-3 border-t border-black/[0.06] flex flex-col gap-2">
+              <p className="text-xs text-[#86868b] text-center">Don't have an account?</p>
               <button type="button" onClick={handleCreate} disabled={loading}
-                className="w-full bg-white/[0.06] border border-white/[0.08] text-white hover:bg-white/[0.10]
+                className="w-full bg-[#f5f5f7] border border-black/[0.08] text-[#1d1d1f] hover:bg-[#ebebf0]
                           font-medium py-2.5 rounded-xl transition-colors text-sm cursor-pointer disabled:opacity-50">
                 {loading ? "Creating…" : "Create account"}
               </button>
@@ -208,9 +207,9 @@ export default function AuthPage() {
           )}
         </div>
 
-        <p className="text-center text-[#27272a] text-xs mt-5">
+        <p className="text-center text-[#aeaeb2] text-xs mt-5">
           By continuing you agree to our{" "}
-          <Link href="/contact" className="hover:text-[#52525b] transition-colors">Terms of Service</Link>
+          <Link href="/contact" className="hover:text-[#6e6e73] transition-colors">Terms of Service</Link>
         </p>
       </div>
     </div>

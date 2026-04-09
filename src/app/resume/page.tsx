@@ -55,7 +55,7 @@ interface Audit {
 
 const badgeColor = {
   low: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
-  medium: "bg-[#fdc806]/10 text-[#fdc806] border-[#fdc806]/20",
+  medium: "bg-[#0071e3]/[0.08] text-[#0071e3] border-[#0071e3]/20",
   high: "bg-red-500/10 text-red-400 border-red-500/20",
 } as const;
 
@@ -150,19 +150,19 @@ export default function ResumeScreen() {
   };
 
   return (
-    <div className="min-h-screen bg-black text-white py-16">
+    <div className="min-h-screen bg-[#f5f5f7] text-[#1d1d1f] py-16">
       {/* Header */}
       <header className="max-w-6xl mx-auto text-center mb-12 px-4">
-        <div className="inline-flex items-center justify-center h-12 w-12 bg-[#fdc806]/10 border border-[#fdc806]/20 rounded-2xl mb-5">
-          <svg width="22" height="22" viewBox="0 0 24 24" className="stroke-[#fdc806] fill-none" strokeWidth="1.5">
+        <div className="inline-flex items-center justify-center h-12 w-12 bg-[#0071e3]/[0.08] border border-[#0071e3]/20 rounded-2xl mb-5">
+          <svg width="22" height="22" viewBox="0 0 24 24" className="stroke-[#0071e3] fill-none" strokeWidth="1.5">
             <path d="M4 2h10l6 6v14H4V2z" />
             <path d="M14 2v6h6" />
           </svg>
         </div>
-        <h1 className="text-4xl md:text-5xl font-semibold tracking-tight text-white">
+        <h1 className="text-4xl md:text-5xl font-semibold tracking-tight text-[#1d1d1f]">
           Resume Scanner
         </h1>
-        <p className="mt-3 text-base text-[#52525b] max-w-xl mx-auto leading-relaxed">
+        <p className="mt-3 text-base text-[#6e6e73] max-w-xl mx-auto leading-relaxed">
           AI-powered insights to optimize your resume for ATS and recruiters.
         </p>
       </header>
@@ -170,9 +170,9 @@ export default function ResumeScreen() {
       {/* Quick Tips */}
       {showTips && (
         <div className="max-w-6xl mx-auto mb-12 px-4">
-          <div className="bg-[#0a0a0a] border border-white/[0.07] rounded-2xl p-6 relative">
+          <div className="bg-white border border-black/[0.08] rounded-2xl p-6 relative">
             <button
-              className="absolute top-4 right-4 text-[#52525b] hover:text-[#a1a1aa] transition-colors"
+              className="absolute top-4 right-4 text-[#6e6e73] hover:text-[#6e6e73] transition-colors"
               onClick={() => setShowTips(false)}
               aria-label="Close tips"
             >
@@ -180,10 +180,10 @@ export default function ResumeScreen() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
-            <h3 className="text-sm font-semibold text-[#fdc806] mb-4 uppercase tracking-widest">
+            <h3 className="text-sm font-semibold text-[#0071e3] mb-4 uppercase tracking-widest">
               Resume Optimization Tips
             </h3>
-            <ul className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm text-[#a1a1aa]">
+            <ul className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm text-[#6e6e73]">
               {[
                 "Use action verbs and quantify achievements for impact.",
                 "Tailor your resume to match job-specific keywords.",
@@ -191,7 +191,7 @@ export default function ResumeScreen() {
                 "Highlight relevant skills and experiences upfront.",
               ].map((tip, i) => (
                 <li key={i} className="flex items-start gap-2">
-                  <span className="text-[#fdc806] flex-shrink-0">✓</span>
+                  <span className="text-[#0071e3] flex-shrink-0">✓</span>
                   <span>{tip}</span>
                 </li>
               ))}
@@ -203,8 +203,8 @@ export default function ResumeScreen() {
       {/* Uploader */}
       <section className="max-w-6xl mx-auto px-4">
         <PlanChecker feature="resume_scan">
-          <div className="bg-[#0a0a0a] rounded-2xl border border-white/[0.07] p-8">
-            <h2 className="text-2xl font-semibold text-white mb-6">
+          <div className="bg-white rounded-2xl border border-black/[0.08] p-8">
+            <h2 className="text-2xl font-semibold text-[#1d1d1f] mb-6">
               Upload Your Resume
             </h2>
             <ResumeUploader onResumeSubmit={sendToApi} />
@@ -220,16 +220,16 @@ export default function ResumeScreen() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
-              className="p-8 bg-[#0a0a0a] rounded-2xl border border-white/[0.07] flex flex-col items-center gap-4"
+              className="p-8 bg-white rounded-2xl border border-black/[0.08] flex flex-col items-center gap-4"
             >
               <div className="relative w-16 h-16">
-                <div className="absolute inset-0 border-4 border-t-[#fdc806] border-r-[#fdc806] border-b-transparent border-l-transparent rounded-full animate-spin" />
+                <div className="absolute inset-0 border-4 border-t-[#0071e3] border-r-[#0071e3] border-b-transparent border-l-transparent rounded-full animate-spin" />
               </div>
               <div className="text-center">
-                <h3 className="text-xl font-semibold text-white">
+                <h3 className="text-xl font-semibold text-[#1d1d1f]">
                   Analyzing Resume...
                 </h3>
-                <p className="text-[#71717a] mt-2">
+                <p className="text-[#86868b] mt-2">
                   Our AI is scanning for optimization opportunities.
                 </p>
               </div>
@@ -270,9 +270,9 @@ export default function ResumeScreen() {
             animate={{ opacity: 1, y: 0, transition: { delay: 0.2 } }}
             className="max-w-6xl mx-auto mt-12 px-4"
           >
-            <div className="bg-[#0a0a0a] rounded-2xl border border-white/[0.07] overflow-hidden">
+            <div className="bg-white rounded-2xl border border-black/[0.08] overflow-hidden">
               {/* Header with Score */}
-              <div className="bg-white/[0.03] p-8 border-b border-white/[0.07]">
+              <div className="bg-black/[0.02] p-8 border-b border-black/[0.08]">
                 <div className="flex flex-col md:flex-row gap-8 items-center">
                   <div ref={scoreRef} className="w-32 h-32 flex-shrink-0">
                     <CircularProgressbar
@@ -282,14 +282,14 @@ export default function ResumeScreen() {
                         textSize: "28px",
                         pathColor: getScoreColor(audit.score),
                         textColor: getScoreColor(audit.score),
-                        trailColor: "var(--trail-color)",
+                        trailColor: "#e8e8ed",
                         pathTransitionDuration: 0.8,
                       })}
                     />
                   </div>
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-3">
-                      <h2 className="text-3xl font-bold text-white">
+                      <h2 className="text-3xl font-bold text-[#1d1d1f]">
                         Resume Score
                       </h2>
                       <span
@@ -302,7 +302,7 @@ export default function ResumeScreen() {
                         {getScoreLabel(audit.score)}
                       </span>
                     </div>
-                    <p className="text-[#a1a1aa] leading-relaxed text-lg">
+                    <p className="text-[#6e6e73] leading-relaxed text-lg">
                       {audit.summary || (audit.score >= 85
                         ? "Outstanding resume! You're well-positioned to impress recruiters."
                         : audit.score >= 70
@@ -316,7 +316,7 @@ export default function ResumeScreen() {
               </div>
 
               {/* Tabs */}
-              <div className="border-b border-white/[0.07] bg-white/[0.02]">
+              <div className="border-b border-black/[0.08] bg-black/[0.02]">
                 <div className="flex max-w-full overflow-x-auto scrollbar-hidden px-4">
                   {[
                     { id: "issues", label: `Issues & Actions (${audit.issues.length})` },
@@ -328,7 +328,7 @@ export default function ResumeScreen() {
                       className={`px-6 py-4 text-sm font-semibold transition-colors relative ${
                         activeTab === tab.id
                           ? "text-[var(--accent)] after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-full after:h-1 after:bg-[var(--accent)]"
-                          : "text-[#71717a] hover:text-white"
+                          : "text-[#86868b] hover:text-[#1d1d1f]"
                       }`}
                       onClick={() => setActiveTab(tab.id as typeof activeTab)}
                     >
@@ -356,58 +356,58 @@ export default function ResumeScreen() {
                       <ul className="space-y-6">
                         {audit.issues.map((issue, i) => (
                           <li key={i} role="listitem" className="animate-fadeIn">
-                            <details className="group border border-white/[0.07] rounded-xl overflow-hidden">
-                              <summary className="cursor-pointer flex items-center gap-4 p-5 bg-black/50 hover:bg-[#0a0a0a] transition-colors">
+                            <details className="group border border-black/[0.08] rounded-xl overflow-hidden">
+                              <summary className="cursor-pointer flex items-center gap-4 p-5 bg-[#f5f5f7] hover:bg-white transition-colors">
                                 <span className={`px-3 py-1 text-xs rounded-full border font-medium ${badgeColor[issue.severity]}`}>
                                   {issue.severity.toUpperCase()}
                                 </span>
                                 <span className="flex items-center gap-3">
-                                  <span className="text-[#71717a] text-lg">
+                                  <span className="text-[#86868b] text-lg">
                                     {sectionIcons[issue.section as keyof typeof sectionIcons] || "📄"}
                                   </span>
-                                  <span className="font-semibold text-white">
+                                  <span className="font-semibold text-[#1d1d1f]">
                                     {issue.section}
                                   </span>
                                 </span>
-                                <span className="text-[#a1a1aa] truncate flex-1 text-sm">
+                                <span className="text-[#6e6e73] truncate flex-1 text-sm">
                                   {issue.text}
                                 </span>
-                                <svg className="w-5 h-5 text-[#52525b] group-open:rotate-180 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <svg className="w-5 h-5 text-[#6e6e73] group-open:rotate-180 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
                                 </svg>
                               </summary>
-                              <div className="p-6 space-y-4 bg-black/50 border-t border-white/[0.07]">
+                              <div className="p-6 space-y-4 bg-[#f5f5f7] border-t border-black/[0.08]">
                                 {issue.line && (
-                                  <div className="bg-white/[0.03] p-4 rounded-lg border border-white/[0.07]">
-                                    <p className="text-[#71717a] text-sm mb-2">Original Text:</p>
-                                    <p className="text-[#a1a1aa] italic">"{issue.line}"</p>
+                                  <div className="bg-black/[0.02] p-4 rounded-lg border border-black/[0.08]">
+                                    <p className="text-[#86868b] text-sm mb-2">Original Text:</p>
+                                    <p className="text-[#6e6e73] italic">"{issue.line}"</p>
                                   </div>
                                 )}
                                 <div>
-                                  <p className="text-[#71717a] text-sm mb-2">Issue:</p>
-                                  <p className="text-[#a1a1aa]">{issue.text}</p>
+                                  <p className="text-[#86868b] text-sm mb-2">Issue:</p>
+                                  <p className="text-[#6e6e73]">{issue.text}</p>
                                   {issue.reason && (
-                                    <p className="mt-2 text-[#71717a] text-sm">{issue.reason}</p>
+                                    <p className="mt-2 text-[#86868b] text-sm">{issue.reason}</p>
                                   )}
                                 </div>
                                 {audit.actions[i] && (
-                                  <div className="bg-[#0a0a0a] p-5 rounded-lg border border-white/[0.07]">
+                                  <div className="bg-white p-5 rounded-lg border border-black/[0.08]">
                                     <div className="flex justify-between items-center mb-3">
-                                      <h4 className="text-white font-semibold">Suggested Improvement</h4>
+                                      <h4 className="text-[#1d1d1f] font-semibold">Suggested Improvement</h4>
                                       <button
                                         onClick={() => handleCopyText(audit.actions[i].rewrite)}
                                         className="p-2 hover:bg-white/[0.07] rounded-lg transition-colors"
                                         aria-label="Copy suggested action"
                                       >
-                                        <svg className="h-5 w-5 text-[#71717a]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <svg className="h-5 w-5 text-[#86868b]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
                                         </svg>
                                       </button>
                                     </div>
-                                    <p className="text-white leading-relaxed">{audit.actions[i].rewrite}</p>
+                                    <p className="text-[#1d1d1f] leading-relaxed">{audit.actions[i].rewrite}</p>
                                     {audit.actions[i].improvement && (
-                                      <p className="mt-3 text-[#71717a] text-sm">
-                                        <span className="text-[#fdc806]">Why this works:</span>{" "}
+                                      <p className="mt-3 text-[#86868b] text-sm">
+                                        <span className="text-[#0071e3]">Why this works:</span>{" "}
                                         {audit.actions[i].improvement}
                                       </p>
                                     )}
@@ -425,8 +425,8 @@ export default function ResumeScreen() {
                 {activeTab === "strengths" && (
                   <>
                     {!audit.strengths || audit.strengths.length === 0 ? (
-                      <div className="p-8 bg-[#0a0a0a]/20 border border-white/[0.07] rounded-2xl text-center">
-                        <p className="text-[#71717a] text-lg">
+                      <div className="p-8 bg-white/20 border border-black/[0.08] rounded-2xl text-center">
+                        <p className="text-[#86868b] text-lg">
                           No specific strengths identified yet. Keep refining your resume!
                         </p>
                       </div>
@@ -438,8 +438,8 @@ export default function ResumeScreen() {
                               <span className="text-xl">{sectionIcons[strength.section as keyof typeof sectionIcons] || "📄"}</span>
                               <h4 className="font-semibold text-emerald-400 text-lg">{strength.section}</h4>
                             </div>
-                            <p className="text-white mb-2">{strength.text}</p>
-                            <p className="text-[#71717a] text-sm">
+                            <p className="text-[#1d1d1f] mb-2">{strength.text}</p>
+                            <p className="text-[#86868b] text-sm">
                               <span className="text-emerald-400">Why this works:</span> {strength.reason}
                             </p>
                           </li>
@@ -452,26 +452,26 @@ export default function ResumeScreen() {
                 {activeTab === "keywords" && (
                   <>
                     {!audit.keywords || audit.keywords.length === 0 ? (
-                      <div className="p-8 bg-[#0a0a0a]/20 border border-white/[0.07] rounded-2xl text-center">
-                        <p className="text-[#71717a] text-lg">
+                      <div className="p-8 bg-white/20 border border-black/[0.08] rounded-2xl text-center">
+                        <p className="text-[#86868b] text-lg">
                           No keyword analysis available. Upload a resume to get started.
                         </p>
                       </div>
                     ) : (
                       <div className="space-y-6">
                         {audit.keywords.map((keyword, i) => (
-                          <div key={i} className="border border-white/[0.07] rounded-xl overflow-hidden">
-                            <div className="bg-white/[0.03] p-4 font-semibold text-white text-lg">
+                          <div key={i} className="border border-black/[0.08] rounded-xl overflow-hidden">
+                            <div className="bg-black/[0.02] p-4 font-semibold text-[#1d1d1f] text-lg">
                               {keyword.category}
                             </div>
                             <div className="p-6">
                               <div className="mb-6">
-                                <h4 className="text-sm text-[#71717a] mb-3 font-medium">Found Keywords</h4>
+                                <h4 className="text-sm text-[#86868b] mb-3 font-medium">Found Keywords</h4>
                                 <div className="flex flex-wrap gap-3">
                                   {keyword.terms.map((term, j) => (
                                     <span
                                       key={j}
-                                      className="px-3 py-1.5 bg-white/[0.04] text-white rounded-full border border-white/[0.1] text-sm font-medium"
+                                      className="px-3 py-1.5 bg-black/[0.03] text-[#1d1d1f] rounded-full border border-white/[0.1] text-sm font-medium"
                                     >
                                       {term}
                                     </span>
@@ -480,12 +480,12 @@ export default function ResumeScreen() {
                               </div>
                               {keyword.missing && keyword.missing.length > 0 && (
                                 <div>
-                                  <h4 className="text-sm text-[#71717a] mb-3 font-medium">Suggested Keywords</h4>
+                                  <h4 className="text-sm text-[#86868b] mb-3 font-medium">Suggested Keywords</h4>
                                   <div className="flex flex-wrap gap-3">
                                     {keyword.missing.map((term, j) => (
                                       <span
                                         key={j}
-                                        className="px-3 py-1.5 bg-[#fdc806]/10 text-[#fdc806] rounded-full border border-[#fdc806]/20 text-sm font-medium"
+                                        className="px-3 py-1.5 bg-[#0071e3]/[0.08] text-[#0071e3] rounded-full border border-[#0071e3]/20 text-sm font-medium"
                                       >
                                         {term}
                                       </span>
@@ -503,9 +503,9 @@ export default function ResumeScreen() {
               </div>
 
               {/* Footer with Tip */}
-              <div className="border-t border-white/[0.07] p-6 bg-black/50/30">
-                <p className="text-[#71717a] text-sm text-center">
-                  <span className="text-[#fdc806] font-semibold">Pro Tip:</span>{" "}
+              <div className="border-t border-black/[0.08] p-6 bg-[#f5f5f7]/30">
+                <p className="text-[#86868b] text-sm text-center">
+                  <span className="text-[#0071e3] font-semibold">Pro Tip:</span>{" "}
                   Recruiters scan resumes in 6–7 seconds. Optimize for clarity and impact!
                 </p>
               </div>

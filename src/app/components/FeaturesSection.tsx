@@ -57,29 +57,29 @@ function FeatureCard({ f, i }: { f: typeof FEATURES[number]; i: number }) {
       transition={{ duration: 0.45, delay: i * 0.06, ease: EASE }}
       className={`relative p-6 flex flex-col gap-4 rounded-2xl border transition-all duration-300 group
         ${muted
-          ? "bg-[#050505] border-white/[0.04] opacity-50"
-          : "bg-[#0a0a0a] border-white/[0.07] hover:border-[#fdc806]/30 hover:bg-[#0d0d0d]"
+          ? "bg-[#f5f5f7] border-black/[0.04] opacity-50"
+          : "bg-white border-black/[0.08] hover:border-[#0071e3]/30 hover:shadow-md"
         }`}
     >
       {(f.pro || f.soon) && (
         <span className={`absolute top-4 right-4 text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full border
-          ${f.pro ? "bg-[#fdc806]/10 text-[#fdc806] border-[#fdc806]/20"
-                  : "bg-white/[0.04] text-[#52525b] border-white/[0.06]"}`}>
+          ${f.pro ? "bg-[#0071e3]/10 text-[#0071e3] border-[#0071e3]/20"
+                  : "bg-black/[0.04] text-[#aeaeb2] border-black/[0.06]"}`}>
           {f.pro ? "Pro" : "Soon"}
         </span>
       )}
       <div className={`w-10 h-10 rounded-xl flex items-center justify-center border transition-colors duration-300
         ${muted
-          ? "bg-white/[0.03] border-white/[0.04] text-[#3f3f46]"
-          : "bg-[#fdc806]/10 border-[#fdc806]/15 text-[#fdc806] group-hover:bg-[#fdc806]/16"
+          ? "bg-black/[0.03] border-black/[0.04] text-[#aeaeb2]"
+          : "bg-[#0071e3]/8 border-[#0071e3]/15 text-[#0071e3] group-hover:bg-[#0071e3]/12"
         }`}>
         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
           {f.icon}
         </svg>
       </div>
       <div>
-        <h3 className={`text-sm font-semibold mb-1.5 ${muted ? "text-[#3f3f46]" : "text-white"}`}>{f.title}</h3>
-        <p className={`text-sm leading-relaxed ${muted ? "text-[#27272a]" : "text-[#52525b]"}`}>{f.description}</p>
+        <h3 className={`text-sm font-semibold mb-1.5 ${muted ? "text-[#aeaeb2]" : "text-[#1d1d1f]"}`}>{f.title}</h3>
+        <p className={`text-sm leading-relaxed ${muted ? "text-[#d2d2d7]" : "text-[#6e6e73]"}`}>{f.description}</p>
       </div>
     </motion.div>
   );
@@ -87,11 +87,10 @@ function FeatureCard({ f, i }: { f: typeof FEATURES[number]; i: number }) {
 
 export default function FeaturesSection() {
   return (
-    <section id="features" className="py-32 relative">
-      <div aria-hidden className="pointer-events-none absolute right-0 top-1/2 -translate-y-1/2 w-[400px] h-[600px] bg-[#fdc806] opacity-[0.03] rounded-full blur-[100px] -z-10" />
+    <section id="features" className="py-32 bg-[#f5f5f7] relative border-t border-black/[0.05]">
+      <div aria-hidden className="pointer-events-none absolute right-0 top-1/2 -translate-y-1/2 w-[400px] h-[600px] bg-[#0071e3] opacity-[0.04] rounded-full blur-[120px] -z-10" />
 
       <div className="max-w-6xl mx-auto px-6">
-        {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -99,16 +98,15 @@ export default function FeaturesSection() {
           transition={{ duration: 0.55, ease: EASE }}
           className="max-w-xl mb-16"
         >
-          <p className="text-xs font-semibold uppercase tracking-widest text-[#fdc806] mb-4">Features</p>
-          <h2 className="text-4xl md:text-5xl font-semibold tracking-tight text-white mb-4">
+          <p className="text-xs font-semibold uppercase tracking-widest text-[#0071e3] mb-4">Features</p>
+          <h2 className="text-4xl md:text-5xl font-semibold tracking-tight text-[#1d1d1f] mb-4">
             Everything you need
             <br />
-            <span className="text-[#52525b]">to get hired.</span>
+            <span className="text-[#6e6e73]">to get hired.</span>
           </h2>
-          <p className="text-[#52525b] text-base leading-relaxed">Six AI tools, one platform — from your first resume upload to your offer letter.</p>
+          <p className="text-[#6e6e73] text-base leading-relaxed">Six AI tools, one platform — from your first resume upload to your offer letter.</p>
         </motion.div>
 
-        {/* 2×3 grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {FEATURES.map((f, i) => <FeatureCard key={f.id} f={f} i={i} />)}
         </div>

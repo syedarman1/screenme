@@ -79,7 +79,6 @@ export default function PricingSection() {
     if (tier.id === "enterprise") { router.push("/contact"); return; }
     if (tier.id === "free")       { router.push(authed ? "/dashboard" : "/login"); return; }
 
-    // Pro
     if (!authed) {
       if (process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO)
         localStorage.setItem("selectedPriceId", process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO);
@@ -101,13 +100,12 @@ export default function PricingSection() {
   };
 
   return (
-    <section id="pricing" className="py-32 border-t border-white/[0.05] relative overflow-hidden">
+    <section id="pricing" className="py-32 bg-[#f5f5f7] border-t border-black/[0.05] relative overflow-hidden">
       <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[500px] rounded-full bg-[#fdc806] opacity-[0.04] blur-[130px]" />
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[500px] rounded-full bg-[#0071e3] opacity-[0.04] blur-[130px]" />
       </div>
 
       <div className="max-w-6xl mx-auto px-6">
-        {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -115,14 +113,13 @@ export default function PricingSection() {
           transition={{ duration: 0.55, ease: EASE }}
           className="text-center mb-16"
         >
-          <p className="text-xs font-semibold uppercase tracking-widest text-[#fdc806] mb-4">Pricing</p>
-          <h2 className="text-4xl md:text-5xl font-semibold tracking-tight text-white mb-3">
+          <p className="text-xs font-semibold uppercase tracking-widest text-[#0071e3] mb-4">Pricing</p>
+          <h2 className="text-4xl md:text-5xl font-semibold tracking-tight text-[#1d1d1f] mb-3">
             Simple pricing.
           </h2>
-          <p className="text-[#52525b] text-base">Start free. Upgrade when you're ready. Cancel anytime.</p>
+          <p className="text-[#6e6e73] text-base">Start free. Upgrade when you're ready. Cancel anytime.</p>
         </motion.div>
 
-        {/* Cards */}
         <div className="grid md:grid-cols-3 gap-4 items-start">
           {TIERS.map((tier, i) => (
             <motion.div
@@ -133,54 +130,51 @@ export default function PricingSection() {
               transition={{ duration: 0.45, delay: i * 0.07, ease: EASE }}
               className={`relative rounded-2xl flex flex-col gap-6 overflow-hidden
                 ${tier.featured
-                  ? "bg-[#fdc806] p-px"
+                  ? "bg-[#0071e3] p-px shadow-xl"
                   : ""
                 }`}
             >
               <div className={`flex flex-col gap-6 p-7 h-full rounded-2xl
                 ${tier.featured
-                  ? "bg-[#0d0b00]"
-                  : "bg-[#0a0a0a] border border-white/[0.07]"
+                  ? "bg-[#003d80]"
+                  : "bg-white border border-black/[0.08] shadow-sm"
                 }`}
               >
                 {tier.featured && (
-                  <span className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-0 text-[10px] font-bold uppercase tracking-widest px-3 py-1 bg-[#fdc806] text-black rounded-b-xl">
+                  <span className="absolute top-0 left-1/2 -translate-x-1/2 text-[10px] font-bold uppercase tracking-widest px-3 py-1 bg-[#0071e3] text-white rounded-b-xl">
                     Most popular
                   </span>
                 )}
 
-                {/* Name & price */}
                 <div className="pt-2">
-                  <p className={`text-xs font-semibold uppercase tracking-widest mb-3 ${tier.featured ? "text-[#fdc806]" : "text-[#52525b]"}`}>
+                  <p className={`text-xs font-semibold uppercase tracking-widest mb-3 ${tier.featured ? "text-[#60a5fa]" : "text-[#6e6e73]"}`}>
                     {tier.name}
                   </p>
                   <div className="flex items-end gap-1.5 mb-2">
-                    <span className="text-4xl font-semibold text-white tabular-nums">{tier.price}</span>
-                    {tier.period && <span className="text-sm text-[#52525b] mb-1">{tier.period}</span>}
+                    <span className={`text-4xl font-semibold tabular-nums ${tier.featured ? "text-white" : "text-[#1d1d1f]"}`}>{tier.price}</span>
+                    {tier.period && <span className={`text-sm mb-1 ${tier.featured ? "text-[#93c5fd]" : "text-[#86868b]"}`}>{tier.period}</span>}
                   </div>
-                  <p className="text-sm text-[#52525b]">{tier.desc}</p>
+                  <p className={`text-sm ${tier.featured ? "text-[#93c5fd]" : "text-[#6e6e73]"}`}>{tier.desc}</p>
                 </div>
 
-                {/* Features */}
                 <ul className="flex flex-col gap-2.5 flex-1">
                   {tier.features.map((f, j) => (
                     <li key={j} className="flex items-center gap-3">
-                      <span className={tier.featured ? "text-[#fdc806]" : "text-[#52525b]"}>
+                      <span className={tier.featured ? "text-[#60a5fa]" : "text-[#0071e3]"}>
                         <Check />
                       </span>
-                      <span className="text-sm text-[#a1a1aa]">{f}</span>
+                      <span className={`text-sm ${tier.featured ? "text-[#e0f2fe]" : "text-[#6e6e73]"}`}>{f}</span>
                     </li>
                   ))}
                 </ul>
 
-                {/* CTA */}
                 <button
                   onClick={() => handleCta(tier)}
                   disabled={busy && tier.id === "pro"}
                   className={`pricing-button relative w-full py-3 rounded-xl text-sm font-semibold transition-all duration-200 cursor-pointer disabled:opacity-50
                     ${tier.featured
-                      ? "bg-[#fdc806] text-black hover:bg-[#fdd835]"
-                      : "bg-white/[0.06] border border-white/[0.1] text-white hover:bg-white/[0.10]"
+                      ? "bg-white text-[#003d80] hover:bg-[#f0f8ff]"
+                      : "bg-[#0071e3]/8 border border-[#0071e3]/20 text-[#0071e3] hover:bg-[#0071e3]/14"
                     }`}
                 >
                   {busy && tier.id === "pro" ? "Loading…" : tier.cta}

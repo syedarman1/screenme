@@ -104,8 +104,8 @@ export default function DashboardPage() {
 
   /* ── Loading / error ── */
   if (loading) return (
-    <div className="min-h-screen bg-black flex items-center justify-center">
-      <svg className="animate-spin h-7 w-7 text-[#fdc806]" fill="none" viewBox="0 0 24 24">
+    <div className="min-h-screen bg-[#f5f5f7] flex items-center justify-center">
+      <svg className="animate-spin h-7 w-7 text-[#0071e3]" fill="none" viewBox="0 0 24 24">
         <circle className="opacity-20" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
         <path className="opacity-80" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
       </svg>
@@ -113,14 +113,14 @@ export default function DashboardPage() {
   );
 
   if (error) return (
-    <div className="min-h-screen bg-black flex items-center justify-center p-6">
+    <div className="min-h-screen bg-[#f5f5f7] flex items-center justify-center p-6">
       <div className="max-w-sm w-full text-center">
         <div className="w-12 h-12 rounded-2xl bg-red-500/10 border border-red-500/15 flex items-center justify-center mx-auto mb-4">
-          <svg className="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          <svg className="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
         </div>
-        <h2 className="text-base font-semibold text-white mb-2">Access required</h2>
-        <p className="text-sm text-[#52525b] mb-6">{error}</p>
-        <Link href="/login" className="inline-block px-6 py-2.5 bg-[#fdc806] hover:bg-[#fdd835] text-black font-semibold rounded-xl text-sm transition-colors">Sign in</Link>
+        <h2 className="text-base font-semibold text-[#1d1d1f] mb-2">Access required</h2>
+        <p className="text-sm text-[#6e6e73] mb-6">{error}</p>
+        <Link href="/login" className="inline-block px-6 py-2.5 bg-[#0071e3] hover:bg-[#0077ed] text-white font-semibold rounded-xl text-sm transition-colors">Sign in</Link>
       </div>
     </div>
   );
@@ -129,23 +129,23 @@ export default function DashboardPage() {
     || (user?.email ? user.email.split("@")[0].charAt(0).toUpperCase() + user.email.split("@")[0].slice(1) : "");
 
   return (
-    <div className="min-h-screen bg-black text-white">
+    <div className="min-h-screen bg-[#f5f5f7] text-[#1d1d1f]">
       {/* ambient */}
       <div aria-hidden className="fixed inset-0 -z-10 pointer-events-none">
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[700px] h-[300px] bg-[#fdc806] opacity-[0.03] rounded-full blur-[120px]" />
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[700px] h-[300px] bg-[#0071e3] opacity-[0.04] rounded-full blur-[140px]" />
       </div>
 
       <div className="max-w-6xl mx-auto px-6 pt-24 pb-24">
 
         {/* Header */}
         <header className="mb-14">
-          <p className="text-xs font-medium text-[#52525b] mb-2 uppercase tracking-widest">Dashboard</p>
+          <p className="text-xs font-medium text-[#aeaeb2] mb-2 uppercase tracking-widest">Dashboard</p>
           <div className="flex items-center justify-between flex-wrap gap-4">
-            <h1 className="text-4xl md:text-5xl font-semibold tracking-tight">
+            <h1 className="text-4xl md:text-5xl font-semibold tracking-tight text-[#1d1d1f]">
               Hey, {firstName}
             </h1>
             {isPro && (
-              <span className="px-3.5 py-1.5 rounded-full border border-[#fdc806]/25 bg-[#fdc806]/10 text-[#fdc806] text-xs font-semibold uppercase tracking-wider">
+              <span className="px-3.5 py-1.5 rounded-full border border-[#0071e3]/25 bg-[#0071e3]/[0.08] text-[#0071e3] text-xs font-semibold uppercase tracking-wider">
                 Pro
               </span>
             )}
@@ -154,7 +154,7 @@ export default function DashboardPage() {
 
         {/* Tools */}
         <section className="mb-16">
-          <p className="text-xs font-medium text-[#3f3f46] uppercase tracking-widest mb-5">Your tools</p>
+          <p className="text-xs font-medium text-[#aeaeb2] uppercase tracking-widest mb-5">Your tools</p>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {tools.map(tool => {
               const muted = !tool.available;
@@ -162,42 +162,42 @@ export default function DashboardPage() {
                 <div key={tool.title} className="relative">
                   <div className={`rounded-2xl border p-5 flex flex-col gap-4 h-full transition-all duration-300
                     ${muted
-                      ? "bg-[#050505] border-white/[0.04] opacity-50"
-                      : "bg-[#0a0a0a] border-white/[0.07] hover:border-white/[0.12] hover:bg-[#0d0d0d]"
+                      ? "bg-white border-black/[0.06] opacity-50"
+                      : "bg-white border-black/[0.08] hover:border-[#0071e3]/30 hover:shadow-md"
                     }`}>
                     {!tool.available && (
                       <span className={`absolute top-3.5 right-3.5 text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full border
                         ${tool.isPro
-                          ? "bg-[#fdc806]/10 text-[#fdc806] border-[#fdc806]/20"
-                          : "bg-white/[0.04] text-[#3f3f46] border-white/[0.06]"
+                          ? "bg-[#0071e3]/[0.08] text-[#0071e3] border-[#0071e3]/20"
+                          : "bg-[#f5f5f7] text-[#aeaeb2] border-black/[0.06]"
                         }`}>
                         {tool.isPro ? "Pro" : "Soon"}
                       </span>
                     )}
                     <div className={`w-9 h-9 rounded-xl flex items-center justify-center border
                       ${muted
-                        ? "bg-white/[0.02] border-white/[0.04] text-[#27272a]"
-                        : "bg-[#fdc806]/10 border-[#fdc806]/15 text-[#fdc806]"
+                        ? "bg-[#f5f5f7] border-black/[0.06] text-[#c7c7cc]"
+                        : "bg-[#0071e3]/[0.08] border-[#0071e3]/15 text-[#0071e3]"
                       }`}>
                       {tool.icon}
                     </div>
                     <div className="flex-1">
-                      <h3 className={`text-sm font-semibold mb-1 ${muted ? "text-[#27272a]" : "text-white"}`}>{tool.title}</h3>
-                      <p className={`text-xs leading-relaxed ${muted ? "text-[#1c1c1e]" : "text-[#52525b]"}`}>{tool.description}</p>
+                      <h3 className={`text-sm font-semibold mb-1 ${muted ? "text-[#aeaeb2]" : "text-[#1d1d1f]"}`}>{tool.title}</h3>
+                      <p className={`text-xs leading-relaxed ${muted ? "text-[#c7c7cc]" : "text-[#6e6e73]"}`}>{tool.description}</p>
                     </div>
                     {tool.available ? (
                       <Link href={tool.href}
-                        className="flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-[#fdc806] hover:bg-[#fdd835] text-black text-xs font-semibold transition-colors group">
+                        className="flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-[#0071e3] hover:bg-[#0077ed] text-white text-xs font-semibold transition-colors group">
                         Open
                         <svg className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7"/></svg>
                       </Link>
                     ) : tool.isPro ? (
                       <button onClick={handleUpgrade}
-                        className="py-2.5 rounded-xl border border-[#fdc806]/20 bg-[#fdc806]/6 text-[#fdc806] text-xs font-medium hover:bg-[#fdc806]/10 transition-colors cursor-pointer">
+                        className="py-2.5 rounded-xl border border-[#0071e3]/20 bg-[#0071e3]/[0.06] text-[#0071e3] text-xs font-medium hover:bg-[#0071e3]/[0.12] transition-colors cursor-pointer">
                         Upgrade to unlock
                       </button>
                     ) : (
-                      <div className="py-2.5 rounded-xl bg-white/[0.03] text-[#3f3f46] text-xs text-center">Coming soon</div>
+                      <div className="py-2.5 rounded-xl bg-[#f5f5f7] text-[#aeaeb2] text-xs text-center">Coming soon</div>
                     )}
                   </div>
                 </div>
@@ -208,23 +208,23 @@ export default function DashboardPage() {
 
         {/* Plan */}
         <section>
-          <p className="text-xs font-medium text-[#3f3f46] uppercase tracking-widest mb-5">Your plan</p>
-          <div className={`rounded-2xl border p-7 ${isPro ? "border-[#fdc806]/20 bg-[#0d0b00]" : "border-white/[0.07] bg-[#0a0a0a]"}`}>
+          <p className="text-xs font-medium text-[#aeaeb2] uppercase tracking-widest mb-5">Your plan</p>
+          <div className={`rounded-2xl border p-7 ${isPro ? "border-[#0071e3]/20 bg-[#f0f7ff]" : "border-black/[0.08] bg-white"}`}>
             <div className="flex items-start justify-between flex-wrap gap-6 mb-6">
               <div>
                 <div className="flex items-center gap-3 mb-1.5">
-                  <h2 className="text-xl font-semibold text-white">{isPro ? "Pro" : "Free"}</h2>
+                  <h2 className="text-xl font-semibold text-[#1d1d1f]">{isPro ? "Pro" : "Free"}</h2>
                   {isPro && (
-                    <span className="text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-full bg-[#fdc806]/15 text-[#fdc806] border border-[#fdc806]/20">Active</span>
+                    <span className="text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-full bg-[#0071e3]/[0.08] text-[#0071e3] border border-[#0071e3]/20">Active</span>
                   )}
                 </div>
-                <p className="text-sm text-[#52525b]">
+                <p className="text-sm text-[#6e6e73]">
                   {isPro ? "Unlimited access to all features." : "3 scans · 2 cover letters · 2 job matches per month."}
                 </p>
               </div>
               {!isPro && (
                 <button onClick={handleUpgrade} disabled={busy}
-                  className="px-5 py-2.5 rounded-xl bg-[#fdc806] hover:bg-[#fdd835] text-black font-semibold text-sm transition-colors disabled:opacity-50 cursor-pointer">
+                  className="px-5 py-2.5 rounded-xl bg-[#0071e3] hover:bg-[#0077ed] text-white font-semibold text-sm transition-colors disabled:opacity-50 cursor-pointer">
                   {busy ? "Loading…" : "Upgrade — $15/mo"}
                 </button>
               )}
@@ -232,7 +232,7 @@ export default function DashboardPage() {
 
             {/* Usage bars */}
             {!isPro && usage && (
-              <div className="grid grid-cols-3 gap-4 pt-5 border-t border-white/[0.06]">
+              <div className="grid grid-cols-3 gap-4 pt-5 border-t border-black/[0.06]">
                 {[
                   { label: "Resume Scans",   used: usage.resume_scans  || 0, limit: 3 },
                   { label: "Cover Letters",  used: usage.cover_letters || 0, limit: 2 },
@@ -244,13 +244,13 @@ export default function DashboardPage() {
                   return (
                     <div key={label}>
                       <div className="flex justify-between items-baseline mb-2">
-                        <p className="text-xs text-[#52525b]">{label}</p>
-                        <p className={`text-sm font-semibold tabular-nums ${depleted ? "text-red-400" : "text-white"}`}>
-                          {remaining}<span className="text-[#3f3f46] font-normal text-xs">/{limit}</span>
+                        <p className="text-xs text-[#6e6e73]">{label}</p>
+                        <p className={`text-sm font-semibold tabular-nums ${depleted ? "text-red-500" : "text-[#1d1d1f]"}`}>
+                          {remaining}<span className="text-[#aeaeb2] font-normal text-xs">/{limit}</span>
                         </p>
                       </div>
-                      <div className="h-1 w-full rounded-full bg-white/[0.05] overflow-hidden">
-                        <div className={`h-full rounded-full transition-all duration-700 ${depleted ? "bg-red-400" : "bg-[#fdc806]"}`}
+                      <div className="h-1 w-full rounded-full bg-[#e8e8ed] overflow-hidden">
+                        <div className={`h-full rounded-full transition-all duration-700 ${depleted ? "bg-red-500" : "bg-[#0071e3]"}`}
                           style={{ width: `${pct}%` }} />
                       </div>
                     </div>

@@ -74,22 +74,22 @@ export default function InterviewPrepPage() {
   };
 
   return (
-    <div className="min-h-screen bg-black text-white pt-16 pb-16">
+    <div className="min-h-screen bg-[#f5f5f7] text-[#1d1d1f] pt-16 pb-16">
       <PlanChecker requiredPlan="pro">
       {/* Header */}
       <header className="max-w-5xl mx-auto text-center mb-8 px-6">
-        <div className="inline-flex items-center justify-center h-12 w-12 bg-[#fdc806]/10 border border-[#fdc806]/20 rounded-2xl mb-5">
-          <svg width="22" height="22" viewBox="0 0 24 24" className="stroke-[#fdc806] fill-none" strokeWidth="1.5">
+        <div className="inline-flex items-center justify-center h-12 w-12 bg-[#0071e3]/[0.08] border border-[#0071e3]/20 rounded-2xl mb-5">
+          <svg width="22" height="22" viewBox="0 0 24 24" className="stroke-[#0071e3] fill-none" strokeWidth="1.5">
             <path d="M12 1a3 3 0 00-3 3v7a3 3 0 006 0V4a3 3 0 00-3-3z" />
             <path d="M19 10v2a7 7 0 11-14 0v-2" />
             <path d="M12 19v4" />
             <path d="M8 23h8" />
           </svg>
         </div>
-        <h1 className="text-4xl md:text-5xl font-semibold tracking-tight text-white">
+        <h1 className="text-4xl md:text-5xl font-semibold tracking-tight text-[#1d1d1f]">
           Job Interview Prep
         </h1>
-        <p className="mt-3 text-base text-[#52525b] max-w-2xl mx-auto">
+        <p className="mt-3 text-base text-[#6e6e73] max-w-2xl mx-auto">
           Paste a job description (and optional context) to get tailored
           interview questions & model answers, or jump into a live mock
           interview below.
@@ -99,9 +99,9 @@ export default function InterviewPrepPage() {
       {/* Inline Tips Section */}
       {showTips && (
         <div className="max-w-5xl mx-auto mb-8 px-6">
-          <div className="bg-[#0a0a0a] border border-white/[0.07] rounded-xl p-4 relative">
+          <div className="bg-white border border-black/[0.08] rounded-xl p-4 relative">
             <button
-              className="absolute top-2 right-2 text-[#71717a] hover:text-[#a1a1aa]"
+              className="absolute top-2 right-2 text-[#86868b] hover:text-[#6e6e73]"
               onClick={() => setShowTips(false)}
             >
               <svg
@@ -118,30 +118,30 @@ export default function InterviewPrepPage() {
                 />
               </svg>
             </button>
-            <h3 className="text-lg font-medium text-[#fdc806] mb-2">
+            <h3 className="text-lg font-medium text-[#0071e3] mb-2">
               Quick Interview Tips
             </h3>
-            <ul className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm text-[#a1a1aa]">
+            <ul className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm text-[#6e6e73]">
               <li className="flex items-start gap-2">
-                <span className="text-[#fdc806] flex-shrink-0">
+                <span className="text-[#0071e3] flex-shrink-0">
                   ✓
                 </span>
                 Maintain eye contact with the camera
               </li>
               <li className="flex items-start gap-2">
-                <span className="text-[#fdc806] flex-shrink-0">
+                <span className="text-[#0071e3] flex-shrink-0">
                   ✓
                 </span>
                 Use specific examples in your answers
               </li>
               <li className="flex items-start gap-2">
-                <span className="text-[#fdc806] flex-shrink-0">
+                <span className="text-[#0071e3] flex-shrink-0">
                   ✓
                 </span>
                 Speak clearly and at a moderate pace
               </li>
               <li className="flex items-start gap-2">
-                <span className="text-[#fdc806] flex-shrink-0">
+                <span className="text-[#0071e3] flex-shrink-0">
                   ✓
                 </span>
                 Research the company’s mission and values
@@ -153,8 +153,8 @@ export default function InterviewPrepPage() {
 
       {/* Q&A Generator */}
       <section className="w-full max-w-5xl mx-auto px-6">
-        <div className="bg-[#0a0a0a] rounded-xl border border-white/[0.07] p-6 shadow-xl space-y-6">
-          <h2 className="text-xl font-semibold text-white">
+        <div className="bg-white rounded-xl border border-black/[0.08] p-6 shadow-xl space-y-6">
+          <h2 className="text-xl font-semibold text-[#1d1d1f]">
             Generate Interview Questions
           </h2>
           <ResumeUploader onResumeSubmit={setResumeText} />
@@ -164,7 +164,7 @@ export default function InterviewPrepPage() {
               <div>
                 <label
                   htmlFor="jobDesc"
-                  className="block mb-1 font-semibold text-white"
+                  className="block mb-1 font-semibold text-[#1d1d1f]"
                 >
                   Job Description
                 </label>
@@ -174,14 +174,14 @@ export default function InterviewPrepPage() {
                   value={jobDesc}
                   onChange={(e) => setJobDesc(e.target.value)}
                   placeholder="Paste the job description here…"
-                  className="w-full bg-black/50 text-white placeholder-[#3f3f46] p-3 rounded border border-white/[0.07] focus:ring-2 focus:ring-[var(--accent)] focus:outline-none"
+                  className="w-full bg-[#f5f5f7] text-[#1d1d1f] placeholder-[#aeaeb2] p-3 rounded border border-black/[0.08] focus:ring-2 focus:ring-[var(--accent)] focus:outline-none"
                   aria-required="true"
                 />
               </div>
               <div>
                 <label
                   htmlFor="context"
-                  className="block mb-1 font-semibold text-white"
+                  className="block mb-1 font-semibold text-[#1d1d1f]"
                 >
                   Role/Company (Optional)
                 </label>
@@ -191,7 +191,7 @@ export default function InterviewPrepPage() {
                   value={context}
                   onChange={(e) => setContext(e.target.value)}
                   placeholder="e.g., Senior Backend Engineer at Acme Corp"
-                  className="w-full bg-black/50 text-white placeholder-[#3f3f46] p-3 rounded border border-white/[0.07] focus:ring-2 focus:ring-[var(--accent)] focus:outline-none"
+                  className="w-full bg-[#f5f5f7] text-[#1d1d1f] placeholder-[#aeaeb2] p-3 rounded border border-black/[0.08] focus:ring-2 focus:ring-[var(--accent)] focus:outline-none"
                 />
               </div>
             </div>
@@ -256,16 +256,16 @@ export default function InterviewPrepPage() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
-              className="p-8 bg-[#0a0a0a] rounded-xl border border-white/[0.07] shadow-xl flex flex-col items-center gap-4"
+              className="p-8 bg-white rounded-xl border border-black/[0.08] shadow-xl flex flex-col items-center gap-4"
             >
               <div className="relative w-20 h-20">
-                <div className="absolute inset-0 border-4 border-t-[#fdc806] border-r-[#fdc806] border-b-transparent border-l-transparent rounded-full animate-spin" />
+                <div className="absolute inset-0 border-4 border-t-[#0071e3] border-r-[#0071e3] border-b-transparent border-l-transparent rounded-full animate-spin" />
               </div>
               <div className="text-center">
-                <h3 className="text-xl font-semibold text-white">
+                <h3 className="text-xl font-semibold text-[#1d1d1f]">
                   Generating your questions...
                 </h3>
-                <p className="text-[#71717a] mt-2">
+                <p className="text-[#86868b] mt-2">
                   Our AI is preparing tailored interview questions
                 </p>
               </div>
@@ -310,8 +310,8 @@ export default function InterviewPrepPage() {
             className="w-full max-w-5xl mx-auto mt-8 px-6"
             ref={qasRef}
           >
-            <div className="bg-[#0a0a0a] rounded-xl border border-white/[0.07] p-8 shadow-xl space-y-6">
-              <h2 className="text-2xl font-semibold text-white">
+            <div className="bg-white rounded-xl border border-black/[0.08] p-8 shadow-xl space-y-6">
+              <h2 className="text-2xl font-semibold text-[#1d1d1f]">
                 Your Interview Questions
               </h2>
               {qas.map((qa, idx) => (
@@ -319,15 +319,15 @@ export default function InterviewPrepPage() {
                   <p className="font-semibold text-[var(--accent)]">
                     Q{idx + 1}. {qa.question}
                   </p>
-                  <div className="bg-[#0a0a0a] p-4 rounded-lg border border-white/[0.07]">
-                    <p className="text-white whitespace-pre-wrap font-mono">
+                  <div className="bg-white p-4 rounded-lg border border-black/[0.08]">
+                    <p className="text-[#1d1d1f] whitespace-pre-wrap font-mono">
                       {qa.modelAnswer}
                     </p>
                   </div>
                 </div>
               ))}
-              <div className="border-t border-white/[0.07] pt-4">
-                <p className="text-[#71717a] text-sm text-center">
+              <div className="border-t border-black/[0.08] pt-4">
+                <p className="text-[#86868b] text-sm text-center">
                   <span className="text-[var(--accent)]">Pro Tip:</span>{" "}
                   Practice these questions aloud to build confidence!
                 </p>
@@ -341,7 +341,7 @@ export default function InterviewPrepPage() {
      
       <section className="w-full max-w-5xl mx-auto mt-16 px-6 space-y-6">
         {/* Title */}
-        <h2 className="text-xl font-semibold text-white text-center md:text-left">
+        <h2 className="text-xl font-semibold text-[#1d1d1f] text-center md:text-left">
           Speak to AI (BETA)
         </h2>
 
@@ -349,8 +349,8 @@ export default function InterviewPrepPage() {
         <AudioChat />
 
         {/* Pro Tip */}
-        <div className="border-t border-white/[0.07] pt-4">
-          <p className="text-[#71717a] text-sm text-center">
+        <div className="border-t border-black/[0.08] pt-4">
+          <p className="text-[#86868b] text-sm text-center">
             <span className="text-[var(--accent)]">Pro Tip:</span> Use the mock
             interview to simulate real-time pressure!
           </p>

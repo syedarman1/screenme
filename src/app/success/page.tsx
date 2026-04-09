@@ -141,7 +141,7 @@ function SuccessPageContent() {
             <h1 className="text-2xl font-bold mb-2">
               Processing your upgrade...
             </h1>
-            <p className="text-[#71717a]">
+            <p className="text-[#86868b]">
               Please wait while we verify your payment and activate your Pro
               features.
             </p>
@@ -151,9 +151,9 @@ function SuccessPageContent() {
       case "success":
         return (
           <div className="text-center">
-            <div className="w-20 h-20 mx-auto mb-6 bg-[#fdc806]/10 border border-[#fdc806]/20 rounded-full flex items-center justify-center">
+            <div className="w-20 h-20 mx-auto mb-6 bg-[#0071e3]/[0.08] border border-[#0071e3]/20 rounded-full flex items-center justify-center">
               <svg
-                className="w-10 h-10 text-[#fdc806]"
+                className="w-10 h-10 text-[#0071e3]"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -166,10 +166,10 @@ function SuccessPageContent() {
                 />
               </svg>
             </div>
-            <h1 className="text-3xl font-bold mb-4 text-[#fdc806]">
+            <h1 className="text-3xl font-bold mb-4 text-[#0071e3]">
               Welcome to Pro!
             </h1>
-            <p className="text-lg text-[#a1a1aa] mb-8">
+            <p className="text-lg text-[#6e6e73] mb-8">
               Your payment was successful and your account has been upgraded.
               You now have access to all Pro features:
             </p>
@@ -262,7 +262,7 @@ function SuccessPageContent() {
               >
                 Go to Dashboard
               </Link>
-              <p className="text-sm text-[#71717a]">
+              <p className="text-sm text-[#86868b]">
                 You can start using your Pro features immediately!
               </p>
             </div>
@@ -272,9 +272,9 @@ function SuccessPageContent() {
       case "already_processed":
         return (
           <div className="text-center">
-            <div className="w-16 h-16 mx-auto mb-6 bg-[#fdc806]/10 border border-[#fdc806]/20 rounded-full flex items-center justify-center">
+            <div className="w-16 h-16 mx-auto mb-6 bg-[#0071e3]/[0.08] border border-[#0071e3]/20 rounded-full flex items-center justify-center">
               <svg
-                className="w-8 h-8 text-[#fdc806]"
+                className="w-8 h-8 text-[#0071e3]"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -288,7 +288,7 @@ function SuccessPageContent() {
               </svg>
             </div>
             <h1 className="text-2xl font-bold mb-4">Already Upgraded!</h1>
-            <p className="text-[#a1a1aa] mb-8">
+            <p className="text-[#6e6e73] mb-8">
               This payment has already been processed and your account is
               already on the Pro plan.
             </p>
@@ -318,7 +318,7 @@ function SuccessPageContent() {
               />
             </svg>
             <h1 className="text-2xl font-bold mb-2">Authentication Required</h1>
-            <p className="text-[#71717a] mb-6">
+            <p className="text-[#86868b] mb-6">
               Please log in to complete your upgrade process.
             </p>
             <Link
@@ -350,7 +350,7 @@ function SuccessPageContent() {
             <h1 className="text-2xl font-bold mb-2">
               Payment Verification Failed
             </h1>
-            <p className="text-[#71717a] mb-6">
+            <p className="text-[#86868b] mb-6">
               {errorMessage ||
                 "We encountered an issue verifying your payment. Please try again or contact support."}
             </p>
@@ -363,12 +363,12 @@ function SuccessPageContent() {
               </button>
               <Link
                 href="/dashboard"
-                className="px-6 py-2 bg-white/[0.06] border border-white/[0.08] text-[#a1a1aa] font-medium rounded-xl hover:bg-white/[0.09] transition"
+                className="px-6 py-2 bg-[#f5f5f7] border border-black/[0.08] text-[#6e6e73] font-medium rounded-xl hover:bg-[#ebebf0] transition"
               >
                 Back to Dashboard
               </Link>
             </div>
-            <p className="text-sm text-[#52525b] mt-4">
+            <p className="text-sm text-[#6e6e73] mt-4">
               If this problem persists, please contact support with your session
               details.
             </p>
@@ -378,7 +378,7 @@ function SuccessPageContent() {
   };
 
   return (
-    <div className="min-h-screen bg-black text-white flex items-center justify-center p-4">
+    <div className="min-h-screen bg-[#f5f5f7] text-[#1d1d1f] flex items-center justify-center p-4">
       <div className="max-w-md w-full">{renderContent()}</div>
     </div>
   );
@@ -388,10 +388,10 @@ export default function SuccessPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen bg-black text-white flex items-center justify-center p-4">
+        <div className="min-h-screen bg-[#f5f5f7] text-[#1d1d1f] flex items-center justify-center p-4">
           <div className="max-w-md w-full text-center">
             <div className="animate-spin h-12 w-12 border-4 border-[var(--accent)] border-t-transparent rounded-full mx-auto mb-4"></div>
-            <p className="text-[#71717a]">Loading...</p>
+            <p className="text-[#86868b]">Loading...</p>
           </div>
         </div>
       }

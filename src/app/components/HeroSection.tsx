@@ -1,117 +1,125 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
-import Link from "next/link";
+import React from "react";
 import { motion } from "framer-motion";
-import { supabase } from "../lib/supabaseClient";
+import Link from "next/link";
 
 const EASE = [0.16, 1, 0.3, 1] as const;
 
 const STATS = [
-  { value: "10k+", label: "Resumes scanned"   },
-  { value: "94%",  label: "Interview rate"     },
-  { value: "3×",   label: "More callbacks"     },
+  { value: "10k+",  label: "Jobs landed"      },
+  { value: "94%",   label: "ATS pass rate"    },
+  { value: "3×",    label: "More callbacks"   },
 ];
 
 export default function HeroSection() {
-  const [authed, setAuthed] = useState<boolean | null>(null);
-
-  useEffect(() => {
-    if (!supabase) return;
-    supabase.auth.getUser().then(({ data }) => setAuthed(!!data?.user));
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_e, session) => setAuthed(!!session?.user)
-    );
-    return () => subscription.unsubscribe();
-  }, []);
-
   return (
-    <section
-      id="home"
-      className="relative min-h-[100dvh] flex flex-col items-center justify-center overflow-hidden"
-    >
-      {/* ── Ambient glow ── */}
-      <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
-        <div className="absolute top-[20%] left-1/2 -translate-x-1/2 w-[640px] h-[400px] rounded-full bg-[#fdc806] opacity-[0.06] blur-[120px]" />
-        <div className="absolute top-[35%] left-[25%] w-[320px] h-[320px] rounded-full bg-[#fdc806] opacity-[0.03] blur-[80px]" />
-        {/* Grid lines */}
-        <div className="absolute inset-0 opacity-[0.025]"
-          style={{ backgroundImage: 'linear-gradient(rgba(255,255,255,.4) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.4) 1px, transparent 1px)', backgroundSize: '72px 72px' }}
-        />
-        {/* Radial vignette */}
-        <div className="absolute inset-0" style={{ background: 'radial-gradient(ellipse 80% 60% at 50% 0%, transparent 50%, #000000 100%)' }} />
-      </div>
+    <section className="relative min-h-[100dvh] flex flex-col items-center justify-center overflow-hidden bg-[#f5f5f7] pt-16">
+      {/* Blue ambient glow */}
+      <div aria-hidden className="pointer-events-none absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[500px] bg-[#0071e3] opacity-[0.06] rounded-full blur-[140px]" />
 
-      <div className="max-w-5xl mx-auto px-6 text-center pt-28 pb-20 flex flex-col items-center gap-8">
+      {/* Subtle grid */}
+      <div aria-hidden className="pointer-events-none absolute inset-0"
+        style={{
+          backgroundImage: "linear-gradient(rgba(0,113,227,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(0,113,227,0.04) 1px, transparent 1px)",
+          backgroundSize: "64px 64px",
+        }}
+      />
 
+      <div className="relative z-10 max-w-4xl mx-auto px-6 text-center">
         {/* Eyebrow */}
         <motion.div
-          initial={{ opacity: 0, y: 10 }}
+          initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, ease: EASE }}
+          transition={{ duration: 0.55, ease: EASE }}
+          className="inline-flex items-center gap-2 px-4 py-1.5 mb-8
+                     border border-[#0071e3]/20 bg-[#0071e3]/[0.06] rounded-full"
         >
-          <span className="inline-flex items-center gap-2 text-xs font-semibold tracking-widest uppercase px-4 py-1.5 rounded-full border border-[#fdc806]/25 bg-[#fdc806]/8 text-[#fdc806]">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#fdc806] animate-pulse" aria-hidden />
+          <span className="w-1.5 h-1.5 rounded-full bg-[#0071e3] animate-pulse" />
+          <span className="text-xs font-semibold text-[#0071e3] tracking-wide uppercase">
             AI-Powered Career Platform
           </span>
         </motion.div>
 
         {/* Headline */}
         <motion.h1
-          initial={{ opacity: 0, y: 24 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.08, ease: EASE }}
-          className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-semibold tracking-tight leading-[1.0] text-white"
-        >
-          Land your next
-          <br />
-          <span className="text-[#fdc806]">dream job.</span>
-        </motion.h1>
-
-        {/* Subtitle */}
-        <motion.p
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.55, delay: 0.16, ease: EASE }}
-          className="text-base md:text-lg text-[#71717a] max-w-xl leading-relaxed"
+          transition={{ duration: 0.65, delay: 0.08, ease: EASE }}
+          className="text-5xl md:text-7xl font-semibold tracking-tight text-[#1d1d1f] mb-6 leading-[1.05]"
         >
-          Resume scoring, job-match analysis, AI cover letters, and mock interviews — everything you need to outperform the competition.
+          Land your next{" "}
+          <br className="hidden md:block" />
+          <span className="text-[#0071e3]">dream job.</span>
+        </motion.h1>
+
+        {/* Sub */}
+        <motion.p
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.55, delay: 0.16, ease: EASE }}
+          className="text-lg md:text-xl text-[#6e6e73] max-w-2xl mx-auto leading-relaxed mb-10"
+        >
+          AI-powered resume analysis, cover letter generation, job matching,
+          and interview prep — everything you need to get hired faster.
         </motion.p>
 
         {/* CTAs */}
         <motion.div
-          initial={{ opacity: 0, y: 16 }}
+          initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.24, ease: EASE }}
-          className="flex flex-col sm:flex-row gap-3 items-center"
+          className="flex flex-col sm:flex-row items-center justify-center gap-3 mb-16"
         >
-          <Link href={authed ? "/dashboard" : "/login"}>
-            <button className="pricing-button px-8 py-3.5 rounded-full bg-[#fdc806] text-black text-sm font-semibold hover:bg-[#fdd835] transition-colors duration-200 cursor-pointer min-w-[160px]">
-              {authed ? "Go to dashboard" : "Start for free"}
-            </button>
+          <Link
+            href="/login"
+            className="pricing-button inline-flex items-center gap-2 px-8 py-3.5 rounded-full bg-[#0071e3] text-white font-semibold text-sm hover:bg-[#0077ed] transition-all duration-200 shadow-md hover:shadow-lg"
+          >
+            Get started free
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+            </svg>
           </Link>
-          <Link href="/#features">
-            <button className="px-8 py-3.5 rounded-full border border-white/[0.1] text-[#a1a1aa] text-sm font-medium hover:text-white hover:border-white/[0.2] hover:bg-white/[0.03] transition-all duration-200 cursor-pointer">
-              See how it works
-            </button>
+          <Link
+            href="/#features"
+            className="inline-flex items-center gap-2 px-8 py-3.5 rounded-full border border-black/[0.12] bg-white text-[#1d1d1f] font-semibold text-sm hover:bg-[#f5f5f7] hover:border-black/[0.18] transition-all duration-200 shadow-sm"
+          >
+            See features
           </Link>
         </motion.div>
 
-        {/* Social proof stats */}
+        {/* Stats */}
         <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.7, delay: 0.38, ease: EASE }}
-          className="flex items-center gap-8 sm:gap-12 pt-4"
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.32, ease: EASE }}
+          className="flex flex-col sm:flex-row items-center justify-center gap-8 sm:gap-16"
         >
-          {STATS.map(({ value, label }, i) => (
-            <div key={i} className="text-center">
-              <p className="text-2xl font-semibold text-white tabular-nums">{value}</p>
-              <p className="text-xs text-[#52525b] mt-0.5">{label}</p>
+          {STATS.map(({ value, label }) => (
+            <div key={label} className="text-center">
+              <div className="text-3xl font-bold text-[#1d1d1f] tracking-tight">{value}</div>
+              <div className="text-sm text-[#86868b] mt-0.5">{label}</div>
             </div>
           ))}
         </motion.div>
       </div>
+
+      {/* Scroll indicator */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 1.2, duration: 0.6 }}
+        className="absolute bottom-10 left-1/2 -translate-x-1/2"
+        aria-hidden
+      >
+        <div className="w-5 h-8 rounded-full border-2 border-black/[0.15] flex items-start justify-center p-1">
+          <motion.div
+            className="w-1 h-1.5 rounded-full bg-[#86868b]"
+            animate={{ y: [0, 10, 0] }}
+            transition={{ duration: 1.8, repeat: Infinity, ease: "easeInOut" }}
+          />
+        </div>
+      </motion.div>
     </section>
   );
 }

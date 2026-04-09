@@ -151,27 +151,27 @@ export default function CoverLetterPage() {
   };
 
   return (
-    <div className="min-h-screen bg-black text-white pt-16 pb-16">
+    <div className="min-h-screen bg-[#f5f5f7] text-[#1d1d1f] pt-16 pb-16">
       <header className="max-w-5xl mx-auto text-center mb-8 px-6">
-        <div className="inline-flex items-center justify-center h-12 w-12 bg-[#fdc806]/10 border border-[#fdc806]/20 rounded-2xl mb-5">
-          <svg width="22" height="22" viewBox="0 0 24 24" className="stroke-[#fdc806] fill-none" strokeWidth="1.5">
+        <div className="inline-flex items-center justify-center h-12 w-12 bg-[#0071e3]/[0.08] border border-[#0071e3]/20 rounded-2xl mb-5">
+          <svg width="22" height="22" viewBox="0 0 24 24" className="stroke-[#0071e3] fill-none" strokeWidth="1.5">
             <polyline points="22,6 12,13 2,6" />
             <rect x="2" y="6" width="20" height="14" rx="2" ry="2" />
           </svg>
         </div>
-        <h1 className="text-4xl md:text-5xl font-semibold tracking-tight text-white">
+        <h1 className="text-4xl md:text-5xl font-semibold tracking-tight text-[#1d1d1f]">
           Cover Letter Generator
         </h1>
-        <p className="mt-3 text-base text-[#52525b] max-w-2xl mx-auto">
+        <p className="mt-3 text-base text-[#6e6e73] max-w-2xl mx-auto">
           Upload your resume, enter role details, and get a tailored cover letter in seconds.
         </p>
       </header>
 
       {showTips && (
         <div className="max-w-5xl mx-auto mb-8 px-6">
-          <div className="bg-[#0a0a0a] border border-white/[0.07] rounded-xl p-4 relative">
+          <div className="bg-white border border-black/[0.08] rounded-xl p-4 relative">
             <button
-              className="absolute top-2 right-2 text-[#71717a] hover:text-[#a1a1aa]"
+              className="absolute top-2 right-2 text-[#86868b] hover:text-[#6e6e73]"
               onClick={() => setShowTips(false)}
             >
               <svg
@@ -188,30 +188,30 @@ export default function CoverLetterPage() {
                 />
               </svg>
             </button>
-            <h3 className="text-lg font-medium text-[#fdc806] mb-2">
+            <h3 className="text-lg font-medium text-[#0071e3] mb-2">
               Quick Cover Letter Tips
             </h3>
-            <ul className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm text-[#a1a1aa]">
+            <ul className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm text-[#6e6e73]">
               <li className="flex items-start gap-2">
-                <span className="text-[#fdc806] flex-shrink-0">
+                <span className="text-[#0071e3] flex-shrink-0">
                   ✓
                 </span>
                 <span>Address the letter to a specific person if possible</span>
               </li>
               <li className="flex items-start gap-2">
-                <span className="text-[#fdc806] flex-shrink-0">
+                <span className="text-[#0071e3] flex-shrink-0">
                   ✓
                 </span>
                 <span>Highlight relevant skills from your resume</span>
               </li>
               <li className="flex items-start gap-2">
-                <span className="text-[#fdc806] flex-shrink-0">
+                <span className="text-[#0071e3] flex-shrink-0">
                   ✓
                 </span>
                 <span>Show enthusiasm for the company and role</span>
               </li>
               <li className="flex items-start gap-2">
-                <span className="text-[#fdc806] flex-shrink-0">
+                <span className="text-[#0071e3] flex-shrink-0">
                   ✓
                 </span>
                 <span>Keep it concise and focused on the job</span>
@@ -223,8 +223,8 @@ export default function CoverLetterPage() {
 
       <section className="w-full max-w-5xl mx-auto px-6">
         <PlanChecker feature="cover_letter">
-          <div className="bg-[#0a0a0a] rounded-xl border border-white/[0.07] p-6 shadow-xl space-y-6">
-            <h2 className="text-xl font-semibold text-white">
+          <div className="bg-white rounded-xl border border-black/[0.08] p-6 shadow-xl space-y-6">
+            <h2 className="text-xl font-semibold text-[#1d1d1f]">
               Create Your Cover Letter
             </h2>
             <ResumeUploader onResumeSubmit={setResumeText} />
@@ -233,13 +233,13 @@ export default function CoverLetterPage() {
             <div>
               <label
                 htmlFor="jobTitle"
-                className="block mb-1 font-semibold text-white"
+                className="block mb-1 font-semibold text-[#1d1d1f]"
               >
                 Job Title
               </label>
               <input
                 id="jobTitle"
-                className="w-full bg-black/50 p-3 rounded border border-white/[0.07] text-white focus:ring-2 focus:outline-none focus:ring-[var(--accent)]"
+                className="w-full bg-[#f5f5f7] p-3 rounded border border-black/[0.08] text-[#1d1d1f] focus:ring-2 focus:outline-none focus:ring-[var(--accent)]"
                 placeholder="e.g., Senior Backend Engineer"
                 value={jobTitle}
                 onChange={(e) => setJobTitle(e.target.value)}
@@ -249,13 +249,13 @@ export default function CoverLetterPage() {
             <div>
               <label
                 htmlFor="company"
-                className="block mb-1 font-semibold text-white"
+                className="block mb-1 font-semibold text-[#1d1d1f]"
               >
                 Company
               </label>
               <input
                 id="company"
-                className="w-full bg-black/50 p-3 rounded border border-white/[0.07] text-white focus:ring-2 focus:outline-none focus:ring-[var(--accent)]"
+                className="w-full bg-[#f5f5f7] p-3 rounded border border-black/[0.08] text-[#1d1d1f] focus:ring-2 focus:outline-none focus:ring-[var(--accent)]"
                 placeholder="e.g., Acme Corp"
                 value={company}
                 onChange={(e) => setCompany(e.target.value)}
@@ -267,13 +267,13 @@ export default function CoverLetterPage() {
           <div>
             <label
               htmlFor="jobDesc"
-              className="block mb-1 font-semibold text-white"
+              className="block mb-1 font-semibold text-[#1d1d1f]"
             >
               Job Description (Optional)
             </label>
             <textarea
               id="jobDesc"
-              className="w-full bg-black/50 p-3 rounded border border-white/[0.07] text-white focus:ring-2 focus:outline-none focus:ring-[var(--accent)]"
+              className="w-full bg-[#f5f5f7] p-3 rounded border border-black/[0.08] text-[#1d1d1f] focus:ring-2 focus:outline-none focus:ring-[var(--accent)]"
               rows={4}
               placeholder="Paste the job description here…"
               value={jobDesc}
@@ -292,7 +292,7 @@ export default function CoverLetterPage() {
                   className={`px-4 py-2 rounded-lg font-medium transition-colors ${
                     tone === t
                       ? "bg-[var(--accent)] text-black ring-2 ring-[var(--accent)]"
-                      : "bg-white/[0.06] text-[#a1a1aa] hover:bg-white/[0.09] focus:ring-2 focus:ring-[var(--accent)]"
+                      : "bg-[#f5f5f7] text-[#6e6e73] hover:bg-[#ebebf0] focus:ring-2 focus:ring-[var(--accent)]"
                   }`}
                   aria-pressed={tone === t}
                 >
@@ -312,20 +312,20 @@ export default function CoverLetterPage() {
                 <div className="flex gap-2">
                   <button
                     type="button"
-                    className="px-4 py-2 rounded-lg font-medium bg-white/[0.06] text-[#71717a] cursor-not-allowed opacity-50"
+                    className="px-4 py-2 rounded-lg font-medium bg-[#f5f5f7] text-[#86868b] cursor-not-allowed opacity-50"
                     disabled
                   >
                     Enthusiastic
                   </button>
                   <button
                     type="button"
-                    className="px-4 py-2 rounded-lg font-medium bg-white/[0.06] text-[#71717a] cursor-not-allowed opacity-50"
+                    className="px-4 py-2 rounded-lg font-medium bg-[#f5f5f7] text-[#86868b] cursor-not-allowed opacity-50"
                     disabled
                   >
                     Concise
                   </button>
                 </div>
-                <span className="text-sm text-[#71717a] ml-2">
+                <span className="text-sm text-[#86868b] ml-2">
                   (Upgrade to Pro for all tones)
                 </span>
               </div>
@@ -381,16 +381,16 @@ export default function CoverLetterPage() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
-              className="p-8 bg-[#0a0a0a] rounded-xl border border-white/[0.07] shadow-xl flex flex-col items-center gap-4"
+              className="p-8 bg-white rounded-xl border border-black/[0.08] shadow-xl flex flex-col items-center gap-4"
             >
               <div className="relative w-20 h-20">
-                <div className="absolute inset-0 border-4 border-t-[#fdc806] border-r-[#fdc806] border-b-transparent border-l-transparent rounded-full animate-spin" />
+                <div className="absolute inset-0 border-4 border-t-[#0071e3] border-r-[#0071e3] border-b-transparent border-l-transparent rounded-full animate-spin" />
               </div>
               <div className="text-center">
-                <h3 className="text-xl font-medium text-white">
+                <h3 className="text-xl font-medium text-[#1d1d1f]">
                   Generating your cover letter...
                 </h3>
-                <p className="text-[#71717a] mt-2">
+                <p className="text-[#86868b] mt-2">
                   Our AI is crafting a tailored cover letter for you
                 </p>
               </div>
@@ -441,11 +441,11 @@ export default function CoverLetterPage() {
             className="w-full max-w-5xl mx-auto mt-8 px-6"
           >
             <div
-              className="bg-[#0a0a0a] rounded-xl border border-white/[0.07] p-8 shadow-xl space-y-6"
+              className="bg-white rounded-xl border border-black/[0.08] p-8 shadow-xl space-y-6"
               ref={letterRef}
             >
               <div className="flex justify-between items-center mb-4">
-                <h2 className="text-2xl font-semibold text-white">
+                <h2 className="text-2xl font-semibold text-[#1d1d1f]">
                   Your Cover Letter
                 </h2>
                 {!isEditing ? (
@@ -465,7 +465,7 @@ export default function CoverLetterPage() {
                     </button>
                     <button
                       onClick={cancelEdit}
-                      className="px-4 py-2 bg-white/[0.06] text-[#a1a1aa] rounded-lg font-medium hover:bg-white/[0.09] transition-colors"
+                      className="px-4 py-2 bg-[#f5f5f7] text-[#6e6e73] rounded-lg font-medium hover:bg-[#ebebf0] transition-colors"
                     >
                       Cancel
                     </button>
@@ -478,11 +478,11 @@ export default function CoverLetterPage() {
                   rows={10}
                   value={editText}
                   onChange={(e) => setEditText(e.target.value)}
-                  className="w-full bg-black/50 text-white p-4 rounded border border-white/[0.07] focus:ring-2 focus:outline-none focus:ring-[var(--accent)]"
+                  className="w-full bg-[#f5f5f7] text-[#1d1d1f] p-4 rounded border border-black/[0.08] focus:ring-2 focus:outline-none focus:ring-[var(--accent)]"
                   aria-label="Edit cover letter"
                 />
               ) : (
-                <pre className="whitespace-pre-wrap text-white">
+                <pre className="whitespace-pre-wrap text-[#1d1d1f]">
                   {coverLetter}
                 </pre>
               )}
@@ -512,9 +512,9 @@ export default function CoverLetterPage() {
                   </button>
                 </div>
               )}
-              <div className="border-t border-white/[0.07] pt-4">
-                <p className="text-[#71717a] text-sm text-center">
-                  <span className="text-[#fdc806]">Pro Tip:</span>{" "}
+              <div className="border-t border-black/[0.08] pt-4">
+                <p className="text-[#86868b] text-sm text-center">
+                  <span className="text-[#0071e3]">Pro Tip:</span>{" "}
                   Personalize your cover letter with specific details about the
                   company to stand out!
                 </p>
