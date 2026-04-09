@@ -1,128 +1,118 @@
-// src/app/components/FeaturesSection.tsx
 "use client";
 
 import React from "react";
 import { motion } from "framer-motion";
 
-/* ---------- Feature Type ---------- */
-type Feature = {
-  id: string; // Added ID for key prop consistency
-  title: string;
-  description: string;
-  Icon: React.ComponentType<{ className?: string }>; // Icon component type
-};
+const EASE = [0.16, 1, 0.3, 1] as const;
 
-/* ---------- Placeholder Icons (Replace with actual SVGs/components) ---------- */
-// Copied from your example FeaturesSection
-const PlaceholderIconScan = ({ className }: { className?: string }) => <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 15.75l-2.489-2.489m0 0a3.375 3.375 0 10-4.773-4.773 3.375 3.375 0 004.774 4.774zM21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>;
-const PlaceholderIconLetter = ({ className }: { className?: string }) => <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" /></svg>;
-const PlaceholderIconChat = ({ className }: { className?: string }) => <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a5.969 5.969 0 01-.474-.065 4.48 4.48 0 00.978-2.025c.09-.455-.017-.92-.364-1.263a3.002 3.002 0 00-.693-.653A5.975 5.975 0 013 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z" /></svg>;
-// Add more icons if needed
-
-/* ---------- Data ---------- */
-const FEATURES_DATA: Feature[] = [
+const FEATURES = [
   {
     id: "f1",
     title: "ATS Resume Scanner",
-    description: "Scan & score your résumé for formatting, keywords, and ATS-friendliness.",
-    Icon: PlaceholderIconScan,
+    description: "Score your résumé against ATS algorithms. Get a detailed breakdown of issues, missing keywords, and suggested rewrites.",
+    icon: <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />,
   },
   {
     id: "f2",
-    title: "Cover Letter Generator",
-    description: "Instantly craft a polished, tone-adjustable cover letter you can edit in-place.",
-    Icon: PlaceholderIconLetter,
+    title: "Job Match Analyzer",
+    description: "Paste any job description and see your match score, skill gaps, and a prioritized action list to close them.",
+    icon: <path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />,
   },
   {
     id: "f3",
-    title: "Targeted Interview Prep",
-    description: "Practice with AI-generated questions and model answers tailored to your target role.",
-    Icon: PlaceholderIconChat,
+    title: "Cover Letter Generator",
+    description: "Generate a tailored, editable cover letter in under 30 seconds. Choose your tone, then download as DOCX.",
+    icon: <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />,
   },
-  
+  {
+    id: "f4",
+    title: "Interview Prep",
+    description: "AI-generated Q&A tailored to your role. Live voice mock interviews with real-time AI feedback. Pro only.",
+    icon: <path strokeLinecap="round" strokeLinejoin="round" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />,
+    pro: true,
+  },
+  {
+    id: "f5",
+    title: "LinkedIn Optimizer",
+    description: "Optimize your headline, about section, and skills for maximum recruiter visibility.",
+    icon: <path strokeLinecap="round" strokeLinejoin="round" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />,
+    soon: true,
+  },
+  {
+    id: "f6",
+    title: "Salary Negotiator",
+    description: "Get market-calibrated salary data and battle-tested negotiation scripts for your exact role.",
+    icon: <path strokeLinecap="round" strokeLinejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />,
+    soon: true,
+  },
 ];
 
-/* ---------- Anim variants (Reused from Testimonials) ---------- */
-const textVariants = {
-  hidden: { opacity: 0, y: 20 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.6, ease: "easeOut" } },
-};
-// Renamed marqueeVariants to gridVariants for clarity
-const gridVariants = {
-  hidden: { opacity: 0 },
-  visible: { opacity: 1, transition: { duration: 0.8, delay: 0.3, staggerChildren: 0.1 } }, // Added staggerChildren
-};
-const cardVariants = { // Added for individual card animation
-  hidden: { opacity: 0, y: 20 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: "easeOut" } },
-};
-
-/* ---------- Card Component ---------- */
-const FeatureCard = React.memo(
-  ({ feature }: { feature: Feature }) => (
-    <motion.div // Wrap card in motion.div for staggered animation
-      variants={cardVariants}
-      className="flex flex-col items-center text-center
-                 bg-[var(--neutral-800)] p-6 rounded-xl shadow-lg h-full  /* Ensure cards take full height */
-                 transition-shadow duration-300 hover:shadow-[var(--accent)]/40"
-    >
-      <div className="mb-5 text-[var(--accent)]"> {/* Increased margin-bottom slightly */}
-        <feature.Icon className="h-10 w-10 md:h-12 md:w-12" /> {/* Slightly larger icon */}
-      </div>
-      <h3 className="text-xl md:text-2xl font-semibold text-[var(--foreground)] mb-3 leading-snug tracking-tight">
-        {feature.title}
-      </h3>
-      <p className="text-[var(--gray-300,var(--neutral-300))] text-sm md:text-base flex-grow"> {/* Fallback color, larger text on md */}
-        {feature.description}
-      </p>
-    </motion.div>
-  )
-);
-FeatureCard.displayName = "FeatureCard";
-
-/* ---------- Section ---------- */
-const FeaturesSection = () => {
+function FeatureCard({ f, i }: { f: typeof FEATURES[number]; i: number }) {
+  const muted = f.soon;
   return (
-    <section
-      id="features" // Changed ID
-      className="relative py-20 md:py-28 bg-[var(--background)] text-center overflow-hidden" // Adjusted overflow, kept bg/padding
-      aria-label="Application Features" // Updated aria-label
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true }}
+      transition={{ duration: 0.45, delay: i * 0.06, ease: EASE }}
+      className={`relative p-6 flex flex-col gap-4 rounded-2xl border transition-all duration-300 group
+        ${muted
+          ? "bg-[#050505] border-white/[0.04] opacity-50"
+          : "bg-[#0a0a0a] border-white/[0.07] hover:border-[#fdc806]/30 hover:bg-[#0d0d0d]"
+        }`}
     >
-      <div className="container mx-auto px-6">
-        {/* Heading - Reused animation and styling */}
-        <motion.h2
-          variants={textVariants}
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true }}
-          className="text-4xl md:text-5xl lg:text-6xl font-manrope font-semibold mb-16 md:mb-20 /* Increased margin-bottom */
-                     bg-clip-text text-transparent bg-gradient-to-r
-                     from-[var(--foreground)] to-[var(--accent)]"
-        >
-          Your AI Job Application Co-Pilot {/* Updated Heading Text */}
-        </motion.h2>
-
-        {/* Grid Container - Adapted from Marquee's motion.div */}
-        <motion.div
-          variants={gridVariants} // Use grid animation variants
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true }}
-          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 items-stretch" // Grid layout classes
-        >
-          {FEATURES_DATA.map((feature) => (
-            <FeatureCard key={feature.id} feature={feature} /> // Use FeatureCard
-          ))}
-        </motion.div>
+      {(f.pro || f.soon) && (
+        <span className={`absolute top-4 right-4 text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full border
+          ${f.pro ? "bg-[#fdc806]/10 text-[#fdc806] border-[#fdc806]/20"
+                  : "bg-white/[0.04] text-[#52525b] border-white/[0.06]"}`}>
+          {f.pro ? "Pro" : "Soon"}
+        </span>
+      )}
+      <div className={`w-10 h-10 rounded-xl flex items-center justify-center border transition-colors duration-300
+        ${muted
+          ? "bg-white/[0.03] border-white/[0.04] text-[#3f3f46]"
+          : "bg-[#fdc806]/10 border-[#fdc806]/15 text-[#fdc806] group-hover:bg-[#fdc806]/16"
+        }`}>
+        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+          {f.icon}
+        </svg>
       </div>
+      <div>
+        <h3 className={`text-sm font-semibold mb-1.5 ${muted ? "text-[#3f3f46]" : "text-white"}`}>{f.title}</h3>
+        <p className={`text-sm leading-relaxed ${muted ? "text-[#27272a]" : "text-[#52525b]"}`}>{f.description}</p>
+      </div>
+    </motion.div>
+  );
+}
 
-      {/* Blurred accent blobs - Reused from Testimonials */}
-      <div className="absolute inset-0 -z-10 opacity-10 pointer-events-none">
-        <div className="absolute top-0 left-0 w-96 h-96 bg-[var(--accent)] rounded-full blur-3xl" />
-        <div className="absolute bottom-0 right-0 w-96 h-96 bg-[var(--yellow-400)] rounded-full blur-3xl" />
+export default function FeaturesSection() {
+  return (
+    <section id="features" className="py-32 relative">
+      <div aria-hidden className="pointer-events-none absolute right-0 top-1/2 -translate-y-1/2 w-[400px] h-[600px] bg-[#fdc806] opacity-[0.03] rounded-full blur-[100px] -z-10" />
+
+      <div className="max-w-6xl mx-auto px-6">
+        {/* Header */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.55, ease: EASE }}
+          className="max-w-xl mb-16"
+        >
+          <p className="text-xs font-semibold uppercase tracking-widest text-[#fdc806] mb-4">Features</p>
+          <h2 className="text-4xl md:text-5xl font-semibold tracking-tight text-white mb-4">
+            Everything you need
+            <br />
+            <span className="text-[#52525b]">to get hired.</span>
+          </h2>
+          <p className="text-[#52525b] text-base leading-relaxed">Six AI tools, one platform — from your first resume upload to your offer letter.</p>
+        </motion.div>
+
+        {/* 2×3 grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          {FEATURES.map((f, i) => <FeatureCard key={f.id} f={f} i={i} />)}
+        </div>
       </div>
     </section>
   );
-};
-
-export default FeaturesSection;
+}

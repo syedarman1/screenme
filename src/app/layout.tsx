@@ -15,7 +15,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className="bg-[#212121] text-white min-h-screen antialiased">
+      <body className="min-h-screen antialiased" style={{ background: '#000000', color: '#ffffff', fontFamily: "'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif" }}>
         <DynamicNavbar />
         {children}
       </body>

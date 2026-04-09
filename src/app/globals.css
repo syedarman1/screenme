@@ -1,66 +1,176 @@
-@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;600&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap');
 @import "tailwindcss";
 
+/* ─── Design Tokens ──────────────────────────────────────────── */
 :root {
-  --background: #0a0a0a;
-  --foreground: #ededed;
-  --accent: #fdc806;
-  --neutral-800: #262626;
-  --neutral-700: #404040;
-  --neutral-900: #171717;
-  --gray-100: #f3f4f6;
-  --gray-200: #e5e7eb;
-  --gray-300: #d1d5db;
-  --gray-400: #9ca3af;
-  --gray-500: #6b7280;
+  /* Backgrounds — OLED hierarchy */
+  --bg:          #000000;
+  --surface-1:   #0a0a0a;
+  --surface-2:   #111111;
+  --surface-3:   #1a1a1a;
+  --surface-4:   #222222;
+
+  /* Text */
+  --fg:          #ffffff;
+  --fg-2:        #a1a1aa;
+  --fg-3:        #71717a;
+  --fg-4:        #3f3f46;
+
+  /* Accent — yellow brand */
+  --accent:      #fdc806;
+  --accent-dim:  rgba(253, 200, 6, 0.12);
+  --accent-glow: rgba(253, 200, 6, 0.20);
+  --accent-fg:   #000000;
+
+  /* Borders */
+  --border:      rgba(255, 255, 255, 0.07);
+  --border-2:    rgba(255, 255, 255, 0.12);
+  --border-3:    rgba(255, 255, 255, 0.18);
+
+  /* Semantic status */
+  --green:    #22c55e;
+  --green-bg: rgba(34, 197, 94, 0.10);
+  --red:      #ef4444;
+  --red-bg:   rgba(239, 68, 68, 0.10);
+  --orange:   #f97316;
+
+  /* Score colors */
+  --score-excellent:  #22c55e;
+  --score-good:       #fdc806;
+  --score-average:    #f97316;
+  --score-needs-work: #ef4444;
+  --trail-color:      #1a1a1a;
+
+  /* Radius */
+  --r-sm:   8px;
+  --r-md:  12px;
+  --r-lg:  16px;
+  --r-xl:  20px;
+  --r-2xl: 24px;
+  --r-full: 9999px;
+
+  /* Motion */
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-expo:  cubic-bezier(0.7, 0, 0.84, 0);
+  --dur-fast:  150ms;
+  --dur-base:  280ms;
+  --dur-slow:  400ms;
+
+  /* Typography */
+  --font:      'DM Sans', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
+  --font-mono: 'SF Mono', 'Fira Code', 'Menlo', monospace;
+
+  /* Legacy aliases (keep for compat with existing code) */
+  --background:  #000000;
+  --foreground:  #ffffff;
+  --accent-hover: #fdd835;
+  --neutral-800: #0a0a0a;
+  --neutral-700: #111111;
+  --neutral-900: #000000;
+  --gray-100: #f4f4f5;
+  --gray-200: #e4e4e7;
+  --gray-300: #a1a1aa;
+  --gray-400: #71717a;
+  --gray-500: #52525b;
   --green-300: #86efac;
   --green-400: #4ade80;
-  --green-800: #15803d;
-  --green-900: #14532d;
-  --yellow-300: #fde047;
-  --yellow-400: #facc15;
-  --yellow-800: #a16207;
-  --yellow-900: #78350f;
+  --green-800: #14532d;
+  --green-900: #052e16;
+  --yellow-300: #fde68a;
+  --yellow-400: #fdc806;
+  --yellow-800: #451a03;
+  --yellow-900: #2c1200;
   --red-300: #fca5a5;
-  --red-800: #991b1b;
-  --red-900: #7f1d1d;
-  --orange-400: #fb923c;
-  --score-excellent: #4ade80; /* score >= 85 */
-  --score-good: #facc15; /* score >= 70 */
-  --score-average: #fb923c; /* score >= 50 */
-  --score-needs-work: #f87171; /* score < 50 */
-  --trail-color: #374151;
-  --font-sans: 'Inter', Arial, Helvetica, sans-serif;
-  --font-mono: 'Fira Code', monospace;
+  --red-800: #450a0a;
+  --red-900: #2c0707;
+  --orange-400: #f97316;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
+/* ─── Base ───────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; }
+
+html { scroll-behavior: smooth; }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: var(--font-sans);
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font);
+  font-size: 16px;
+  line-height: 1.6;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
 h1, h2, h3, h4, h5, h6 {
-  font-family: 'Manrope', sans-serif;
-  font-weight: 300;
-  letter-spacing: -0.01em;
-  line-height: 1.2;
+  font-family: var(--font);
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+  font-weight: 600;
 }
 
-html {
-  scroll-behavior: smooth;
+section { scroll-margin-top: 60px; }
+
+/* ─── Utilities ──────────────────────────────────────────────── */
+
+/* Glass card */
+.card {
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  transition: border-color var(--dur-base) var(--ease-out-expo),
+              background  var(--dur-base) var(--ease-out-expo);
+}
+.card:hover {
+  border-color: var(--border-2);
+  background: var(--surface-2);
 }
 
-section {
-  scroll-margin-top: 80px;
+/* Accent glow behind yellow elements */
+.accent-glow {
+  box-shadow: 0 0 40px var(--accent-glow);
+}
+
+/* Subtle section separator */
+.section-divider {
+  border-top: 1px solid var(--border);
+}
+
+/* Shimmer on pricing button */
+@keyframes shimmer {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(200%);  }
+}
+.pricing-button { position: relative; overflow: hidden; }
+.pricing-button::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent);
+  animation: shimmer 2.5s infinite var(--ease-out-expo);
+  pointer-events: none;
+}
+
+/* Noise texture overlay (subtle premium feel) */
+.noise::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+  pointer-events: none;
+  border-radius: inherit;
+}
+
+/* Gradient text */
+.text-gradient {
+  background: linear-gradient(135deg, #ffffff 30%, var(--accent) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Focus ring */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+  border-radius: 4px;
 }

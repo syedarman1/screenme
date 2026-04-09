@@ -1,175 +1,116 @@
-// src/app/components/HeroSection.tsx
 "use client";
 
-import React, { useRef, useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { supabase } from "../lib/supabaseClient";
 
-const DEMOS = [
-  {
-    title: "Resume Scanner",
-    src: "/resume.mp4",
-    description: "Score your resume for ATS compatibility and keywords", // Kept for potential future use, but not displayed
-  },
-  {
-    title: "Job-Match Scanner",
-    src: "/job.mp4",
-    description: "Craft tailored, editable cover letters instantly", // This will be filtered out
-  },
-  {
-    title: "Cover Letter Gen",
-    src: "/cover.mp4",
-    description: "Compare your skills to job postings", // Kept for potential future use, but not displayed
-  },
-] as const;
+const EASE = [0.16, 1, 0.3, 1] as const;
 
-// Filter out the "Cover Letter Gen" demo
-const filteredDemos = DEMOS.filter(demo => demo.title !== "Job-Match Scanner");
+const STATS = [
+  { value: "10k+", label: "Resumes scanned"   },
+  { value: "94%",  label: "Interview rate"     },
+  { value: "3×",   label: "More callbacks"     },
+];
 
 export default function HeroSection() {
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
-  
-  // Explicitly type the ref as an array of HTMLVideoElement | null
-  const videoRefs = useRef<(HTMLVideoElement | null)[]>([]);
+  const [authed, setAuthed] = useState<boolean | null>(null);
 
-  // Ensure the ref array has the correct length based on filtered demos
-  if (videoRefs.current.length !== filteredDemos.length) {
-      videoRefs.current = Array(filteredDemos.length).fill(null);
-  }
-
-  const handleMouseEnter = (i: number) => {
-    const video = videoRefs.current[i];
-    if (video) {
-      video.play().catch(error => console.error("Video play failed:", error)); // Added catch for potential errors
-    }
-  };
-
-  const handleMouseLeave = (i: number) => {
-    const video = videoRefs.current[i];
-    if (video) {
-      video.pause();
-      video.currentTime = 0; // Optional: Reset video to start on mouse leave
-    }
-  };
-
-  // Check authentication status
   useEffect(() => {
     if (!supabase) return;
-    
-    const checkAuth = async () => {
-      if (!supabase) return;
-      const { data: { user } } = await supabase.auth.getUser();
-      setIsAuthenticated(!!user);
-    };
-    
-    checkAuth();
-    
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      setIsAuthenticated(!!session?.user);
-    });
-    
+    supabase.auth.getUser().then(({ data }) => setAuthed(!!data?.user));
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (_e, session) => setAuthed(!!session?.user)
+    );
     return () => subscription.unsubscribe();
   }, []);
-
-  // Animation variants for entrance effects (unchanged)
-  const textVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: { opacity: 1, y: 0, transition: { duration: 0.6, ease: "easeOut" } },
-  };
-
-  const buttonVariants = {
-    hidden: { opacity: 0, scale: 0.8 },
-    visible: { opacity: 1, scale: 1, transition: { duration: 0.5, delay: 0.3 } },
-  };
-
-  const demoContainerVariants = { // Renamed for clarity
-      hidden: { opacity: 0 },
-      visible: { opacity: 1, transition: { delay: 0.5, duration: 0.8, staggerChildren: 0.2 } } // Added stagger
-  };
-
-  const demoItemVariants = { // Added for individual item animation
-      hidden: { opacity: 0, y: 20 },
-      visible: { opacity: 1, y: 0 }
-  };
 
   return (
     <section
       id="home"
-      className="relative bg-[var(--background)] text-[var(--foreground)] py-20 md:py-28 overflow-hidden"
+      className="relative min-h-[100dvh] flex flex-col items-center justify-center overflow-hidden"
     >
-      <div className="container mx-auto px-6 flex flex-col items-center justify-center text-center">
-        {/* Title  */}
-        <motion.h1
-          className="text-4xl md:text-5xl lg:text-6xl font-manrope font-semibold mb-6 bg-clip-text text-transparent bg-gradient-to-r from-[var(--foreground)] to-[var(--accent)]"
-          variants={textVariants}
-          initial="hidden"
-          animate="visible"
+      {/* ── Ambient glow ── */}
+      <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
+        <div className="absolute top-[20%] left-1/2 -translate-x-1/2 w-[640px] h-[400px] rounded-full bg-[#fdc806] opacity-[0.06] blur-[120px]" />
+        <div className="absolute top-[35%] left-[25%] w-[320px] h-[320px] rounded-full bg-[#fdc806] opacity-[0.03] blur-[80px]" />
+        {/* Grid lines */}
+        <div className="absolute inset-0 opacity-[0.025]"
+          style={{ backgroundImage: 'linear-gradient(rgba(255,255,255,.4) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.4) 1px, transparent 1px)', backgroundSize: '72px 72px' }}
+        />
+        {/* Radial vignette */}
+        <div className="absolute inset-0" style={{ background: 'radial-gradient(ellipse 80% 60% at 50% 0%, transparent 50%, #000000 100%)' }} />
+      </div>
+
+      <div className="max-w-5xl mx-auto px-6 text-center pt-28 pb-20 flex flex-col items-center gap-8">
+
+        {/* Eyebrow */}
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, ease: EASE }}
         >
-          Apply Smarter, Get Hired Faster
+          <span className="inline-flex items-center gap-2 text-xs font-semibold tracking-widest uppercase px-4 py-1.5 rounded-full border border-[#fdc806]/25 bg-[#fdc806]/8 text-[#fdc806]">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#fdc806] animate-pulse" aria-hidden />
+            AI-Powered Career Platform
+          </span>
+        </motion.div>
+
+        {/* Headline */}
+        <motion.h1
+          initial={{ opacity: 0, y: 24 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.08, ease: EASE }}
+          className="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-semibold tracking-tight leading-[1.0] text-white"
+        >
+          Land your next
+          <br />
+          <span className="text-[#fdc806]">dream job.</span>
         </motion.h1>
 
         {/* Subtitle */}
         <motion.p
-          className="text-lg md:text-xl lg:text-2xl mb-10 text-[var(--gray-300)] max-w-3xl leading-relaxed font-inter"
-          variants={textVariants}
-          initial="hidden"
-          animate="visible"
-          transition={{ delay: 0.2 }} // Explicit transition property
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.55, delay: 0.16, ease: EASE }}
+          className="text-base md:text-lg text-[#71717a] max-w-xl leading-relaxed"
         >
-          Empower your job search with ScreenMe. Get AI-driven resume insights, job-match analysis, and interview prep in one seamless workflow.
+          Resume scoring, job-match analysis, AI cover letters, and mock interviews — everything you need to outperform the competition.
         </motion.p>
 
-        {/* Call-to-Action */}
+        {/* CTAs */}
         <motion.div
-          variants={buttonVariants}
-          initial="hidden"
-          animate="visible"
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.24, ease: EASE }}
+          className="flex flex-col sm:flex-row gap-3 items-center"
         >
-          <Link href={isAuthenticated ? "/dashboard" : "/login"}>
-            <button className="bg-[var(--accent)] text-[var(--neutral-900)] font-inter font-semibold px-10 py-4 rounded-full shadow-lg
-                               transform transition duration-300 hover:scale-105 hover:shadow-[var(--accent)]/50 focus:outline-none focus:ring-4 focus:ring-[var(--accent)]/50">
-              Try ScreenMe Now
+          <Link href={authed ? "/dashboard" : "/login"}>
+            <button className="pricing-button px-8 py-3.5 rounded-full bg-[#fdc806] text-black text-sm font-semibold hover:bg-[#fdd835] transition-colors duration-200 cursor-pointer min-w-[160px]">
+              {authed ? "Go to dashboard" : "Start for free"}
+            </button>
+          </Link>
+          <Link href="/#features">
+            <button className="px-8 py-3.5 rounded-full border border-white/[0.1] text-[#a1a1aa] text-sm font-medium hover:text-white hover:border-white/[0.2] hover:bg-white/[0.03] transition-all duration-200 cursor-pointer">
+              See how it works
             </button>
           </Link>
         </motion.div>
 
-        {/* Demo Section - Modified */}
+        {/* Social proof stats */}
         <motion.div
-          className="mt-25 w-full max-w-full grid grid-cols-1 md:grid-cols-2 gap-10 justify-center items-center" // Adjusted max-w, grid-cols, gap, added justify-center
-          variants={demoContainerVariants}
-          initial="hidden"
-          animate="visible"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.7, delay: 0.38, ease: EASE }}
+          className="flex items-center gap-8 sm:gap-12 pt-4"
         >
-          {filteredDemos.map(({ title, src }, i) => ( // Only destructuring title (for key) and src
-            <motion.div
-                key={title}
-                className="relative group w-full" // Removed flex col, items-center. Added w-full.
-                variants={demoItemVariants} // Apply item animation
-            >
-              {/* Removed Title div */}
-              <video
-                ref={(el) => { videoRefs.current[i] = el; }}
-                src={src}
-                muted
-                loop
-                playsInline
-                className="w-full rounded-xl shadow-lg group-hover:shadow-[var(--accent)]/40 transition-shadow duration-300 aspect-video object-cover" // Added aspect-video and object-cover
-                onMouseEnter={() => handleMouseEnter(i)}
-                onMouseLeave={() => handleMouseLeave(i)}
-                preload="metadata" // Optional: Improve initial load appearance
-              />
-              {/* Removed Description p tag */}
-            </motion.div>
+          {STATS.map(({ value, label }, i) => (
+            <div key={i} className="text-center">
+              <p className="text-2xl font-semibold text-white tabular-nums">{value}</p>
+              <p className="text-xs text-[#52525b] mt-0.5">{label}</p>
+            </div>
           ))}
         </motion.div>
-      </div>
-
-      {/* Subtle background decoration (unchanged) */}
-      <div className="absolute inset-0 -z-10 opacity-10">
-        <div className="absolute top-0 left-0 w-96 h-96 bg-[var(--accent)] rounded-full filter blur-3xl" />
-        <div className="absolute bottom-0 right-0 w-96 h-96 bg-[var(--yellow-400)] rounded-full filter blur-3xl" />
       </div>
     </section>
   );

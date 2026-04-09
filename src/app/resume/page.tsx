@@ -54,9 +54,9 @@ interface Audit {
 }
 
 const badgeColor = {
-  low: "bg-[var(--green-900)] text-[var(--green-300)] border-[var(--green-800)]",
-  medium: "bg-[var(--yellow-900)] text-[var(--yellow-300)] border-[var(--yellow-800)]",
-  high: "bg-[var(--red-900)] text-[var(--red-300)] border-[var(--red-800)]",
+  low: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
+  medium: "bg-[#fdc806]/10 text-[#fdc806] border-[#fdc806]/20",
+  high: "bg-red-500/10 text-red-400 border-red-500/20",
 } as const;
 
 const sectionIcons = {
@@ -150,29 +150,29 @@ export default function ResumeScreen() {
   };
 
   return (
-    <div className="min-h-screen bg-[var(--background)] text-[var(--foreground)] py-16">
+    <div className="min-h-screen bg-black text-white py-16">
       {/* Header */}
       <header className="max-w-6xl mx-auto text-center mb-12 px-4">
-        <div className="inline-flex items-center justify-center h-14 w-14 bg-[var(--accent)] rounded-full mb-4 shadow-md">
-          <svg width="24" height="24" viewBox="0 0 24 24" className="stroke-black fill-none" strokeWidth="2">
+        <div className="inline-flex items-center justify-center h-12 w-12 bg-[#fdc806]/10 border border-[#fdc806]/20 rounded-2xl mb-5">
+          <svg width="22" height="22" viewBox="0 0 24 24" className="stroke-[#fdc806] fill-none" strokeWidth="1.5">
             <path d="M4 2h10l6 6v14H4V2z" />
             <path d="M14 2v6h6" />
           </svg>
         </div>
-        <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-[var(--accent)]">
+        <h1 className="text-4xl md:text-5xl font-semibold tracking-tight text-white">
           Resume Scanner
         </h1>
-        <p className="mt-3 text-lg text-[var(--gray-300)] max-w-xl mx-auto leading-relaxed">
-          Elevate your resume with AI-powered insights to make a lasting impression.
+        <p className="mt-3 text-base text-[#52525b] max-w-xl mx-auto leading-relaxed">
+          AI-powered insights to optimize your resume for ATS and recruiters.
         </p>
       </header>
 
       {/* Quick Tips */}
       {showTips && (
         <div className="max-w-6xl mx-auto mb-12 px-4">
-          <div className="bg-[var(--neutral-800)]/40 border border-[var(--neutral-700)] rounded-2xl p-6 relative shadow-lg">
+          <div className="bg-[#0a0a0a] border border-white/[0.07] rounded-2xl p-6 relative">
             <button
-              className="absolute top-4 right-4 text-[var(--gray-400)] hover:text-[var(--foreground)] transition-colors"
+              className="absolute top-4 right-4 text-[#52525b] hover:text-[#a1a1aa] transition-colors"
               onClick={() => setShowTips(false)}
               aria-label="Close tips"
             >
@@ -180,10 +180,10 @@ export default function ResumeScreen() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
-            <h3 className="text-xl font-semibold text-[var(--yellow-300)] mb-4">
+            <h3 className="text-sm font-semibold text-[#fdc806] mb-4 uppercase tracking-widest">
               Resume Optimization Tips
             </h3>
-            <ul className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm text-[var(--gray-300)]">
+            <ul className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm text-[#a1a1aa]">
               {[
                 "Use action verbs and quantify achievements for impact.",
                 "Tailor your resume to match job-specific keywords.",
@@ -191,7 +191,7 @@ export default function ResumeScreen() {
                 "Highlight relevant skills and experiences upfront.",
               ].map((tip, i) => (
                 <li key={i} className="flex items-start gap-2">
-                  <span className="text-[var(--yellow-300)] flex-shrink-0">✓</span>
+                  <span className="text-[#fdc806] flex-shrink-0">✓</span>
                   <span>{tip}</span>
                 </li>
               ))}
@@ -203,8 +203,8 @@ export default function ResumeScreen() {
       {/* Uploader */}
       <section className="max-w-6xl mx-auto px-4">
         <PlanChecker feature="resume_scan">
-          <div className="bg-[var(--neutral-800)] rounded-2xl border border-[var(--neutral-700)] p-8 shadow-xl">
-            <h2 className="text-2xl font-semibold text-[var(--gray-100)] mb-6">
+          <div className="bg-[#0a0a0a] rounded-2xl border border-white/[0.07] p-8">
+            <h2 className="text-2xl font-semibold text-white mb-6">
               Upload Your Resume
             </h2>
             <ResumeUploader onResumeSubmit={sendToApi} />
@@ -220,23 +220,23 @@ export default function ResumeScreen() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
-              className="p-8 bg-[var(--neutral-800)] rounded-2xl border border-[var(--neutral-700)] shadow-xl flex flex-col items-center gap-4"
+              className="p-8 bg-[#0a0a0a] rounded-2xl border border-white/[0.07] flex flex-col items-center gap-4"
             >
               <div className="relative w-16 h-16">
-                <div className="absolute inset-0 border-4 border-t-[var(--accent)] border-r-[var(--accent)] border-b-transparent border-l-transparent rounded-full animate-spin" />
+                <div className="absolute inset-0 border-4 border-t-[#fdc806] border-r-[#fdc806] border-b-transparent border-l-transparent rounded-full animate-spin" />
               </div>
               <div className="text-center">
-                <h3 className="text-xl font-semibold text-[var(--gray-100)]">
+                <h3 className="text-xl font-semibold text-white">
                   Analyzing Resume...
                 </h3>
-                <p className="text-[var(--gray-400)] mt-2">
+                <p className="text-[#71717a] mt-2">
                   Our AI is scanning for optimization opportunities.
                 </p>
               </div>
               {controller && (
                 <button
                   onClick={() => controller.abort()}
-                  className="mt-4 px-5 py-2 bg-[var(--red-900)] hover:bg-[var(--red-800)] text-[var(--red-300)] rounded-lg border border-[var(--red-800)] transition-colors font-medium"
+                  className="mt-4 px-5 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-xl border border-red-500/20 transition-colors font-medium"
                 >
                   Cancel Analysis
                 </button>
@@ -250,7 +250,7 @@ export default function ResumeScreen() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
-              className="p-6 bg-[var(--red-900)]/20 border border-[var(--red-800)] text-[var(--red-300)] rounded-2xl flex items-center justify-center mt-8 shadow-md"
+              className="p-6 bg-red-500/8 border border-red-500/20 text-red-400 rounded-2xl flex items-center justify-center mt-8"
               role="alert"
             >
               <svg className="h-5 w-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -270,9 +270,9 @@ export default function ResumeScreen() {
             animate={{ opacity: 1, y: 0, transition: { delay: 0.2 } }}
             className="max-w-6xl mx-auto mt-12 px-4"
           >
-            <div className="bg-[var(--neutral-800)] rounded-2xl border border-[var(--neutral-700)] shadow-xl overflow-hidden">
+            <div className="bg-[#0a0a0a] rounded-2xl border border-white/[0.07] overflow-hidden">
               {/* Header with Score */}
-              <div className="bg-[var(--neutral-700)]/30 p-8 border-b border-[var(--neutral-700)]">
+              <div className="bg-white/[0.03] p-8 border-b border-white/[0.07]">
                 <div className="flex flex-col md:flex-row gap-8 items-center">
                   <div ref={scoreRef} className="w-32 h-32 flex-shrink-0">
                     <CircularProgressbar
@@ -289,7 +289,7 @@ export default function ResumeScreen() {
                   </div>
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-3">
-                      <h2 className="text-3xl font-bold text-[var(--gray-100)]">
+                      <h2 className="text-3xl font-bold text-white">
                         Resume Score
                       </h2>
                       <span
@@ -302,7 +302,7 @@ export default function ResumeScreen() {
                         {getScoreLabel(audit.score)}
                       </span>
                     </div>
-                    <p className="text-[var(--gray-300)] leading-relaxed text-lg">
+                    <p className="text-[#a1a1aa] leading-relaxed text-lg">
                       {audit.summary || (audit.score >= 85
                         ? "Outstanding resume! You're well-positioned to impress recruiters."
                         : audit.score >= 70
@@ -316,7 +316,7 @@ export default function ResumeScreen() {
               </div>
 
               {/* Tabs */}
-              <div className="border-b border-[var(--neutral-700)] bg-[var(--neutral-700)]/10">
+              <div className="border-b border-white/[0.07] bg-white/[0.02]">
                 <div className="flex max-w-full overflow-x-auto scrollbar-hidden px-4">
                   {[
                     { id: "issues", label: `Issues & Actions (${audit.issues.length})` },
@@ -328,7 +328,7 @@ export default function ResumeScreen() {
                       className={`px-6 py-4 text-sm font-semibold transition-colors relative ${
                         activeTab === tab.id
                           ? "text-[var(--accent)] after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-full after:h-1 after:bg-[var(--accent)]"
-                          : "text-[var(--gray-400)] hover:text-[var(--gray-200)]"
+                          : "text-[#71717a] hover:text-white"
                       }`}
                       onClick={() => setActiveTab(tab.id as typeof activeTab)}
                     >
@@ -343,11 +343,11 @@ export default function ResumeScreen() {
                 {activeTab === "issues" && (
                   <>
                     {audit.issues.length === 0 ? (
-                      <div className="p-8 bg-[var(--green-900)]/10 border border-[var(--green-800)] text-[var(--green-300)] rounded-2xl text-center">
+                      <div className="p-8 bg-emerald-500/8 border border-emerald-500/20 text-emerald-400 rounded-2xl text-center">
                         <svg className="h-10 w-10 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
-                        <h3 className="text-xl font-semibold text-[var(--green-300)] mb-2">
+                        <h3 className="text-xl font-semibold text-emerald-400 mb-2">
                           No Issues Detected!
                         </h3>
                         <p>Your resume is optimized and ready to shine!</p>
@@ -356,58 +356,58 @@ export default function ResumeScreen() {
                       <ul className="space-y-6">
                         {audit.issues.map((issue, i) => (
                           <li key={i} role="listitem" className="animate-fadeIn">
-                            <details className="group border border-[var(--neutral-700)] rounded-xl overflow-hidden">
-                              <summary className="cursor-pointer flex items-center gap-4 p-5 bg-[var(--neutral-900)] hover:bg-[var(--neutral-800)] transition-colors">
+                            <details className="group border border-white/[0.07] rounded-xl overflow-hidden">
+                              <summary className="cursor-pointer flex items-center gap-4 p-5 bg-black/50 hover:bg-[#0a0a0a] transition-colors">
                                 <span className={`px-3 py-1 text-xs rounded-full border font-medium ${badgeColor[issue.severity]}`}>
                                   {issue.severity.toUpperCase()}
                                 </span>
                                 <span className="flex items-center gap-3">
-                                  <span className="text-[var(--gray-400)] text-lg">
+                                  <span className="text-[#71717a] text-lg">
                                     {sectionIcons[issue.section as keyof typeof sectionIcons] || "📄"}
                                   </span>
-                                  <span className="font-semibold text-[var(--gray-200)]">
+                                  <span className="font-semibold text-white">
                                     {issue.section}
                                   </span>
                                 </span>
-                                <span className="text-[var(--gray-300)] truncate flex-1 text-sm">
+                                <span className="text-[#a1a1aa] truncate flex-1 text-sm">
                                   {issue.text}
                                 </span>
-                                <svg className="w-5 h-5 text-[var(--gray-500)] group-open:rotate-180 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <svg className="w-5 h-5 text-[#52525b] group-open:rotate-180 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
                                 </svg>
                               </summary>
-                              <div className="p-6 space-y-4 bg-[var(--neutral-900)] border-t border-[var(--neutral-700)]">
+                              <div className="p-6 space-y-4 bg-black/50 border-t border-white/[0.07]">
                                 {issue.line && (
-                                  <div className="bg-[var(--neutral-700)]/30 p-4 rounded-lg border border-[var(--neutral-700)]">
-                                    <p className="text-[var(--gray-400)] text-sm mb-2">Original Text:</p>
-                                    <p className="text-[var(--gray-300)] italic">"{issue.line}"</p>
+                                  <div className="bg-white/[0.03] p-4 rounded-lg border border-white/[0.07]">
+                                    <p className="text-[#71717a] text-sm mb-2">Original Text:</p>
+                                    <p className="text-[#a1a1aa] italic">"{issue.line}"</p>
                                   </div>
                                 )}
                                 <div>
-                                  <p className="text-[var(--gray-400)] text-sm mb-2">Issue:</p>
-                                  <p className="text-[var(--gray-300)]">{issue.text}</p>
+                                  <p className="text-[#71717a] text-sm mb-2">Issue:</p>
+                                  <p className="text-[#a1a1aa]">{issue.text}</p>
                                   {issue.reason && (
-                                    <p className="mt-2 text-[var(--gray-400)] text-sm">{issue.reason}</p>
+                                    <p className="mt-2 text-[#71717a] text-sm">{issue.reason}</p>
                                   )}
                                 </div>
                                 {audit.actions[i] && (
-                                  <div className="bg-[var(--neutral-800)] p-5 rounded-lg border border-[var(--neutral-700)]">
+                                  <div className="bg-[#0a0a0a] p-5 rounded-lg border border-white/[0.07]">
                                     <div className="flex justify-between items-center mb-3">
-                                      <h4 className="text-[var(--gray-200)] font-semibold">Suggested Improvement</h4>
+                                      <h4 className="text-white font-semibold">Suggested Improvement</h4>
                                       <button
                                         onClick={() => handleCopyText(audit.actions[i].rewrite)}
-                                        className="p-2 hover:bg-[var(--neutral-700)] rounded-lg transition-colors"
+                                        className="p-2 hover:bg-white/[0.07] rounded-lg transition-colors"
                                         aria-label="Copy suggested action"
                                       >
-                                        <svg className="h-5 w-5 text-[var(--gray-400)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <svg className="h-5 w-5 text-[#71717a]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
                                         </svg>
                                       </button>
                                     </div>
-                                    <p className="text-[var(--gray-200)] leading-relaxed">{audit.actions[i].rewrite}</p>
+                                    <p className="text-white leading-relaxed">{audit.actions[i].rewrite}</p>
                                     {audit.actions[i].improvement && (
-                                      <p className="mt-3 text-[var(--gray-400)] text-sm">
-                                        <span className="text-[var(--yellow-300)]">Why this works:</span>{" "}
+                                      <p className="mt-3 text-[#71717a] text-sm">
+                                        <span className="text-[#fdc806]">Why this works:</span>{" "}
                                         {audit.actions[i].improvement}
                                       </p>
                                     )}
@@ -425,22 +425,22 @@ export default function ResumeScreen() {
                 {activeTab === "strengths" && (
                   <>
                     {!audit.strengths || audit.strengths.length === 0 ? (
-                      <div className="p-8 bg-[var(--neutral-800)]/20 border border-[var(--neutral-700)] rounded-2xl text-center">
-                        <p className="text-[var(--gray-400)] text-lg">
+                      <div className="p-8 bg-[#0a0a0a]/20 border border-white/[0.07] rounded-2xl text-center">
+                        <p className="text-[#71717a] text-lg">
                           No specific strengths identified yet. Keep refining your resume!
                         </p>
                       </div>
                     ) : (
                       <ul className="space-y-6">
                         {audit.strengths.map((strength, i) => (
-                          <li key={i} className="bg-[var(--green-900)]/10 border border-[var(--green-800)]/30 rounded-xl p-6">
+                          <li key={i} className="bg-emerald-500/8 border border-emerald-500/15 rounded-xl p-6">
                             <div className="flex items-center gap-3 mb-3">
                               <span className="text-xl">{sectionIcons[strength.section as keyof typeof sectionIcons] || "📄"}</span>
-                              <h4 className="font-semibold text-[var(--green-400)] text-lg">{strength.section}</h4>
+                              <h4 className="font-semibold text-emerald-400 text-lg">{strength.section}</h4>
                             </div>
-                            <p className="text-[var(--gray-200)] mb-2">{strength.text}</p>
-                            <p className="text-[var(--gray-400)] text-sm">
-                              <span className="text-[var(--green-400)]">Why this works:</span> {strength.reason}
+                            <p className="text-white mb-2">{strength.text}</p>
+                            <p className="text-[#71717a] text-sm">
+                              <span className="text-emerald-400">Why this works:</span> {strength.reason}
                             </p>
                           </li>
                         ))}
@@ -452,26 +452,26 @@ export default function ResumeScreen() {
                 {activeTab === "keywords" && (
                   <>
                     {!audit.keywords || audit.keywords.length === 0 ? (
-                      <div className="p-8 bg-[var(--neutral-800)]/20 border border-[var(--neutral-700)] rounded-2xl text-center">
-                        <p className="text-[var(--gray-400)] text-lg">
+                      <div className="p-8 bg-[#0a0a0a]/20 border border-white/[0.07] rounded-2xl text-center">
+                        <p className="text-[#71717a] text-lg">
                           No keyword analysis available. Upload a resume to get started.
                         </p>
                       </div>
                     ) : (
                       <div className="space-y-6">
                         {audit.keywords.map((keyword, i) => (
-                          <div key={i} className="border border-[var(--neutral-700)] rounded-xl overflow-hidden">
-                            <div className="bg-[var(--neutral-700)]/30 p-4 font-semibold text-[var(--gray-200)] text-lg">
+                          <div key={i} className="border border-white/[0.07] rounded-xl overflow-hidden">
+                            <div className="bg-white/[0.03] p-4 font-semibold text-white text-lg">
                               {keyword.category}
                             </div>
                             <div className="p-6">
                               <div className="mb-6">
-                                <h4 className="text-sm text-[var(--gray-400)] mb-3 font-medium">Found Keywords</h4>
+                                <h4 className="text-sm text-[#71717a] mb-3 font-medium">Found Keywords</h4>
                                 <div className="flex flex-wrap gap-3">
                                   {keyword.terms.map((term, j) => (
                                     <span
                                       key={j}
-                                      className="px-3 py-1.5 bg-[var(--neutral-700)]/20 text-[var(--gray-200)] rounded-full border border-[var(--neutral-600)] text-sm font-medium"
+                                      className="px-3 py-1.5 bg-white/[0.04] text-white rounded-full border border-white/[0.1] text-sm font-medium"
                                     >
                                       {term}
                                     </span>
@@ -480,12 +480,12 @@ export default function ResumeScreen() {
                               </div>
                               {keyword.missing && keyword.missing.length > 0 && (
                                 <div>
-                                  <h4 className="text-sm text-[var(--gray-400)] mb-3 font-medium">Suggested Keywords</h4>
+                                  <h4 className="text-sm text-[#71717a] mb-3 font-medium">Suggested Keywords</h4>
                                   <div className="flex flex-wrap gap-3">
                                     {keyword.missing.map((term, j) => (
                                       <span
                                         key={j}
-                                        className="px-3 py-1.5 bg-[var(--yellow-900)]/10 text-[var(--yellow-400)] rounded-full border border-[var(--yellow-800)]/30 text-sm font-medium"
+                                        className="px-3 py-1.5 bg-[#fdc806]/10 text-[#fdc806] rounded-full border border-[#fdc806]/20 text-sm font-medium"
                                       >
                                         {term}
                                       </span>
@@ -503,9 +503,9 @@ export default function ResumeScreen() {
               </div>
 
               {/* Footer with Tip */}
-              <div className="border-t border-[var(--neutral-700)] p-6 bg-[var(--neutral-900)]/30">
-                <p className="text-[var(--gray-400)] text-sm text-center">
-                  <span className="text-[var(--accent)] font-semibold">Pro Tip:</span>{" "}
+              <div className="border-t border-white/[0.07] p-6 bg-black/50/30">
+                <p className="text-[#71717a] text-sm text-center">
+                  <span className="text-[#fdc806] font-semibold">Pro Tip:</span>{" "}
                   Recruiters scan resumes in 6–7 seconds. Optimize for clarity and impact!
                 </p>
               </div>

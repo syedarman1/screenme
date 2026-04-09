@@ -1,90 +1,63 @@
-// src/app/components/TestimonialsSection.tsx
 "use client";
 
 import React from "react";
 import Marquee from "react-fast-marquee";
 import { motion } from "framer-motion";
 
-/* ---------- Data ---------- */
-const TESTIMONIALS_DATA = [
-  { id: "t1", quote: "This service transformed my job search—my resume now stands out.", author: "Jane D., Software Engineer" },
-  { id: "t2", quote: "AI insights were spot-on—three interviews in a week.", author: "Mark S., Data Analyst" },
-  { id: "t3", quote: "Tailored cover letters in seconds saved me hours.", author: "Alex K., Product Manager" },
-  { id: "t4", quote: "Job-match scanner felt like a personal coach.", author: "Priya R., Full-Stack Dev" },
-  { id: "t5", quote: "Worth every penny. I’m 100 % more confident hitting apply.", author: "Luis M., UX Designer" },
+const EASE = [0.16, 1, 0.3, 1] as const;
+
+const TESTIMONIALS = [
+  { id: "t1", quote: "ScreenMe transformed my job search. I went from no callbacks to 3 interviews in one week.", author: "Jane D.", role: "Software Engineer" },
+  { id: "t2", quote: "The ATS feedback was brutally honest and exactly what I needed. Landed a senior role within a month.", author: "Mark S.", role: "Data Analyst" },
+  { id: "t3", quote: "Generated a perfectly tailored cover letter in under a minute. The download to DOCX was a great touch.", author: "Alex K.", role: "Product Manager" },
+  { id: "t4", quote: "The job-match scanner felt like having a personal career coach. Showed me exactly what to add.", author: "Priya R.", role: "Full-Stack Dev" },
+  { id: "t5", quote: "Worth every penny. I'm 100% more confident hitting apply on competitive roles now.", author: "Luis M.", role: "UX Designer" },
+  { id: "t6", quote: "Resume score went from 54 to 89 in one afternoon following the suggestions. Incredible tool.", author: "Sarah T.", role: "Marketing Lead" },
 ];
 
-/* ---------- Anim variants ---------- */
-const textVariants = {
-  hidden:  { opacity: 0, y: 20 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.6, ease: "easeOut" } },
-};
-const marqueeVariants = {
-  hidden:  { opacity: 0 },
-  visible: { opacity: 1, transition: { duration: 0.8, delay: 0.1 } },
-};
-
-/* ---------- Card ---------- */
-const TestimonialCard = React.memo(
-  ({ quote, author }: { quote: string; author: string }) => (
-    <div className="mx-4 inline-block w-[320px] md:w-[380px] shrink-0
-                    bg-[var(--neutral-800)] rounded-xl shadow-lg px-6 py-6
-                    hover:shadow-[var(--accent)]/40 transition-shadow duration-300">
-      <blockquote className="flex h-full flex-col justify-between">
-        <p className="mb-4 italic leading-relaxed text-[var(--gray-200)]">“{quote}”</p>
-        <footer className="mt-auto pt-2 border-t border-[var(--neutral-700)] text-right">
-          <span className="font-semibold text-[var(--accent)] text-sm">— {author}</span>
-        </footer>
-      </blockquote>
+const Card = React.memo(({ quote, author, role }: { quote: string; author: string; role: string }) => (
+  <div className="mx-2.5 w-[300px] shrink-0 rounded-2xl border border-white/[0.07] bg-[#0a0a0a] p-5 flex flex-col gap-4">
+    <div className="flex gap-0.5" aria-label="5 stars">
+      {Array.from({ length: 5 }).map((_, i) => (
+        <svg key={i} className="w-3 h-3 text-[#fdc806]" fill="currentColor" viewBox="0 0 20 20" aria-hidden>
+          <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+        </svg>
+      ))}
     </div>
-  )
-);
-TestimonialCard.displayName = "TestimonialCard";
+    <p className="text-sm text-[#a1a1aa] leading-relaxed flex-1">"{quote}"</p>
+    <div className="pt-1 border-t border-white/[0.05]">
+      <p className="text-xs font-semibold text-white">{author}</p>
+      <p className="text-xs text-[#52525b]">{role}</p>
+    </div>
+  </div>
+));
+Card.displayName = "TestimonialCard";
 
-/* ---------- Section ---------- */
-const TestimonialsSection = () => {
-  const testimonials = React.useMemo(
-    () => [...TESTIMONIALS_DATA, ...TESTIMONIALS_DATA], // duplicate for infinite scroll
-    []
-  );
+export default function TestimonialsSection() {
+  const doubled = React.useMemo(() => [...TESTIMONIALS, ...TESTIMONIALS], []);
 
   return (
-    <section
-      id="testimonials"
-      className="relative py-20 md:py-28 bg-[var(--background)] text-center overflow-x-hidden"
-      aria-label="User Testimonials"
-    >
-      <div className="container mx-auto px-6">
-        {/* Heading */}
-        <motion.h2
-          variants={textVariants}
-          initial="hidden"
-          whileInView="visible"
+    <section id="testimonials" className="py-32 overflow-hidden border-t border-white/[0.05]">
+      <div className="max-w-6xl mx-auto px-6 mb-14">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="text-4xl md:text-5xl lg:text-6xl font-manrope font-semibold mb-12
-                     bg-clip-text text-transparent bg-gradient-to-r
-                     from-[var(--foreground)] to-[var(--accent)]"
+          transition={{ duration: 0.55, ease: EASE }}
+          className="text-center"
         >
-          What Our Users Say
-        </motion.h2>
-
-        {/* Marquee */}
-        <motion.div variants={marqueeVariants} initial="hidden" whileInView="visible" viewport={{ once: true }}>
-          <Marquee pauseOnHover gradient={false} speed={40}>
-            {testimonials.map((t, i) => (
-              <TestimonialCard key={`${t.id}-${i}`} quote={t.quote} author={t.author} />
-            ))}
-          </Marquee>
+          <p className="text-xs font-semibold uppercase tracking-widest text-[#fdc806] mb-4">Testimonials</p>
+          <h2 className="text-4xl md:text-5xl font-semibold tracking-tight text-white">
+            Real results.
+            <br />
+            <span className="text-[#52525b]">Real people.</span>
+          </h2>
         </motion.div>
       </div>
 
-      {/* Blurred accent blobs */}
-      <div className="absolute inset-0 -z-10 opacity-10 pointer-events-none">
-        <div className="absolute top-0 left-0 w-96 h-96 bg-[var(--accent)] rounded-full blur-3xl" />
-        <div className="absolute bottom-0 right-0 w-96 h-96 bg-[var(--yellow-400)] rounded-full blur-3xl" />
-      </div>
+      <Marquee pauseOnHover gradient={false} speed={30}>
+        {doubled.map((t, i) => <Card key={`${t.id}-${i}`} {...t} />)}
+      </Marquee>
     </section>
   );
-};
-
-export default TestimonialsSection;
+}
