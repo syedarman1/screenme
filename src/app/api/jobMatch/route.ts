@@ -5,138 +5,106 @@ import { z } from 'zod';
 import { checkUsageLimit, incrementUsage } from '../../lib/usageTracker';
 import { ErrorTypes, handleAPIError, validateRequest, validateContentLength } from '../../lib/errorHandler';
 
-/* ------------------------------------------------------------------ */
-/* 1 ▸ Zod schema (no hard cap on array length – we'll trim manually)  */
-/* ------------------------------------------------------------------ */
+/* ── Schema ───────────────────────────────────────────────── */
 const MatchSchema = z.object({
-  matchScore: z.number().int().min(0).max(100),
-  matchedSkills: z.array(z.string().max(160)),   // skills present in résumé
-  missingSkills: z.array(z.string().max(160)),   // skills not found
-  gaps: z.array(z.string().max(160)),   // short explanatory sentences
-  actions: z.array(z.string().max(160)),   // concrete fixes (≤160 chars)
+  matchScore:    z.number().int().min(0).max(100),
+  summary:       z.string().max(400).optional(),
+  matchedSkills: z.array(z.string().max(160)),
+  missingSkills: z.array(z.string().max(160)),
+  gaps:          z.array(z.string().max(200)),
+  actions:       z.array(z.string().max(200)),
 });
 type MatchResult = z.infer<typeof MatchSchema>;
 
-/* ------------------------------------------------------------------ */
-/* 2 ▸ System prompt – returns ONLY JSON that matches the schema       */
-/* ------------------------------------------------------------------ */
+/* ── System prompt ────────────────────────────────────────── */
 const PROMPT = `
-You are an expert technical recruiter.
+You are a senior technical recruiter with 15+ years of experience matching candidates to roles.
 
-Given a JOB DESCRIPTION and a CANDIDATE RESUME, reply **only** with valid JSON:
+Given a JOB DESCRIPTION and a CANDIDATE RESUME, reply ONLY with valid JSON:
 
 {
-  "matchScore": <integer 0‑100>,
-  "matchedSkills": [ skills that appear in both documents ],
-  "missingSkills": [ skills required but NOT present in resume ],
-  "gaps": [ up to 10 short sentences describing main mis‑matches ],
-  "actions": [ up to 15 concrete fixes the candidate should do
-               (start with a verb, ≤160 chars) ]
+  "matchScore": <integer 0-100>,
+  "summary": "<1-2 sentence plain-English verdict on this specific candidate for this specific role>",
+  "matchedSkills": [ skills/tools/technologies present in BOTH documents ],
+  "missingSkills": [ skills/tools required by the JD but absent from the resume ],
+  "gaps": [ up to 8 specific gap descriptions — compare exact JD requirement vs candidate profile ],
+  "actions": [ up to 12 concrete resume edits — name the section, what to change, and why ]
 }
 
-Rules:
-• No markdown, no commentary outside the JSON block.
-• Keep every string concise; max 160 characters.
-• Focus on technical skills, experience level, and role requirements.
-• Be specific about what's missing and what actions would improve the match.
-• matchScore should reflect overall alignment (0-39: poor, 40-69: fair, 70-89: good, 90-100: excellent).
+Scoring:
+• 90-100: Near-perfect match, candidate exceeds requirements
+• 70-89:  Strong match, minor gaps in nice-to-haves
+• 50-69:  Decent match, some key requirements missing
+• 30-49:  Partial match, several important gaps
+• 0-29:   Significant mismatch, fundamental requirements absent
+
+Summary rules:
+✓ "Strong match — your 3 years of React experience and AWS background align well with the core requirements, though the role asks for GraphQL which isn't on your resume."
+✓ "Partial match — you cover the frontend stack but the JD requires 5+ years of Python ML experience which is missing."
+✗ "Good resume."
+
+Gap rules (specific, not generic):
+✓ "JD requires 5+ years Python; resume shows ~2 years based on project dates"
+✓ "Role needs AWS certification; resume mentions AWS but no cert listed"
+✗ "Candidate lacks experience"
+
+Action rules (verb + section + specific change):
+✓ "Add 'GraphQL' to your Skills section if you have any exposure — even self-taught projects count"
+✓ "Rewrite the Google internship bullet to quantify impact: add users affected, latency improved, or revenue influenced"
+✗ "Improve your resume"
+✗ "Add more skills"
+
+No markdown. Every string max 200 characters.
 `.trim();
 
-/* ------------------------------------------------------------------ */
-/* 3 ▸ OpenAI client                                                   */
-/* ------------------------------------------------------------------ */
-// Only create OpenAI client if API key is available
+/* ── OpenAI client ────────────────────────────────────────── */
 const openai = process.env.OPENAI_API_KEY
-  ? new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY,
-    timeout: 30000
-  })
+  ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY, timeout: 30000 })
   : null;
 
-/* ------------------------------------------------------------------ */
-/* 4 ▸ POST handler                                                   */
-/* ------------------------------------------------------------------ */
+/* ── POST ─────────────────────────────────────────────────── */
 export async function POST(req: Request) {
   try {
-    /* 4‑A ▸ read body -------------------------------------------------- */
     const body = await req.json().catch(() => ({}));
     const { resume, job, userId } = body as { resume?: string; job?: string; userId?: string };
 
-    // Validate required fields
     const validationError = validateRequest(body, ['resume', 'job']);
-    if (validationError) {
-      return handleAPIError(validationError);
-    }
+    if (validationError) return handleAPIError(validationError);
 
-    // Validate resume content length with specific guidance
-    const resumeError = validateContentLength(
-      resume!,
-      'Resume',
-      100,
-      'Include your work experience, skills, and key achievements for accurate job matching.'
-    );
-    if (resumeError) {
-      return handleAPIError(resumeError);
-    }
+    const resumeError = validateContentLength(resume!, 'Resume', 100,
+      'Include your work experience, skills, and key achievements for accurate job matching.');
+    if (resumeError) return handleAPIError(resumeError);
 
-    // Validate job description content length
-    const jobError = validateContentLength(
-      job!,
-      'Job description',
-      50,
-      'Paste the complete job posting including requirements, responsibilities, and qualifications.'
-    );
-    if (jobError) {
-      return handleAPIError(jobError);
-    }
+    const jobError = validateContentLength(job!, 'Job description', 50,
+      'Paste the complete job posting including requirements, responsibilities, and qualifications.');
+    if (jobError) return handleAPIError(jobError);
 
-    // Check usage limits if user is authenticated
     if (userId) {
       const usageCheck = await checkUsageLimit(userId, 'job_match');
       if (!usageCheck.allowed) {
         const usageError = ErrorTypes.USAGE_LIMIT_REACHED('job match analyses', usageCheck.plan);
         return NextResponse.json(
-          {
-            error: usageError.message,
-            details: {
-              message: usageError.message,
-              code: usageError.code,
-              action: usageError.action,
-              limit: usageCheck.limit,
-              remaining: usageCheck.remaining,
-              plan: usageCheck.plan
-            },
-            timestamp: new Date().toISOString()
-          },
+          { error: usageError.message, details: { message: usageError.message, code: usageError.code, action: usageError.action, limit: usageCheck.limit, remaining: usageCheck.remaining, plan: usageCheck.plan }, timestamp: new Date().toISOString() },
           { status: usageError.status }
         );
       }
     }
 
-    /* 4‑B ▸ call GPT --------------------------------------------------- */
     if (!openai) {
-      const serviceError = ErrorTypes.OPENAI_SERVICE_ERROR();
       return NextResponse.json(
-        {
-          error: 'AI job matching service is not configured. Please contact support.',
-          details: {
-            message: serviceError.message,
-            code: serviceError.code,
-            action: serviceError.action
-          },
-          timestamp: new Date().toISOString()
-        },
-        { status: serviceError.status }
+        { error: 'AI job matching service is not configured. Please contact support.', timestamp: new Date().toISOString() },
+        { status: 503 }
       );
     }
 
+    /* ── Call GPT ─────────────────────────────────────────── */
     let raw = '';
     try {
       const completion = await openai.chat.completions.create({
         model: 'gpt-4o-mini',
         temperature: 0.2,
-        max_tokens: 1500,
-        response_format: { type: "json_object" },
+        max_tokens: 1800,
+        response_format: { type: 'json_object' },
         messages: [
           { role: 'system', content: PROMPT },
           { role: 'user', content: `JOB DESCRIPTION:\n${job!.trim()}` },
@@ -144,116 +112,89 @@ export async function POST(req: Request) {
         ],
       });
       raw = completion.choices[0]?.message?.content ?? '';
-
-      if (!raw) {
-        throw ErrorTypes.OPENAI_SERVICE_ERROR();
-      }
+      if (!raw) throw ErrorTypes.OPENAI_SERVICE_ERROR();
     } catch (err: any) {
       console.error('OpenAI error:', err);
-
-      // Check for specific OpenAI error types
       if (err.message?.includes('rate limit') || err.message?.includes('quota')) {
         return NextResponse.json(
-          {
-            error: 'Job matching temporarily unavailable due to high demand. Please try again in a few minutes.',
-            details: {
-              message: 'Service temporarily overloaded',
-              code: 'OPENAI_RATE_LIMITED',
-              action: 'Wait 2-3 minutes and try analyzing your job match again.'
-            },
-            timestamp: new Date().toISOString()
-          },
+          { error: 'Job matching temporarily unavailable due to high demand. Please try again in a few minutes.', timestamp: new Date().toISOString() },
           { status: 503 }
         );
       }
-
-      const serviceError = ErrorTypes.OPENAI_SERVICE_ERROR();
-      return handleAPIError(serviceError);
+      return handleAPIError(ErrorTypes.OPENAI_SERVICE_ERROR());
     }
 
-    /* 4‑C ▸ parse JSON ------------------------------------------------- */
+    /* ── Parse ────────────────────────────────────────────── */
     let parsed: unknown;
     try {
       parsed = JSON.parse(raw);
-    } catch (parseError) {
-      console.error('GPT returned non‑JSON:\n', raw.substring(0, 500));
-      const formatError = ErrorTypes.INVALID_RESPONSE_FORMAT();
-      return NextResponse.json(
-        {
-          error: formatError.message,
-          details: {
-            message: formatError.message,
-            code: formatError.code,
-            action: formatError.action,
-            raw: raw.substring(0, 200)
-          },
-          timestamp: new Date().toISOString()
-        },
-        { status: formatError.status }
-      );
+    } catch {
+      console.error('GPT returned non-JSON:', raw.substring(0, 500));
+      return handleAPIError(ErrorTypes.INVALID_RESPONSE_FORMAT());
     }
 
-    /* 4‑D ▸ trim arrays to safe limits before validation --------------- */
+    /* ── Sanitize before validation ───────────────────────── */
     const safe = parsed as any;
-    ['matchedSkills', 'missingSkills', 'gaps', 'actions'].forEach((key) => {
-      if (Array.isArray(safe[key])) {
-        safe[key] = safe[key]
-          .slice(0, key === 'actions' ? 15 : 10)      // max items
-          .map((s: string) => String(s).slice(0, 160));       // max length
-      }
-    });
+    const clampStr = (s: any, max = 200) => typeof s === 'string' ? s.slice(0, max) : String(s ?? '').slice(0, max);
 
-    /* 4‑E ▸ validate --------------------------------------------------- */
+    if (Array.isArray(safe?.matchedSkills)) {
+      safe.matchedSkills = safe.matchedSkills
+        .filter((s: any) => s != null)
+        .slice(0, 20)
+        .map((s: any) => clampStr(s, 160));
+    } else { safe.matchedSkills = []; }
+
+    if (Array.isArray(safe?.missingSkills)) {
+      safe.missingSkills = safe.missingSkills
+        .filter((s: any) => s != null)
+        .slice(0, 20)
+        .map((s: any) => clampStr(s, 160));
+    } else { safe.missingSkills = []; }
+
+    if (Array.isArray(safe?.gaps)) {
+      safe.gaps = safe.gaps
+        .filter((s: any) => s != null)
+        .slice(0, 10)
+        .map((s: any) => clampStr(s, 200));
+    } else { safe.gaps = []; }
+
+    if (Array.isArray(safe?.actions)) {
+      safe.actions = safe.actions
+        .filter((s: any) => s != null)
+        .slice(0, 15)
+        .map((s: any) => clampStr(s, 200));
+    } else { safe.actions = []; }
+
+    if (typeof safe?.summary === 'string') {
+      safe.summary = safe.summary.slice(0, 400);
+    } else {
+      delete safe.summary;
+    }
+
+    /* ── Validate ─────────────────────────────────────────── */
     const validation = MatchSchema.safeParse(safe);
     if (!validation.success) {
       console.error('Schema errors:', validation.error.issues);
-      const formatError = ErrorTypes.INVALID_RESPONSE_FORMAT();
-      return NextResponse.json(
-        {
-          error: formatError.message,
-          details: {
-            message: formatError.message,
-            code: formatError.code,
-            action: formatError.action,
-            validationErrors: validation.error.issues,
-            raw: raw.substring(0, 200)
-          },
-          timestamp: new Date().toISOString()
-        },
-        { status: formatError.status }
-      );
+      return handleAPIError(ErrorTypes.INVALID_RESPONSE_FORMAT());
     }
 
-    /* 4‑F ▸ success ---------------------------------------------------- */
-    const data: MatchResult = validation.data;
-
-    // Increment usage AFTER successful processing
+    /* ── Increment usage + respond ────────────────────────── */
     if (userId) {
-      const incrementSuccess = await incrementUsage(userId, 'job_match');
-      if (!incrementSuccess) {
-        console.warn("Failed to increment usage for user:", userId);
-        // Don't fail the request, just log the warning
-      }
+      const ok = await incrementUsage(userId, 'job_match');
+      if (!ok) console.warn('Failed to increment usage for user:', userId);
     }
 
-    return NextResponse.json({
-      ...data,
-      success: true
-    }, {
-      headers: {
-        'Cache-Control': 'private, max-age=1800', // 30 minutes
-      }
+    const data: MatchResult = validation.data;
+    return NextResponse.json({ ...data, success: true }, {
+      headers: { 'Cache-Control': 'private, max-age=1800' },
     });
 
   } catch (error: any) {
-    console.error("Error processing job match:", error);
+    console.error('Error processing job match:', error);
     return handleAPIError(error);
   }
 }
 
-/**
- * Handle OPTIONS requests for CORS preflight
- */
 export async function OPTIONS() {
   return new NextResponse(null, {
     status: 204,

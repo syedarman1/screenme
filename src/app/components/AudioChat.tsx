@@ -1,70 +1,75 @@
 // src/app/components/AudioChat.tsx
 "use client";
 
-import { useState, useRef, useEffect } from "react";
-import VideoFeed from "./VideoFeed";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { supabase } from "../lib/supabaseClient";
 
 export type ChatMsg = { id: number; who: "user" | "ai"; text: string };
 
-export default function AudioChat() {
-  // --- State Variables ---
-  const [msgs, setMsgs] = useState<ChatMsg[]>([]);
-  const [isRecording, setIsRecording] = useState(false);
-  const [isProcessing, setIsProcessing] = useState(false);
+interface AudioChatProps {
+  jobContext?: string; // job description / role context for the AI interviewer
+}
+
+export default function AudioChat({ jobContext }: AudioChatProps) {
+  const [msgs, setMsgs]                   = useState<ChatMsg[]>([]);
+  const [isRecording, setIsRecording]     = useState(false);
+  const [isProcessing, setIsProcessing]   = useState(false);
   const [hasPermission, setHasPermission] = useState(false);
-  const [isSpeaking, setIsSpeaking] = useState(false);
-  const [isInterviewActive, setIsInterviewActive] = useState(false);
-  const [startDisabled, setStartDisabled] = useState(true); // Default to true on server
-  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [isSpeaking, setIsSpeaking]       = useState(false);
+  const [isActive, setIsActive]           = useState(false);
+  const [currentUser, setCurrentUser]     = useState<any>(null);
 
-  // --- Refs ---
-  const mediaRef = useRef<MediaRecorder | null>(null);
-  const chunksRef = useRef<Blob[]>([]);
-  const streamRef = useRef<MediaStream | null>(null);
-  const synthRef = useRef<SpeechSynthesis | null>(null);
+  const mediaRef    = useRef<MediaRecorder | null>(null);
+  const chunksRef   = useRef<Blob[]>([]);
+  const streamRef   = useRef<MediaStream | null>(null);
+  const synthRef    = useRef<SpeechSynthesis | null>(null);
+  const scrollRef   = useRef<HTMLDivElement>(null);
+  const mountedRef  = useRef(true);
 
-  // --- Get current user ---
+  // Cleanup on unmount
   useEffect(() => {
-    const getCurrentUser = async () => {
-      if (!supabase) return;
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      setCurrentUser(user);
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      synthRef.current?.cancel();
+      mediaRef.current?.state === "recording" && mediaRef.current.stop();
+      streamRef.current?.getTracks().forEach((t) => t.stop());
     };
-    getCurrentUser();
   }, []);
 
-  // --- Initialize startDisabled on client ---
+  // Get current user
   useEffect(() => {
-    // This runs only on the client
-    const disabled =
-      !hasPermission &&
-      (typeof navigator === "undefined" || !navigator.permissions);
-    setStartDisabled(disabled);
-  }, [hasPermission]);
-
-  // --- TTS Handling ---
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      synthRef.current = window.speechSynthesis;
-      const loadVoices = () => {
-        const voices = synthRef.current?.getVoices();
-        if (voices?.length) {
-          console.log("Voices loaded");
-        } else {
-          console.log("Waiting for voices...");
-        }
-      };
-      setTimeout(loadVoices, 50);
-      if (synthRef.current && synthRef.current.onvoiceschanged !== undefined) {
-        synthRef.current.onvoiceschanged = loadVoices;
-      }
-    }
+    if (!supabase) return;
+    supabase.auth.getUser().then(({ data }) => {
+      if (mountedRef.current) setCurrentUser(data?.user ?? null);
+    });
   }, []);
 
-  const stripMarkdown = (text: string): string =>
+  // Init speech synthesis
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    synthRef.current = window.speechSynthesis;
+  }, []);
+
+  // Check mic permission
+  useEffect(() => {
+    if (!navigator.permissions) return;
+    navigator.permissions
+      .query({ name: "microphone" as PermissionName })
+      .then((ps) => {
+        if (mountedRef.current) setHasPermission(ps.state === "granted");
+        ps.onchange = () => { if (mountedRef.current) setHasPermission(ps.state === "granted"); };
+      })
+      .catch(() => {});
+  }, []);
+
+  // Auto-scroll transcript
+  useEffect(() => {
+    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
+  }, [msgs]);
+
+  /* ── Speech helpers ───────────────────────────────────── */
+  const stripMarkdown = (text: string) =>
     text
       .replace(/(\*\*|__)(.*?)\1/g, "$2")
       .replace(/(\*|_)(.*?)\1/g, "$2")
@@ -72,409 +77,298 @@ export default function AudioChat() {
       .replace(/`{1,3}(.*?)`{1,3}/g, "$1")
       .replace(/\[(.*?)\]\(.*?\)/g, "$1")
       .replace(/^\s*[-*+]\s+/gm, ". ")
-      .replace(/\d+\.\s+/g, ". ")
       .replace(/\n+/g, " ")
       .trim();
 
-  const speak = (text: string) => {
+  const stopSpeech = useCallback(() => {
+    if (synthRef.current?.speaking) synthRef.current.cancel();
+    if (mountedRef.current) setIsSpeaking(false);
+  }, []);
+
+  const speak = useCallback((text: string) => {
     if (!synthRef.current || !text) return;
     stopSpeech();
     const utter = new SpeechSynthesisUtterance(stripMarkdown(text));
-    utter.onstart = () => setIsSpeaking(true);
-    utter.onend = () => setIsSpeaking(false);
-    utter.onerror = (event: SpeechSynthesisErrorEvent) => {
-      if (event.error === "canceled" || event.error === "interrupted") {
-        console.log(`Speech stopped: ${event.error}`);
-      } else {
-        console.error("SpeechSynthesisUtterance error:", event.error, event);
-      }
-      setIsSpeaking(false);
+    utter.onstart  = () => { if (mountedRef.current) setIsSpeaking(true); };
+    utter.onend    = () => { if (mountedRef.current) setIsSpeaking(false); };
+    utter.onerror  = (e) => {
+      if (e.error !== "canceled" && e.error !== "interrupted") console.error("TTS error:", e.error);
+      if (mountedRef.current) setIsSpeaking(false);
     };
     const voices = synthRef.current.getVoices();
-    const female = voices.find(
-      (v) => /female/i.test(v.name) && v.lang.startsWith("en")
-    );
-    if (female) utter.voice = female;
+    const preferred = voices.find((v) => /samantha|karen|female/i.test(v.name) && v.lang.startsWith("en"));
+    if (preferred) utter.voice = preferred;
     synthRef.current.speak(utter);
-  };
+  }, [stopSpeech]);
 
-  const stopSpeech = () => {
-    if (synthRef.current && synthRef.current.speaking) {
-      synthRef.current.cancel();
-    }
-    if (isSpeaking) setIsSpeaking(false);
-  };
-
-  // --- Permission Handling ---
-  const getMicrophonePermission = async (): Promise<boolean> => {
-    if (!navigator.mediaDevices?.getUserMedia) {
-      alert("Mic access not supported.");
-      return false;
-    }
+  /* ── Mic permission ───────────────────────────────────── */
+  const requestMicPermission = async (): Promise<boolean> => {
+    if (!navigator.mediaDevices?.getUserMedia) return false;
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      setHasPermission(true);
       stream.getTracks().forEach((t) => t.stop());
+      if (mountedRef.current) setHasPermission(true);
       return true;
-    } catch (err) {
-      console.error("Mic permission error:", err);
-      setHasPermission(false);
-      alert(
-        "Microphone access was denied. Please enable it in browser settings."
-      );
+    } catch {
+      if (mountedRef.current) setHasPermission(false);
       return false;
     }
   };
 
-  useEffect(() => {
-    if (navigator.permissions) {
-      navigator.permissions
-        .query({ name: "microphone" as PermissionName })
-        .then((ps) => {
-          setHasPermission(ps.state === "granted");
-          ps.onchange = () => setHasPermission(ps.state === "granted");
-        })
-        .catch(() => setHasPermission(false));
-    } else {
-      console.warn(
-        "Permissions API not supported for microphone state checking."
-      );
+  /* ── Start interview ──────────────────────────────────── */
+  const handleStart = async () => {
+    if (!hasPermission && !(await requestMicPermission())) {
+      setMsgs([{ id: Date.now(), who: "ai", text: "Microphone access denied. Please allow microphone access in your browser settings and try again." }]);
+      return;
     }
-  }, []);
+    const greeting = jobContext
+      ? "Great — let's get started. I'll be interviewing you for this role today. Take a breath, speak naturally, and remember: specific examples from your experience make the strongest answers. Ready? Here's your first question: Can you walk me through your background and why you're interested in this role?"
+      : "Welcome to your mock interview. I'll ask you a series of questions — answer as you would in a real interview. Speak clearly and take your time. Let's begin: Can you start by telling me about yourself and your professional background?";
+    if (mountedRef.current) {
+      setMsgs([{ id: Date.now(), who: "ai", text: greeting }]);
+      setIsActive(true);
+    }
+    setTimeout(() => speak(greeting), 100);
+  };
 
-  // --- Recording Logic ---
-  const startRecordingInternal = async () => {
+  /* ── Stop interview ───────────────────────────────────── */
+  const handleStop = useCallback(() => {
     stopSpeech();
-    if (!hasPermission && !(await getMicrophonePermission())) return;
+    if (mediaRef.current?.state === "recording") mediaRef.current.stop();
+    streamRef.current?.getTracks().forEach((t) => t.stop());
+    streamRef.current = null;
+    if (mountedRef.current) {
+      setIsActive(false);
+      setIsRecording(false);
+      setIsProcessing(false);
+    }
+  }, [stopSpeech]);
+
+  /* ── Recording ────────────────────────────────────────── */
+  const startRecording = async () => {
+    stopSpeech();
+    if (!hasPermission && !(await requestMicPermission())) return;
+
     let stream: MediaStream;
     try {
       stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       streamRef.current = stream;
-    } catch (err) {
-      alert("Could not start recording. Check microphone.");
+    } catch {
       return;
     }
 
     const recorder = new MediaRecorder(stream);
     mediaRef.current = recorder;
     chunksRef.current = [];
-    recorder.ondataavailable = (e) => {
-      if (e.data.size > 0) chunksRef.current.push(e.data);
-    };
+
+    recorder.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data); };
+
     recorder.onstop = async () => {
+      if (!mountedRef.current) return;
       setIsRecording(false);
       setIsProcessing(true);
+
       if (chunksRef.current.length === 0) {
-        setMsgs((prev) => [
-          ...prev,
-          { id: Date.now(), who: "ai", text: "⚠️ No audio detected." },
-        ]);
+        setMsgs((prev) => [...prev, { id: Date.now(), who: "ai", text: "No audio detected. Please speak into your microphone and try again." }]);
         setIsProcessing(false);
         streamRef.current?.getTracks().forEach((t) => t.stop());
         streamRef.current = null;
         return;
       }
+
       const audioBlob = new Blob(chunksRef.current, { type: "audio/webm" });
-      const form = new FormData();
-      form.append("audio", audioBlob, "audio.webm");
-      form.append("history", JSON.stringify(msgs));
-
-      if (currentUser?.id) {
-        form.append("userId", currentUser.id);
-      }
-
       const placeholderId = Date.now();
-      setMsgs((prev) => [
-        ...prev,
-        { id: placeholderId, who: "user", text: "🎤 (Processing…)" },
-      ]);
+
+      setMsgs((prev) => [...prev, { id: placeholderId, who: "user", text: "Processing…" }]);
+
+      const formData = new FormData();
+      formData.append("audio", audioBlob, "audio.webm");
+      formData.append("history", JSON.stringify(msgs));
+      if (jobContext) formData.append("jobContext", jobContext.slice(0, 600));
+      if (currentUser?.id) formData.append("userId", currentUser.id);
+
       try {
-        const res = await fetch("/api/interviewPrep", {
-          method: "POST",
-          body: form,
-        });
+        const res = await fetch("/api/interviewPrep", { method: "POST", body: formData });
 
         if (!res.ok) {
-          let errorDetails = `Server error ${res.status}`;
-          try {
-            const d = await res.json();
-            // Handle Pro feature requirement error specifically
-            if (d.code === "PRO_FEATURE_REQUIRED") {
-              errorDetails = "🔒 " + d.error;
-            } else {
-              errorDetails = d.error || d.message || errorDetails;
-            }
-          } catch {}
-          throw new Error(errorDetails);
+          const d = await res.json().catch(() => ({}));
+          throw new Error(d.error || `Server error ${res.status}`);
         }
 
         const { transcript, reply } = await res.json();
+
+        if (!mountedRef.current) return;
         setMsgs((prev) =>
-          prev.map((m) =>
-            m.id === placeholderId
-              ? { ...m, text: transcript || "[Silence]" }
-              : m
-          )
+          prev.map((m) => m.id === placeholderId ? { ...m, text: transcript || "(no transcript)" } : m)
         );
         setTimeout(() => {
-          setMsgs((prev) => [
-            ...prev,
-            { id: Date.now() + 1, who: "ai", text: reply || "[No Reply]" },
-          ]);
+          if (!mountedRef.current) return;
+          setMsgs((prev) => [...prev, { id: Date.now() + 1, who: "ai", text: reply || "(no reply)" }]);
           speak(reply || "");
-        }, 10);
+        }, 20);
       } catch (e: any) {
-        console.error("API/Fetch error in onstop:", e);
+        if (!mountedRef.current) return;
         setMsgs((prev) =>
-          prev.map((m) =>
-            m.id === placeholderId ? { ...m, text: `⚠️ ${e.message}` } : m
-          )
+          prev.map((m) => m.id === placeholderId ? { ...m, text: `Error: ${e.message}` } : m)
         );
       } finally {
+        if (mountedRef.current) setIsProcessing(false);
         streamRef.current?.getTracks().forEach((t) => t.stop());
         streamRef.current = null;
         chunksRef.current = [];
-        setIsProcessing(false);
       }
     };
+
     recorder.start();
-    setIsRecording(true);
-    setIsProcessing(false);
+    if (mountedRef.current) { setIsRecording(true); setIsProcessing(false); }
   };
 
-  const stopRecordingInternal = () => {
-    if (mediaRef.current?.state === "recording") {
-      mediaRef.current.stop();
-    }
-  };
-
-  // --- Interview State Handlers ---
-  const handleStartInterview = async () => {
-    if (!hasPermission && !(await getMicrophonePermission())) return;
-    const greeting =
-      "Okay, let's start the mock interview. Ask your first question, or tell me what role you're preparing for.";
-    setMsgs([{ id: Date.now(), who: "ai", text: greeting }]);
-    setIsInterviewActive(true);
-    speak(greeting);
-  };
-
-  const handleStopInterview = () => {
-    stopSpeech();
+  const stopRecording = () => {
     if (mediaRef.current?.state === "recording") mediaRef.current.stop();
-    else {
-      streamRef.current?.getTracks().forEach((t) => t.stop());
-      streamRef.current = null;
-    }
-    setIsInterviewActive(false);
-    setIsRecording(false);
-    setIsProcessing(false);
-    setIsSpeaking(false);
   };
 
-  // --- Cleanup Effect ---
-  useEffect(() => {
-    return () => handleStopInterview();
-  }, []);
-
-  // --- Render JSX ---
+  /* ── Render ───────────────────────────────────────────── */
   return (
-    <div className="bg-[var(--neutral-800)] border border-[var(--neutral-700)] rounded-xl p-6 shadow-xl space-y-6">
-      <h3 className="text-xl font-semibold text-[var(--gray-200)]">
-        Live Mock Interview
-      </h3>
-      <div className="grid md:grid-cols-2 gap-6">
-        {/* Controls Column */}
-        <div className="space-y-4">
-          <VideoFeed />
-          <div className="flex flex-wrap gap-3 items-center">
-            {/* Interview Start/Stop Buttons */}
-            {!isInterviewActive ? (
-              <button
-                onClick={handleStartInterview}
-                disabled={startDisabled}
-                className="px-5 py-2 bg-[var(--accent)] text-black rounded-lg font-medium hover:-translate-y-1 hover:shadow-xl transition-transform disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-              >
-                <svg
-                  className="w-5 h-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M5 3v18l14-9L5 3z"
-                  />
+    <div className="bg-white border border-black/[0.06] rounded-3xl overflow-hidden shadow-sm">
+
+      {/* Transcript */}
+      <div
+        ref={scrollRef}
+        className="h-64 overflow-y-auto p-5 space-y-3 bg-[#fafafa]"
+      >
+        {msgs.length === 0 ? (
+          <div className="h-full flex flex-col items-center justify-center gap-2 text-center">
+            <div className="w-10 h-10 rounded-2xl bg-[#0071e3]/[0.08] border border-[#0071e3]/15 flex items-center justify-center">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" className="stroke-[#0071e3]" strokeWidth="1.5">
+                <path d="M12 1a3 3 0 00-3 3v7a3 3 0 006 0V4a3 3 0 00-3-3z" />
+                <path d="M19 10v2a7 7 0 01-14 0v-2" />
+                <path d="M12 19v4M8 23h8" />
+              </svg>
+            </div>
+            <p className="text-[#86868b] text-sm">
+              {isActive ? "Recording started — tap the mic button to speak." : 'Click "Start Interview" to begin your mock session.'}
+            </p>
+          </div>
+        ) : (
+          msgs.map((m) => (
+            <div
+              key={m.id}
+              className={`flex gap-3 ${m.who === "user" ? "justify-end" : "justify-start"}`}
+            >
+              {m.who === "ai" && (
+                <div className="w-7 h-7 rounded-full bg-[#0071e3]/10 border border-[#0071e3]/20 flex items-center justify-center shrink-0 mt-0.5">
+                  <span className="text-[#0071e3] text-[10px] font-bold">AI</span>
+                </div>
+              )}
+              <div className={`max-w-[80%] px-4 py-2.5 rounded-2xl text-sm leading-relaxed ${
+                m.who === "user"
+                  ? "bg-[#0071e3] text-white rounded-br-sm"
+                  : "bg-white border border-[#e8e8ed] text-[#1d1d1f] rounded-bl-sm"
+              }`}>
+                {m.text}
+              </div>
+              {m.who === "user" && (
+                <div className="w-7 h-7 rounded-full bg-[#f0f0f5] border border-[#e0e0e5] flex items-center justify-center shrink-0 mt-0.5">
+                  <span className="text-[#6e6e73] text-[10px] font-bold">You</span>
+                </div>
+              )}
+            </div>
+          ))
+        )}
+
+        {/* Processing indicator */}
+        {isProcessing && (
+          <div className="flex gap-3 justify-start">
+            <div className="w-7 h-7 rounded-full bg-[#0071e3]/10 border border-[#0071e3]/20 flex items-center justify-center shrink-0">
+              <span className="text-[#0071e3] text-[10px] font-bold">AI</span>
+            </div>
+            <div className="px-4 py-2.5 bg-white border border-[#e8e8ed] rounded-2xl rounded-bl-sm">
+              <div className="flex gap-1 items-center h-4">
+                {[0, 1, 2].map((i) => (
+                  <span key={i} className="w-1.5 h-1.5 rounded-full bg-[#0071e3] animate-bounce" style={{ animationDelay: `${i * 0.15}s` }} />
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Controls */}
+      <div className="px-5 py-4 border-t border-[#f0f0f5] bg-white">
+        {!isActive ? (
+          <div className="flex items-center gap-3">
+            <button
+              onClick={handleStart}
+              className="flex items-center gap-2 px-5 py-2.5 bg-[#0071e3] hover:bg-[#0077ed] text-white rounded-xl font-semibold text-sm transition-colors active:scale-[.98]"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                <polygon points="5 3 19 12 5 21 5 3" />
+              </svg>
+              Start Interview
+            </button>
+            {!hasPermission && (
+              <p className="text-xs text-[#86868b] flex items-center gap-1.5">
+                <svg className="w-3.5 h-3.5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
                 </svg>
-                Start Interview
+                Microphone access required
+              </p>
+            )}
+          </div>
+        ) : (
+          <div className="flex items-center gap-3 flex-wrap">
+            {/* Mic button */}
+            {!isRecording ? (
+              <button
+                onClick={startRecording}
+                disabled={isProcessing}
+                className="flex items-center gap-2 px-4 py-2.5 bg-[#f0f7ff] hover:bg-[#e0efff] text-[#0071e3] border border-[#0071e3]/20 rounded-xl font-semibold text-sm transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 1a3 3 0 00-3 3v7a3 3 0 006 0V4a3 3 0 00-3-3zM19 10v2a7 7 0 01-14 0v-2M12 19v4M8 23h8" />
+                </svg>
+                {isProcessing ? "Processing…" : "Speak"}
               </button>
             ) : (
               <button
-                onClick={handleStopInterview}
-                className="px-5 py-2 bg-[var(--red-900)] hover:bg-[var(--red-800)] text-[var(--red-300)] rounded-lg font-medium hover:-translate-y-1 hover:shadow-xl transition-transform flex items-center gap-2"
+                onClick={stopRecording}
+                className="flex items-center gap-2 px-4 py-2.5 bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 rounded-xl font-semibold text-sm transition-colors"
               >
-                <svg
-                  className="w-5 h-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M6 6h12v12H6z"
-                  />
-                </svg>
-                Stop Interview
+                <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+                Submit Answer
               </button>
             )}
 
-            {/* Recording/Submit Buttons - Shown only when interview is active */}
-            {isInterviewActive && (
-              <>
-                <button
-                  onClick={startRecordingInternal}
-                  disabled={isRecording || isProcessing || !hasPermission}
-                  className="px-5 py-2 bg-[var(--accent)] text-black rounded-lg font-medium hover:-translate-y-1 hover:shadow-xl transition-transform disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                >
-                  <svg
-                    className={`w-5 h-5 ${isRecording ? "animate-pulse" : ""}`}
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2"
-                      d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"
-                    />
-                  </svg>
-                  {isRecording ? "Recording..." : "Start Recording"}
-                </button>
-                <button
-                  onClick={stopRecordingInternal}
-                  disabled={!isRecording}
-                  className="px-5 py-2 bg-[var(--neutral-700)] text-[var(--gray-200)] rounded-lg font-medium hover:-translate-y-1 hover:shadow-xl transition-transform disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-                  aria-label="Submit Answer"
-                >
-                  <svg
-                    className="w-5 h-5"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2"
-                      d="M5 13l4 4L19 7"
-                    />
-                  </svg>
-                  Submit Answer
-                </button>
-              </>
-            )}
-
-            {/* Stop Speech Button */}
+            {/* Stop speech */}
             {isSpeaking && (
               <button
                 onClick={stopSpeech}
-                className="px-5 py-2 bg-yellow-600 hover:bg-yellow-700 text-white rounded-lg font-medium hover:-translate-y-1 hover:shadow-xl transition-transform animate-pulse flex items-center gap-2"
+                className="flex items-center gap-2 px-4 py-2.5 bg-amber-50 text-amber-700 border border-amber-200 rounded-xl text-sm font-medium transition-colors hover:bg-amber-100"
               >
-                <svg
-                  className="w-5 h-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M6 18L18 6M6 6l12 12"
-                  />
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                  <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
                 </svg>
-                Stop Speech
+                Stop Speaking
               </button>
             )}
-          </div>
 
-          {/* Processing Indicator */}
-          {isProcessing && !isSpeaking && (
-            <div className="text-sm text-[var(--gray-400)] flex items-center gap-2">
-              <svg
-                className="animate-spin h-4 w-4 text-[var(--accent)]"
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-              >
-                <circle
-                  className="opacity-25"
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  strokeWidth="4"
-                />
-                <path
-                  className="opacity-75"
-                  fill="currentColor"
-                  d="M4 12a8 8 0 018-8v8h8a8 8 0 01-16 0z"
-                />
-              </svg>
-              Processing your response…
-            </div>
-          )}
+            {/* End interview */}
+            <button
+              onClick={handleStop}
+              className="ml-auto flex items-center gap-2 px-4 py-2.5 bg-[#f5f5f7] text-[#6e6e73] border border-[#e0e0e5] rounded-xl text-sm font-medium hover:bg-[#ebebf0] transition-colors"
+            >
+              End Interview
+            </button>
 
-          {/* Permission Hint */}
-          {!hasPermission && !isInterviewActive && (
-            <p className="text-xs text-[var(--gray-400)] flex items-center gap-2">
-              <svg
-                className="w-4 h-4 text-[var(--gray-400)]"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
-              Microphone permission needed. Click "Start Interview".
-            </p>
-          )}
-        </div>
-
-        {/* Transcript Column */}
-        <div className="w-full">
-          <div className="h-64 max-h-64 overflow-y-auto space-y-3 border border-[var(--neutral-700)] rounded-lg p-4 bg-[var(--neutral-900)] text-sm shadow-inner">
-            {msgs.length === 0 && !isProcessing ? (
-              <p className="text-sm text-[var(--gray-400)] italic text-center py-4">
-                {isInterviewActive
-                  ? "Interview started..."
-                  : 'Click "Start Interview" to begin...'}
-              </p>
-            ) : (
-              msgs.map((m) => (
-                <div
-                  key={m.id}
-                  className={`p-2 rounded-lg ${
-                    m.who === "user"
-                      ? "bg-[var(--neutral-800)] text-[var(--gray-200)]"
-                      : "bg-[var(--accent)]/20 text-[var(--accent)]"
-                  }`}
-                >
-                  <strong>{m.who === "user" ? "You:" : "AI:"}</strong> {m.text}
-                </div>
-              ))
+            {/* Recording status */}
+            {isRecording && (
+              <span className="text-xs text-red-500 flex items-center gap-1.5 font-medium">
+                <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+                Recording…
+              </span>
             )}
           </div>
-        </div>
+        )}
       </div>
     </div>
   );

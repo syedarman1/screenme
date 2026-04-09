@@ -1,361 +1,493 @@
-// src/app/job-interview-prep/page.tsx
+// src/app/interview/page.tsx
 "use client";
 
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useCallback } from "react";
 import ResumeUploader from "../components/ResumeUploader";
 import { motion, AnimatePresence } from "framer-motion";
-import confetti from "canvas-confetti";
 import AudioChat from "../components/AudioChat";
 import PlanChecker from "../components/PlanChecker";
+import { supabase } from "../lib/supabaseClient";
+
+type QuestionType = "Behavioral" | "Technical" | "Situational" | "Problem-Solving" | "Motivation" | "Role-Specific";
+type Difficulty   = "Easy" | "Medium" | "Hard";
 
 type QA = {
-  question: string;
+  question:    string;
+  type:        QuestionType;
+  difficulty:  Difficulty;
   modelAnswer: string;
+  tip:         string;
 };
 
+/* ── Style maps ───────────────────────────────────────────── */
+const TYPE_STYLES: Record<QuestionType, { bg: string; text: string; border: string; dot: string }> = {
+  Behavioral:          { bg: "bg-purple-50",     text: "text-purple-700",  border: "border-purple-200",  dot: "bg-purple-400"   },
+  Technical:           { bg: "bg-blue-50",        text: "text-blue-700",    border: "border-blue-200",    dot: "bg-blue-400"     },
+  Situational:         { bg: "bg-amber-50",       text: "text-amber-700",   border: "border-amber-200",   dot: "bg-amber-400"    },
+  "Problem-Solving":   { bg: "bg-teal-50",        text: "text-teal-700",    border: "border-teal-200",    dot: "bg-teal-400"     },
+  Motivation:          { bg: "bg-rose-50",        text: "text-rose-700",    border: "border-rose-200",    dot: "bg-rose-400"     },
+  "Role-Specific":     { bg: "bg-[#f0f7ff]",      text: "text-[#0071e3]",   border: "border-[#0071e3]/20", dot: "bg-[#0071e3]"   },
+};
+
+const DIFF_STYLES: Record<Difficulty, string> = {
+  Easy:   "text-emerald-600",
+  Medium: "text-amber-600",
+  Hard:   "text-red-500",
+};
+
+const DIFF_BG: Record<Difficulty, string> = {
+  Easy:   "bg-emerald-50 border-emerald-200 text-emerald-700",
+  Medium: "bg-amber-50 border-amber-200 text-amber-700",
+  Hard:   "bg-red-50 border-red-200 text-red-700",
+};
+
+/* ── CopyButton ───────────────────────────────────────────── */
+function CopyButton({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <button
+      onClick={() => { navigator.clipboard.writeText(text); setCopied(true); setTimeout(() => setCopied(false), 2000); }}
+      className={`flex items-center gap-1 text-xs font-medium px-2.5 py-1 rounded-lg border transition-all ${
+        copied
+          ? "bg-emerald-50 text-emerald-600 border-emerald-200"
+          : "bg-white text-[#6e6e73] border-[#d2d2d7] hover:text-[#0071e3] hover:border-[#0071e3]/30"
+      }`}
+    >
+      {copied ? (
+        <><svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>Copied</>
+      ) : (
+        <><svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>Copy</>
+      )}
+    </button>
+  );
+}
+
+/* ── Main ─────────────────────────────────────────────────── */
 export default function InterviewPrepPage() {
-  const [resumeText, setResumeText] = useState<string>("");
-  const [jobDesc, setJobDesc] = useState<string>("");
-  const [context, setContext] = useState<string>("");
-  const [qas, setQAs] = useState<QA[]>([]);
-  const [loading, setLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
-  const [controller, setController] = useState<AbortController | null>(null);
-  const [showTips, setShowTips] = useState<boolean>(true);
-  const qasRef = useRef<HTMLDivElement>(null);
+  const [resumeText, setResumeText]     = useState("");
+  const [jobDesc, setJobDesc]           = useState("");
+  const [roleContext, setRoleContext]   = useState("");
+  const [qas, setQAs]                   = useState<QA[]>([]);
+  const [loading, setLoading]           = useState(false);
+  const [error, setError]               = useState<string | null>(null);
+  const [controller, setController]     = useState<AbortController | null>(null);
+  const [openIdx, setOpenIdx]           = useState<number | null>(null);
+  const [activeSection, setActiveSection] = useState<"prep" | "mock">("prep");
+  const resultsRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (qas.length > 0 && qasRef.current && !loading) {
-      const rect = qasRef.current.getBoundingClientRect();
-      confetti({
-        particleCount: 100,
-        spread: 70,
-        origin: {
-          x: (rect.left + rect.width / 2) / window.innerWidth,
-          y: (rect.top + rect.height / 2) / window.innerHeight,
-        },
-      });
-    }
-  }, [qas, loading]);
-
-  const handleSubmit = async (e: React.FormEvent) => {
+  /* ── Generate questions ─────────────────────────────────── */
+  const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!jobDesc.trim()) {
-      setError("Job description is required.");
-      return;
-    }
+    if (!jobDesc.trim()) { setError("Job description is required."); return; }
 
     const ac = new AbortController();
     setController(ac);
     setLoading(true);
     setError(null);
     setQAs([]);
+    setOpenIdx(null);
 
     try {
+      if (!supabase) throw new Error("Authentication service not available");
+      const { data: { user } } = await supabase.auth.getUser();
+
+      const context = [
+        roleContext.trim() ? roleContext.trim() : null,
+        resumeText.trim() ? `Resume:\n${resumeText.trim()}` : null,
+      ].filter(Boolean).join("\n\n");
+
       const res = await fetch("/api/interviewPrep", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           job: jobDesc,
-          context: resumeText ? `${context}\nResume: ${resumeText}` : context,
+          context: context || undefined,
+          userId: user?.id,
         }),
         signal: ac.signal,
       });
+
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "Unknown error");
-      setQAs(data.questions);
+      setQAs(data.questions ?? []);
+
+      setTimeout(() => resultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 150);
     } catch (err: any) {
-      if (err.name === "AbortError") setError("Generation cancelled");
-      else setError(err.message);
+      if (err.name === "AbortError") setError("Generation cancelled.");
+      else setError(err.message || "An unexpected error occurred.");
     } finally {
       setLoading(false);
       setController(null);
     }
-  };
+  }, [jobDesc, resumeText, roleContext]);
+
+  /* ── Audio context for mock interview ──────────────────── */
+  const audioContext = [
+    roleContext.trim() ? roleContext.trim() : null,
+    jobDesc.trim() ? `Job Description:\n${jobDesc.trim().slice(0, 500)}` : null,
+  ].filter(Boolean).join("\n\n");
+
+  /* ── Derived ─────────────────────────────────────────────── */
+  const typeBreakdown = qas.reduce<Record<string, number>>((acc, q) => {
+    acc[q.type] = (acc[q.type] ?? 0) + 1;
+    return acc;
+  }, {});
 
   return (
-    <div className="min-h-screen bg-[#f5f5f7] text-[#1d1d1f] pt-16 pb-16">
+    <div className="min-h-screen bg-[#f5f5f7] text-[#1d1d1f] pt-16 pb-24 px-4">
       <PlanChecker requiredPlan="pro">
-      {/* Header */}
-      <header className="max-w-5xl mx-auto text-center mb-8 px-6">
-        <div className="inline-flex items-center justify-center h-12 w-12 bg-[#0071e3]/[0.08] border border-[#0071e3]/20 rounded-2xl mb-5">
-          <svg width="22" height="22" viewBox="0 0 24 24" className="stroke-[#0071e3] fill-none" strokeWidth="1.5">
-            <path d="M12 1a3 3 0 00-3 3v7a3 3 0 006 0V4a3 3 0 00-3-3z" />
-            <path d="M19 10v2a7 7 0 11-14 0v-2" />
-            <path d="M12 19v4" />
-            <path d="M8 23h8" />
-          </svg>
-        </div>
-        <h1 className="text-4xl md:text-5xl font-semibold tracking-tight text-[#1d1d1f]">
-          Job Interview Prep
-        </h1>
-        <p className="mt-3 text-base text-[#6e6e73] max-w-2xl mx-auto">
-          Paste a job description (and optional context) to get tailored
-          interview questions & model answers, or jump into a live mock
-          interview below.
-        </p>
-      </header>
 
-      {/* Inline Tips Section */}
-      {showTips && (
-        <div className="max-w-5xl mx-auto mb-8 px-6">
-          <div className="bg-white border border-black/[0.08] rounded-xl p-4 relative">
-            <button
-              className="absolute top-2 right-2 text-[#86868b] hover:text-[#6e6e73]"
-              onClick={() => setShowTips(false)}
-            >
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
+        {/* ── Header ──────────────────────────────────────── */}
+        <header className="max-w-2xl mx-auto text-center mb-12">
+          <div className="inline-flex items-center justify-center w-14 h-14 rounded-[18px] bg-[#0071e3]/[0.08] border border-[#0071e3]/15 mb-6">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="stroke-[#0071e3]" strokeWidth="1.5">
+              <path d="M12 1a3 3 0 00-3 3v7a3 3 0 006 0V4a3 3 0 00-3-3z" />
+              <path d="M19 10v2a7 7 0 01-14 0v-2" />
+              <path d="M12 19v4M8 23h8" />
+            </svg>
+          </div>
+          <h1 className="text-5xl font-semibold tracking-tight text-[#1d1d1f] mb-3">
+            Interview Prep
+          </h1>
+          <p className="text-[#6e6e73] text-lg leading-relaxed max-w-lg mx-auto">
+            Generate targeted questions with model answers, then practice out loud with an AI interviewer.
+          </p>
+        </header>
+
+        {/* ── Section toggle ──────────────────────────────── */}
+        <div className="max-w-2xl mx-auto mb-8">
+          <div className="flex gap-1 p-1 bg-white border border-black/[0.06] rounded-2xl shadow-sm w-fit mx-auto">
+            {(["prep", "mock"] as const).map((s) => (
+              <button
+                key={s}
+                onClick={() => setActiveSection(s)}
+                className={`px-6 py-2.5 rounded-xl text-sm font-semibold transition-all ${
+                  activeSection === s
+                    ? "bg-[#0071e3] text-white shadow-sm"
+                    : "text-[#6e6e73] hover:text-[#1d1d1f]"
+                }`}
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M6 18L18 6M6 6l12 12"
-                />
-              </svg>
-            </button>
-            <h3 className="text-lg font-medium text-[#0071e3] mb-2">
-              Quick Interview Tips
-            </h3>
-            <ul className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm text-[#6e6e73]">
-              <li className="flex items-start gap-2">
-                <span className="text-[#0071e3] flex-shrink-0">
-                  ✓
-                </span>
-                Maintain eye contact with the camera
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="text-[#0071e3] flex-shrink-0">
-                  ✓
-                </span>
-                Use specific examples in your answers
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="text-[#0071e3] flex-shrink-0">
-                  ✓
-                </span>
-                Speak clearly and at a moderate pace
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="text-[#0071e3] flex-shrink-0">
-                  ✓
-                </span>
-                Research the company’s mission and values
-              </li>
-            </ul>
+                {s === "prep" ? "Question Bank" : "Live Mock Interview"}
+                {s === "mock" && (
+                  <span className="ml-2 px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded-full text-[10px] font-semibold">BETA</span>
+                )}
+              </button>
+            ))}
           </div>
         </div>
-      )}
 
-      {/* Q&A Generator */}
-      <section className="w-full max-w-5xl mx-auto px-6">
-        <div className="bg-white rounded-xl border border-black/[0.08] p-6 shadow-xl space-y-6">
-          <h2 className="text-xl font-semibold text-[#1d1d1f]">
-            Generate Interview Questions
-          </h2>
-          <ResumeUploader onResumeSubmit={setResumeText} />
+        {/* ════════════════════════════════════════════════
+            QUESTION BANK SECTION
+            ════════════════════════════════════════════════ */}
+        {activeSection === "prep" && (
+          <div className="max-w-2xl mx-auto space-y-5">
 
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="grid md:grid-cols-2 gap-4">
+            {/* Form card */}
+            <div className="bg-white rounded-3xl border border-black/[0.06] shadow-sm p-8 space-y-7">
               <div>
-                <label
-                  htmlFor="jobDesc"
-                  className="block mb-1 font-semibold text-[#1d1d1f]"
-                >
-                  Job Description
-                </label>
-                <textarea
-                  id="jobDesc"
-                  rows={6}
-                  value={jobDesc}
-                  onChange={(e) => setJobDesc(e.target.value)}
-                  placeholder="Paste the job description here…"
-                  className="w-full bg-[#f5f5f7] text-[#1d1d1f] placeholder-[#aeaeb2] p-3 rounded border border-black/[0.08] focus:ring-2 focus:ring-[var(--accent)] focus:outline-none"
-                  aria-required="true"
-                />
-              </div>
-              <div>
-                <label
-                  htmlFor="context"
-                  className="block mb-1 font-semibold text-[#1d1d1f]"
-                >
-                  Role/Company (Optional)
-                </label>
-                <input
-                  id="context"
-                  type="text"
-                  value={context}
-                  onChange={(e) => setContext(e.target.value)}
-                  placeholder="e.g., Senior Backend Engineer at Acme Corp"
-                  className="w-full bg-[#f5f5f7] text-[#1d1d1f] placeholder-[#aeaeb2] p-3 rounded border border-black/[0.08] focus:ring-2 focus:ring-[var(--accent)] focus:outline-none"
-                />
-              </div>
-            </div>
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full py-3 rounded-lg text-black font-semibold disabled:opacity-50 disabled:cursor-not-allowed hover:-translate-y-1 hover:shadow-xl transition-transform flex items-center justify-center"
-              style={{ backgroundColor: "var(--accent)" }}
-              aria-disabled={loading}
-            >
-              {loading ? (
-                <>
-                  <svg
-                    className="animate-spin h-5 w-5 mr-2 text-black"
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                  >
-                    <circle
-                      className="opacity-25"
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      strokeWidth="4"
-                    />
-                    <path
-                      className="opacity-75"
-                      fill="currentColor"
-                      d="M4 12a8 8 0 018-8v8h8a8 8 0 01-16 0z"
-                    />
-                  </svg>
-                  Generating…
-                </>
-              ) : (
-                "Generate Questions"
-              )}
-            </button>
-
-            {controller && (
-              <button
-                onClick={() => controller.abort()}
-                className="w-full py-3 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 font-semibold transition-colors"
-              >
-                Cancel
-              </button>
-            )}
-          </form>
-        </div>
-      </section>
-
-      {/* Loading & Error States */}
-      <section
-        className="w-full max-w-5xl mx-auto mt-8 px-6"
-        aria-live="polite"
-        aria-busy={loading}
-      >
-        <AnimatePresence mode="wait">
-          {loading && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              className="p-8 bg-white rounded-xl border border-black/[0.08] shadow-xl flex flex-col items-center gap-4"
-            >
-              <div className="relative w-20 h-20">
-                <div className="absolute inset-0 border-4 border-t-[#0071e3] border-r-[#0071e3] border-b-transparent border-l-transparent rounded-full animate-spin" />
-              </div>
-              <div className="text-center">
-                <h3 className="text-xl font-semibold text-[#1d1d1f]">
-                  Generating your questions...
-                </h3>
-                <p className="text-[#86868b] mt-2">
-                  Our AI is preparing tailored interview questions
-                </p>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-        <AnimatePresence mode="wait">
-          {error && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              className="p-4 bg-red-500/8 border border-red-500/20 text-red-400 rounded-xl flex items-center justify-center mt-8"
-              role="alert"
-            >
-              <svg
-                className="h-5 w-5 mr-2"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
-              {error}
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </section>
-
-      {/* Generated Q&A */}
-      <AnimatePresence>
-        {qas.length > 0 && (
-          <motion.section
-            initial={{ opacity: 0, y: 40 }}
-            animate={{ opacity: 1, y: 0, transition: { delay: 0.2 } }}
-            exit={{ opacity: 0, y: -20 }}
-            className="w-full max-w-5xl mx-auto mt-8 px-6"
-            ref={qasRef}
-          >
-            <div className="bg-white rounded-xl border border-black/[0.08] p-8 shadow-xl space-y-6">
-              <h2 className="text-2xl font-semibold text-[#1d1d1f]">
-                Your Interview Questions
-              </h2>
-              {qas.map((qa, idx) => (
-                <div key={idx} className="space-y-2">
-                  <p className="font-semibold text-[var(--accent)]">
-                    Q{idx + 1}. {qa.question}
-                  </p>
-                  <div className="bg-white p-4 rounded-lg border border-black/[0.08]">
-                    <p className="text-[#1d1d1f] whitespace-pre-wrap font-mono">
-                      {qa.modelAnswer}
-                    </p>
-                  </div>
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="font-semibold text-[#1d1d1f]">Resume</h2>
+                  <span className="text-xs text-[#86868b] font-normal">Optional — improves answer relevance</span>
                 </div>
-              ))}
-              <div className="border-t border-black/[0.08] pt-4">
-                <p className="text-[#86868b] text-sm text-center">
-                  <span className="text-[var(--accent)]">Pro Tip:</span>{" "}
-                  Practice these questions aloud to build confidence!
-                </p>
+                <ResumeUploader onResumeSubmit={setResumeText} />
               </div>
+
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-[#f0f0f5]" /></div>
+                <div className="relative flex justify-center">
+                  <span className="px-3 bg-white text-xs text-[#aeaeb2] font-medium">role details</span>
+                </div>
+              </div>
+
+              <form onSubmit={handleSubmit} className="space-y-5">
+                {/* Job description */}
+                <div>
+                  <label htmlFor="jobDesc" className="block mb-1.5 text-sm font-semibold text-[#1d1d1f]">
+                    Job Description <span className="text-red-400">*</span>
+                  </label>
+                  <textarea
+                    id="jobDesc"
+                    rows={6}
+                    value={jobDesc}
+                    onChange={(e) => setJobDesc(e.target.value)}
+                    placeholder="Paste the full job description here — the more detail, the more targeted your questions will be…"
+                    className="w-full bg-[#f9f9fb] text-[#1d1d1f] placeholder-[#b0b0b8] p-4 rounded-2xl border border-[#d2d2d7] focus:outline-none focus:border-[#0071e3] focus:ring-2 focus:ring-[#0071e3]/10 resize-none text-sm leading-relaxed transition-all"
+                  />
+                </div>
+
+                {/* Role + company (optional) */}
+                <div>
+                  <label htmlFor="roleCtx" className="block mb-1.5 text-sm font-semibold text-[#1d1d1f]">
+                    Role / Company
+                    <span className="ml-1.5 font-normal text-xs text-[#86868b]">— helps generate culture-fit questions</span>
+                  </label>
+                  <input
+                    id="roleCtx"
+                    type="text"
+                    value={roleContext}
+                    onChange={(e) => setRoleContext(e.target.value)}
+                    placeholder="e.g., Senior Backend Engineer at Stripe"
+                    className="w-full bg-[#f9f9fb] text-[#1d1d1f] placeholder-[#b0b0b8] p-3.5 rounded-xl border border-[#d2d2d7] focus:outline-none focus:border-[#0071e3] focus:ring-2 focus:ring-[#0071e3]/10 text-sm transition-all"
+                  />
+                </div>
+
+                {/* Tip banner */}
+                <div className="p-4 bg-[#f0f7ff] border border-[#0071e3]/15 rounded-2xl">
+                  <p className="text-xs font-semibold text-[#0071e3] mb-2">Interview Tips</p>
+                  <ul className="space-y-1.5 text-xs text-[#6e6e73]">
+                    {[
+                      "Use the STAR method for behavioral questions — Situation, Task, Action, Result",
+                      "Prepare specific metrics and numbers to back up every claim",
+                      "Research the company's mission, recent news, and products before the real interview",
+                    ].map((tip, i) => (
+                      <li key={i} className="flex items-start gap-2">
+                        <svg className="w-3.5 h-3.5 text-[#0071e3] mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                        </svg>
+                        {tip}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                <div className="flex gap-3">
+                  <button
+                    type="submit"
+                    disabled={loading || !jobDesc.trim()}
+                    className="flex-1 py-3.5 rounded-2xl text-white bg-[#0071e3] font-semibold disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#0077ed] active:scale-[.98] transition-all flex items-center justify-center gap-2 text-sm"
+                  >
+                    {loading ? (
+                      <>
+                        <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8h8a8 8 0 01-16 0z" />
+                        </svg>
+                        Generating Questions…
+                      </>
+                    ) : (
+                      qas.length > 0 ? "Regenerate Questions" : "Generate Interview Questions"
+                    )}
+                  </button>
+                  {controller && loading && (
+                    <button
+                      type="button"
+                      onClick={() => controller.abort()}
+                      className="px-5 py-3.5 rounded-2xl bg-red-50 text-red-600 border border-red-200 font-semibold text-sm hover:bg-red-100 transition-colors"
+                    >
+                      Cancel
+                    </button>
+                  )}
+                </div>
+              </form>
             </div>
-          </motion.section>
+
+            {/* Status */}
+            <div aria-live="polite">
+              <AnimatePresence mode="wait">
+                {loading && (
+                  <motion.div key="loading" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+                    className="bg-white rounded-3xl border border-black/[0.06] shadow-sm p-10 flex flex-col items-center gap-5">
+                    <div className="relative w-14 h-14">
+                      <div className="absolute inset-0 rounded-full border-[3px] border-[#e8e8ed]" />
+                      <div className="absolute inset-0 rounded-full border-[3px] border-t-[#0071e3] border-r-[#0071e3]/20 border-b-transparent border-l-transparent animate-spin" />
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" className="stroke-[#0071e3]" strokeWidth="1.5">
+                          <path d="M12 1a3 3 0 00-3 3v7a3 3 0 006 0V4a3 3 0 00-3-3z" />
+                          <path d="M19 10v2a7 7 0 01-14 0v-2M12 19v4" />
+                        </svg>
+                      </div>
+                    </div>
+                    <div className="text-center">
+                      <p className="font-semibold text-[#1d1d1f]">Generating your questions…</p>
+                      <p className="text-[#86868b] text-sm mt-1">Crafting 6 targeted questions with model answers</p>
+                    </div>
+                  </motion.div>
+                )}
+                {error && !loading && (
+                  <motion.div key="error" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+                    className="flex items-start gap-3 p-5 bg-red-50 border border-red-200 text-red-700 rounded-2xl text-sm" role="alert">
+                    <svg className="h-5 w-5 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    {error}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
+            {/* Q&A results */}
+            <AnimatePresence>
+              {qas.length > 0 && (
+                <motion.div
+                  ref={resultsRef}
+                  key="results"
+                  initial={{ opacity: 0, y: 24 }}
+                  animate={{ opacity: 1, y: 0, transition: { duration: 0.4 } }}
+                >
+                  <div className="bg-white rounded-3xl border border-black/[0.06] shadow-sm overflow-hidden">
+
+                    {/* Results header */}
+                    <div className="px-6 py-5 border-b border-[#f0f0f5] flex flex-wrap items-center justify-between gap-3">
+                      <div>
+                        <h2 className="font-semibold text-[#1d1d1f]">{qas.length} Interview Questions</h2>
+                        <p className="text-xs text-[#86868b] mt-0.5">Click any question to expand the model answer</p>
+                      </div>
+                      <div className="flex flex-wrap gap-1.5">
+                        {Object.entries(typeBreakdown).map(([type, count]) => {
+                          const s = TYPE_STYLES[type as QuestionType] ?? TYPE_STYLES["Role-Specific"];
+                          return (
+                            <span key={type} className={`flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium border ${s.bg} ${s.text} ${s.border}`}>
+                              <span className={`w-1.5 h-1.5 rounded-full ${s.dot}`} />
+                              {type} ({count})
+                            </span>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Question list */}
+                    <div className="divide-y divide-[#f0f0f5]">
+                      {qas.map((qa, idx) => {
+                        const ts = TYPE_STYLES[qa.type] ?? TYPE_STYLES["Role-Specific"];
+                        const isOpen = openIdx === idx;
+
+                        return (
+                          <div key={idx}>
+                            {/* Question row */}
+                            <button
+                              className="w-full text-left px-6 py-5 hover:bg-[#fafafa] transition-colors flex items-start gap-4"
+                              onClick={() => setOpenIdx(isOpen ? null : idx)}
+                              aria-expanded={isOpen}
+                            >
+                              <div className="w-7 h-7 rounded-full bg-[#f0f0f5] border border-[#e0e0e5] flex items-center justify-center shrink-0 mt-0.5">
+                                <span className="text-[#6e6e73] text-xs font-bold">{idx + 1}</span>
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex flex-wrap items-center gap-2 mb-2">
+                                  <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold border ${ts.bg} ${ts.text} ${ts.border}`}>
+                                    {qa.type}
+                                  </span>
+                                  <span className={`text-xs font-semibold px-2 py-0.5 rounded-full border ${DIFF_BG[qa.difficulty]}`}>
+                                    {qa.difficulty}
+                                  </span>
+                                </div>
+                                <p className="text-[#1d1d1f] font-medium text-sm leading-relaxed pr-4">{qa.question}</p>
+                              </div>
+                              <svg
+                                className={`w-5 h-5 text-[#aeaeb2] shrink-0 mt-1 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}
+                                fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                              >
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                              </svg>
+                            </button>
+
+                            {/* Expanded answer */}
+                            <AnimatePresence>
+                              {isOpen && (
+                                <motion.div
+                                  initial={{ height: 0, opacity: 0 }}
+                                  animate={{ height: "auto", opacity: 1, transition: { duration: 0.2 } }}
+                                  exit={{ height: 0, opacity: 0, transition: { duration: 0.15 } }}
+                                  className="overflow-hidden"
+                                >
+                                  <div className="px-6 pb-6 pl-[4.5rem] space-y-4">
+
+                                    {/* Model answer */}
+                                    <div className="bg-[#f9f9fb] rounded-2xl p-4 border border-[#e8e8ed]">
+                                      <div className="flex items-center justify-between mb-3">
+                                        <p className="text-[10px] font-semibold text-[#86868b] uppercase tracking-widest">Model Answer</p>
+                                        <CopyButton text={qa.modelAnswer} />
+                                      </div>
+                                      <p className="text-[#1d1d1f] text-sm leading-[1.8]">{qa.modelAnswer}</p>
+                                    </div>
+
+                                    {/* Tip */}
+                                    {qa.tip && (
+                                      <div className="flex items-start gap-3 px-4 py-3 bg-[#f0f7ff] border border-[#0071e3]/15 rounded-xl">
+                                        <svg className="w-4 h-4 text-[#0071e3] shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                          <path strokeLinecap="round" strokeLinejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                                        </svg>
+                                        <p className="text-[#0071e3] text-xs leading-relaxed">
+                                          <span className="font-semibold">Tip: </span>{qa.tip}
+                                        </p>
+                                      </div>
+                                    )}
+
+                                    {/* STAR framework for behavioral */}
+                                    {qa.type === "Behavioral" && (
+                                      <div>
+                                        <p className="text-[10px] font-semibold text-purple-500 uppercase tracking-widest mb-2">STAR Framework</p>
+                                        <div className="grid grid-cols-4 gap-2 text-center">
+                                          {[
+                                            ["S", "Situation", "Set the context"],
+                                            ["T", "Task",      "Your role"],
+                                            ["A", "Action",    "What you did"],
+                                            ["R", "Result",    "The outcome"],
+                                          ].map(([letter, label, desc]) => (
+                                            <div key={letter} className="p-2.5 bg-purple-50 border border-purple-100 rounded-xl">
+                                              <div className="w-7 h-7 bg-purple-100 rounded-lg mx-auto mb-1.5 flex items-center justify-center">
+                                                <span className="text-purple-700 font-bold text-sm">{letter}</span>
+                                              </div>
+                                              <p className="text-purple-700 text-xs font-semibold">{label}</p>
+                                              <p className="text-purple-400 text-[10px] mt-0.5">{desc}</p>
+                                            </div>
+                                          ))}
+                                        </div>
+                                      </div>
+                                    )}
+                                  </div>
+                                </motion.div>
+                              )}
+                            </AnimatePresence>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    <div className="border-t border-[#f0f0f5] px-6 py-4 bg-[#fafafa]">
+                      <p className="text-xs text-[#aeaeb2] text-center">
+                        Practice answers out loud — timing yourself builds confidence and natural pacing. Aim for 90–120 seconds per answer.
+                      </p>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
         )}
-      </AnimatePresence>
 
-      {/* Live Mock Interview */}
-     
-      <section className="w-full max-w-5xl mx-auto mt-16 px-6 space-y-6">
-        {/* Title */}
-        <h2 className="text-xl font-semibold text-[#1d1d1f] text-center md:text-left">
-          Speak to AI (BETA)
-        </h2>
+        {/* ════════════════════════════════════════════════
+            LIVE MOCK INTERVIEW SECTION
+            ════════════════════════════════════════════════ */}
+        {activeSection === "mock" && (
+          <div className="max-w-2xl mx-auto space-y-5">
+            <div className="bg-white rounded-3xl border border-black/[0.06] shadow-sm p-6">
+              <div className="flex items-start gap-3 mb-5 p-4 bg-[#f0f7ff] border border-[#0071e3]/15 rounded-2xl">
+                <svg className="w-5 h-5 text-[#0071e3] shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <div>
+                  <p className="text-sm font-semibold text-[#0071e3] mb-1">How it works</p>
+                  <p className="text-xs text-[#6e6e73] leading-relaxed">
+                    Click <strong>Start Interview</strong>, then tap <strong>Speak</strong> to record your answer. The AI interviewer will transcribe your voice, give brief feedback, and ask the next question. Add a job description in the Question Bank tab first — it makes the mock interview much more relevant.
+                  </p>
+                </div>
+              </div>
 
-        {/* AudioChat component is now a direct child, removing the max-w-3xl constraint */}
-        <AudioChat />
+              {audioContext && (
+                <div className="mb-4 px-4 py-2.5 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center gap-2">
+                  <svg className="w-4 h-4 text-emerald-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                  </svg>
+                  <p className="text-xs font-medium text-emerald-700">Role context loaded — interviewer knows the role</p>
+                </div>
+              )}
 
-        {/* Pro Tip */}
-        <div className="border-t border-black/[0.08] pt-4">
-          <p className="text-[#86868b] text-sm text-center">
-            <span className="text-[var(--accent)]">Pro Tip:</span> Use the mock
-            interview to simulate real-time pressure!
-          </p>
-        </div>
-      </section>
+              <AudioChat jobContext={audioContext || undefined} />
+            </div>
+          </div>
+        )}
+
       </PlanChecker>
     </div>
   );

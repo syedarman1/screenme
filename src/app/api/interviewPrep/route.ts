@@ -1,475 +1,280 @@
-// src/app/api/InterviewPrep/route.ts
+// src/app/api/interviewPrep/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
+import { checkUsageLimit, incrementUsage } from "../../lib/usageTracker";
 import { ErrorTypes, handleAPIError } from "../../lib/errorHandler";
 
 type ChatMsg = { id: number; who: "user" | "ai"; text: string };
 
-// Ensure API key is loaded correctly
-if (!process.env.OPENAI_API_KEY) {
-  console.error("FATAL: OPENAI_API_KEY environment variable not set.");
-}
-
-// Only create OpenAI client if API key is available
 const openai = process.env.OPENAI_API_KEY
-  ? new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY,
-    timeout: 30000
-  })
+  ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY, timeout: 35000 })
   : null;
 
+/* ── Router ───────────────────────────────────────────────── */
 export async function POST(req: NextRequest) {
   try {
-    const contentType = req.headers.get('content-type') || '';
-
-    // Handle Q&A Generation (JSON requests)
-    if (contentType.includes('application/json')) {
-      return handleQAGeneration(req);
-    }
-
-    // Handle Audio Chat (FormData requests)
-    if (contentType.includes('multipart/form-data')) {
-      return handleAudioChat(req);
-    }
-
-    return NextResponse.json(
-      {
-        error: "Unsupported content type. Use JSON for Q&A generation or FormData for audio chat.",
-        details: {
-          message: "Invalid request format",
-          code: "UNSUPPORTED_CONTENT_TYPE",
-          action: "Check your request headers and content type."
-        },
-        timestamp: new Date().toISOString()
-      },
-      { status: 400 }
-    );
+    const contentType = req.headers.get("content-type") || "";
+    if (contentType.includes("application/json"))   return handleQAGeneration(req);
+    if (contentType.includes("multipart/form-data")) return handleAudioChat(req);
+    return NextResponse.json({ error: "Unsupported content type." }, { status: 400 });
   } catch (e: any) {
-    console.error("UNEXPECTED API ROUTE ERROR:", e);
     return handleAPIError(e);
   }
 }
 
+/* ══════════════════════════════════════════════════════════
+   Q&A GENERATION
+   ══════════════════════════════════════════════════════════ */
 async function handleQAGeneration(req: NextRequest) {
-  try {
-    if (!openai) {
-      const serviceError = ErrorTypes.OPENAI_SERVICE_ERROR();
+  if (!openai) return NextResponse.json({ error: "AI service not configured." }, { status: 503 });
+
+  const body = await req.json().catch(() => ({}));
+  const { job, context, userId } = body as { job?: string; context?: string; userId?: string };
+
+  /* ── Validate input ─────────────────────────────────────── */
+  if (!job || typeof job !== "string" || job.trim().length < 20) {
+    return NextResponse.json(
+      { error: "Job description must be at least 20 characters.", details: { code: "INVALID_JOB_DESCRIPTION", action: "Paste the complete job posting including requirements and responsibilities." } },
+      { status: 400 }
+    );
+  }
+
+  /* ── Usage limit check ──────────────────────────────────── */
+  if (userId) {
+    const usageCheck = await checkUsageLimit(userId, "interview_prep");
+    if (!usageCheck.allowed) {
+      const usageError = ErrorTypes.USAGE_LIMIT_REACHED("interview prep sessions", usageCheck.plan);
       return NextResponse.json(
-        {
-          error: 'AI interview service is not configured. Please contact support.',
-          details: {
-            message: serviceError.message,
-            code: serviceError.code,
-            action: serviceError.action
-          },
-          timestamp: new Date().toISOString()
-        },
-        { status: serviceError.status }
+        { error: usageError.message, details: { message: usageError.message, code: usageError.code, action: usageError.action, limit: usageCheck.limit, remaining: usageCheck.remaining, plan: usageCheck.plan } },
+        { status: usageError.status }
       );
     }
+  }
 
-    const body = await req.json().catch(() => ({}));
-    const { job, context } = body;
+  /* ── System prompt ──────────────────────────────────────── */
+  const systemPrompt = `You are a senior hiring manager and interview coach with 15+ years of experience.
 
-    // Validate required fields
-    if (!job || typeof job !== 'string' || job.trim().length < 20) {
-      return NextResponse.json(
-        {
-          error: "Job description must be at least 20 characters. Include role requirements and responsibilities.",
-          details: {
-            message: "Job description too short",
-            code: "INVALID_JOB_DESCRIPTION",
-            action: "Paste the complete job posting including requirements and responsibilities."
-          },
-          timestamp: new Date().toISOString()
-        },
-        { status: 400 }
-      );
-    }
+Generate exactly 6 targeted interview questions for the given role. Cover all 6 types — one each.
 
-    // Generate interview questions using OpenAI
-    try {
-      const systemPrompt = `You are an experienced interview coach. Generate 5-7 relevant interview questions for the given job description and context. For each question, provide a model answer that demonstrates best practices.
+Question types (use exactly these strings):
+1. "Behavioral"     — "Tell me about a time when…" (past experience, STAR format)
+2. "Technical"      — Specific tools, technologies, or domain knowledge required for this role
+3. "Situational"    — "What would you do if…" (hypothetical scenario relevant to the role)
+4. "Problem-Solving"— Analytical thinking, process, or methodology
+5. "Motivation"     — Why this role/company, career direction, values alignment
+6. "Role-Specific"  — A unique question about the exact responsibilities or challenges of THIS position
 
-Return ONLY valid JSON in this format:
+For every question provide:
+- question: clear, specific to this role — never generic
+- type: one of the exact strings above
+- difficulty: "Easy" | "Medium" | "Hard"
+- modelAnswer: 4-8 sentences. For Behavioral type, use STAR format explicitly. Reference context from the JD.
+- tip: 1-2 sentences of specific interview advice for this question
+
+Return ONLY valid JSON:
 {
   "questions": [
     {
-      "question": "Tell me about your experience with...",
-      "modelAnswer": "A good answer would highlight specific examples..."
+      "question": "...",
+      "type": "Behavioral",
+      "difficulty": "Medium",
+      "modelAnswer": "...",
+      "tip": "..."
     }
   ]
-}`;
-
-      const userContent = `Job Description:\n${job.trim()}\n\nAdditional Context:\n${context?.trim() || 'No additional context provided'}`;
-
-      const completion = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userContent }
-        ],
-        temperature: 0.7,
-        max_tokens: 2000,
-        response_format: { type: "json_object" }
-      });
-
-      const result = completion.choices[0]?.message?.content;
-      if (!result) {
-        throw ErrorTypes.OPENAI_SERVICE_ERROR();
-      }
-
-      const parsed = JSON.parse(result);
-      if (!parsed.questions || !Array.isArray(parsed.questions)) {
-        throw ErrorTypes.INVALID_RESPONSE_FORMAT();
-      }
-
-      return NextResponse.json(parsed, {
-        headers: {
-          'Cache-Control': 'private, max-age=1800'
-        }
-      });
-
-    } catch (error: any) {
-      console.error("ERROR DURING Q&A GENERATION:", error);
-
-      if (error.message?.includes('rate limit') || error.message?.includes('quota')) {
-        return NextResponse.json(
-          {
-            error: "Interview question generation temporarily unavailable due to high demand.",
-            details: {
-              message: "Service temporarily overloaded",
-              code: "OPENAI_RATE_LIMITED",
-              action: "Wait 2-3 minutes and try generating questions again."
-            },
-            timestamp: new Date().toISOString()
-          },
-          { status: 503 }
-        );
-      }
-
-      const serviceError = ErrorTypes.OPENAI_SERVICE_ERROR();
-      return handleAPIError(serviceError);
-    }
-
-  } catch (error: any) {
-    console.error("Error in Q&A generation:", error);
-    return handleAPIError(error);
-  }
 }
 
-async function handleAudioChat(req: NextRequest) {
+Rules:
+- Exactly 6 questions, one of each type
+- Questions must be specific to the role — not generic interview questions
+- Model answers should be concrete and demonstrate strong performance
+- No markdown outside the JSON`;
+
+  const hasResume = typeof context === "string" && context.trim().length > 0;
+  const userContent = `JOB DESCRIPTION:\n${job.trim()}${hasResume ? `\n\nCANDIDATE CONTEXT:\n${context!.trim()}` : ""}`;
+
+  /* ── Call GPT ───────────────────────────────────────────── */
+  let result: string;
   try {
-    if (!openai) {
-      const serviceError = ErrorTypes.OPENAI_SERVICE_ERROR();
-      return NextResponse.json(
-        {
-          error: 'AI interview service is not configured. Please contact support.',
-          details: {
-            message: serviceError.message,
-            code: serviceError.code,
-            action: serviceError.action
-          },
-          timestamp: new Date().toISOString()
-        },
-        { status: serviceError.status }
-      );
-    }
-
-    // Parse form data
-    const form = await req.formData();
-
-    // 1) Validate audio blob
-    const audioEntry = form.get("audio");
-    if (!(audioEntry instanceof File)) {
-      console.error("Validation Error: Missing audio blob");
-      const audioError = ErrorTypes.INVALID_INPUT('Audio file', 'is required for interview practice');
-      return NextResponse.json(
-        {
-          error: audioError.message,
-          details: {
-            message: audioError.message,
-            code: audioError.code,
-            action: 'Please record audio before submitting.'
-          },
-          timestamp: new Date().toISOString()
-        },
-        { status: audioError.status }
-      );
-    }
-
-    // Log audio details for debugging
-    
-
-    // Check for empty file
-    if (audioEntry.size === 0) {
-      console.error("Validation Error: Received empty audio file.");
-      return NextResponse.json(
-        {
-          error: "No audio detected. Please record your voice and try again.",
-          details: {
-            message: "Audio recording is empty",
-            code: "EMPTY_AUDIO",
-            action: "Ensure your microphone is working and speak clearly into it."
-          },
-          timestamp: new Date().toISOString()
-        },
-        { status: 400 }
-      );
-    }
-
-    // Check file size (max 25MB for Whisper)
-    if (audioEntry.size > 25 * 1024 * 1024) {
-      console.error("Validation Error: Audio file too large.");
-      return NextResponse.json(
-        {
-          error: "Audio recording too long. Please keep responses under 25MB (about 20 minutes).",
-          details: {
-            message: "Audio file exceeds maximum size limit",
-            code: "FILE_TOO_LARGE",
-            action: "Record a shorter response or compress your audio file."
-          },
-          timestamp: new Date().toISOString()
-        },
-        { status: 413 }
-      );
-    }
-
-    // 2) Validate chat history
-    const historyStr = form.get("history");
-    if (typeof historyStr !== "string") {
-      console.error("Validation Error: Missing chat history string");
-      const historyError = ErrorTypes.INVALID_INPUT('Chat history', 'is required for context');
-      return NextResponse.json(
-        {
-          error: historyError.message,
-          details: {
-            message: historyError.message,
-            code: historyError.code,
-            action: 'This is likely a technical issue. Please refresh the page and try again.'
-          },
-          timestamp: new Date().toISOString()
-        },
-        { status: historyError.status }
-      );
-    }
-
-    let history: ChatMsg[] = [];
-    try {
-      history = JSON.parse(historyStr);
-
-      // Validate history structure
-      if (!Array.isArray(history)) {
-        throw new Error("History must be an array");
-      }
-
-      // Validate each message in history
-      for (const msg of history) {
-        if (!msg.id || !msg.who || !msg.text) {
-          throw new Error("Invalid message structure");
-        }
-        if (!["user", "ai"].includes(msg.who)) {
-          throw new Error("Invalid message role");
-        }
-      }
-    } catch (e) {
-      console.error("Validation Error: Failed to parse chat history JSON", e);
-      return NextResponse.json(
-        {
-          error: "Invalid conversation format detected.",
-          details: {
-            message: "Chat history is corrupted",
-            code: "INVALID_HISTORY",
-            action: "Refresh the page to start a new interview session."
-          },
-          timestamp: new Date().toISOString()
-        },
-        { status: 400 }
-      );
-    }
-
-    // 3) Transcribe with Whisper
-    let transcript = "";
-    try {
-      
-
-      const whisperResponse = await openai.audio.transcriptions.create({
-        model: "whisper-1",
-        file: audioEntry,
-        language: "en", // Optional: specify language for better accuracy
-        temperature: 0.2, // Lower temperature for more consistent transcription
-      });
-
-      transcript = whisperResponse.text?.trim() || "";
-      
-
-      // Handle potentially empty transcriptions from Whisper
-      if (!transcript || transcript.length === 0) {
-        console.warn("Whisper returned an empty transcript.");
-        const transcriptionError = ErrorTypes.TRANSCRIPTION_FAILED();
-        return NextResponse.json(
-          {
-            error: "Could not understand your audio. Please speak clearly and try again.",
-            details: {
-              message: transcriptionError.message,
-              code: "EMPTY_TRANSCRIPT",
-              action: "Speak more clearly, check your microphone, and ensure there's no background noise."
-            },
-            transcript: "",
-            timestamp: new Date().toISOString()
-          },
-          { status: 400 }
-        );
-      }
-
-      // Check for very short transcripts that might indicate issues
-      if (transcript.length < 3) {
-        console.warn("Whisper returned very short transcript:", transcript);
-        return NextResponse.json(
-          {
-            error: "Response too brief. Please provide a more detailed answer to the interview question.",
-            details: {
-              message: "Transcription too short",
-              code: "SHORT_TRANSCRIPT",
-              action: "Speak for at least a few sentences to provide a complete answer."
-            },
-            transcript: transcript,
-            timestamp: new Date().toISOString()
-          },
-          { status: 400 }
-        );
-      }
-
-    } catch (error: any) {
-      console.error("ERROR DURING WHISPER TRANSCRIPTION:", error);
-      const transcriptionError = ErrorTypes.TRANSCRIPTION_FAILED();
-      return NextResponse.json(
-        {
-          error: transcriptionError.message,
-          details: {
-            message: transcriptionError.message,
-            code: transcriptionError.code,
-            action: transcriptionError.action,
-            technicalDetails: error.message || "Unknown transcription error"
-          },
-          timestamp: new Date().toISOString()
-        },
-        { status: transcriptionError.status }
-      );
-    }
-
-    // 4) Append user turn to history
-    const newUserMessage: ChatMsg = {
-      id: Date.now(),
-      who: "user",
-      text: transcript
-    };
-    const updatedHistory = [...history, newUserMessage];
-
-    // 5) Generate GPT reply
-    let reply = "";
-    try {
-      
-
-      // Convert chat history to OpenAI format
-      const messages = updatedHistory.map((m) => ({
-        role: m.who === 'ai' ? 'assistant' as const : 'user' as const,
-        content: m.text
-      }));
-
-      // Add system message for interview context
-      const systemMessage = {
-        role: 'system' as const,
-        content: `You are a professional interviewer conducting a job interview. Be conversational, ask follow-up questions, and provide constructive feedback. Keep responses concise (1-3 sentences) since this is a voice conversation. Ask one question at a time and show genuine interest in the candidate's responses.`
-      };
-
-      const chatResp = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
-        messages: [systemMessage, ...messages],
-        temperature: 0.75,
-        max_tokens: 150, // Keep responses concise for voice interaction
-        presence_penalty: 0.1, // Slight penalty to avoid repetition
-        frequency_penalty: 0.1
-      });
-
-      reply = chatResp.choices[0]?.message?.content?.trim() ?? "";
-      
-
-      if (!reply) {
-        console.warn("GPT returned an empty reply.");
-        reply = "I'm sorry, I didn't catch that. Could you please repeat your response?";
-      }
-
-    } catch (error: any) {
-      console.error("ERROR DURING GPT COMPLETION:", error);
-
-      // Check for specific OpenAI error types
-      if (error.message?.includes('rate limit') || error.message?.includes('quota')) {
-        return NextResponse.json(
-          {
-            error: "Interview AI temporarily unavailable due to high demand.",
-            details: {
-              message: "Service temporarily overloaded",
-              code: "OPENAI_RATE_LIMITED",
-              action: "Wait 2-3 minutes and continue your interview practice."
-            },
-            transcript: transcript,
-            reply: "I heard you say: '" + transcript + "'. Let me think about that for a moment... Could you please try asking again?",
-            timestamp: new Date().toISOString()
-          },
-          { status: 503 }
-        );
-      }
-
-      // Still return transcript even if GPT fails
-      const serviceError = ErrorTypes.OPENAI_SERVICE_ERROR();
-      return NextResponse.json(
-        {
-          error: "AI interviewer temporarily unavailable, but I heard your response.",
-          details: {
-            message: serviceError.message,
-            code: serviceError.code,
-            action: "Your response was recorded. Try continuing the conversation.",
-            technicalDetails: error.message || "Unknown AI completion error"
-          },
-          transcript: transcript,
-          reply: "I heard you say: '" + transcript + "'. I'm having trouble generating a response right now. Could you please try again?",
-          timestamp: new Date().toISOString()
-        },
-        { status: 500 }
-      );
-    }
-
-    // 6) Return successful response
-    
-    return NextResponse.json({
-      transcript,
-      reply,
-      success: true
-    }, {
-      status: 200,
-      headers: {
-        'Cache-Control': 'no-cache', // Don't cache voice interactions
-      }
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userContent },
+      ],
+      temperature: 0.6,
+      max_tokens: 3500,
+      response_format: { type: "json_object" },
     });
-
-  } catch (e: any) {
-    // Catch any unexpected errors during request processing
-    console.error("UNEXPECTED API ROUTE ERROR:", e);
-    return handleAPIError(e);
+    result = completion.choices[0]?.message?.content ?? "";
+    if (!result) throw ErrorTypes.OPENAI_SERVICE_ERROR();
+  } catch (error: any) {
+    console.error("Q&A generation error:", error);
+    if (error.message?.includes("rate limit") || error.message?.includes("quota")) {
+      return NextResponse.json({ error: "Interview question generation temporarily unavailable. Please try again shortly." }, { status: 503 });
+    }
+    return handleAPIError(ErrorTypes.OPENAI_SERVICE_ERROR());
   }
+
+  /* ── Parse & sanitize ───────────────────────────────────── */
+  let parsed: any;
+  try {
+    parsed = JSON.parse(result);
+  } catch {
+    console.error("GPT returned non-JSON:", result.substring(0, 500));
+    return handleAPIError(ErrorTypes.INVALID_RESPONSE_FORMAT());
+  }
+
+  if (!parsed?.questions || !Array.isArray(parsed.questions)) {
+    return handleAPIError(ErrorTypes.INVALID_RESPONSE_FORMAT());
+  }
+
+  const VALID_TYPES = ["Behavioral", "Technical", "Situational", "Problem-Solving", "Motivation", "Role-Specific"];
+  const VALID_DIFFS = ["Easy", "Medium", "Hard"];
+
+  const questions = parsed.questions
+    .filter((q: any) => q && typeof q.question === "string" && q.question.trim().length > 0)
+    .slice(0, 6)
+    .map((q: any) => ({
+      question:    String(q.question   || "").slice(0, 300),
+      type:        VALID_TYPES.includes(q.type) ? q.type : "Role-Specific",
+      difficulty:  VALID_DIFFS.includes(q.difficulty) ? q.difficulty : "Medium",
+      modelAnswer: String(q.modelAnswer || "").slice(0, 1500),
+      tip:         String(q.tip        || "").slice(0, 300),
+    }));
+
+  if (questions.length === 0) {
+    return handleAPIError(ErrorTypes.INVALID_RESPONSE_FORMAT());
+  }
+
+  /* ── Increment usage ────────────────────────────────────── */
+  if (userId) {
+    const ok = await incrementUsage(userId, "interview_prep");
+    if (!ok) console.warn("Failed to increment usage for user:", userId);
+  }
+
+  return NextResponse.json({ questions }, {
+    headers: { "Cache-Control": "private, max-age=1800" },
+  });
 }
 
-/**
- * Handle OPTIONS requests for CORS preflight
- */
+/* ══════════════════════════════════════════════════════════
+   AUDIO CHAT (Live Mock Interview)
+   ══════════════════════════════════════════════════════════ */
+async function handleAudioChat(req: NextRequest) {
+  if (!openai) return NextResponse.json({ error: "AI service not configured." }, { status: 503 });
+
+  const form = await req.formData();
+  const audioEntry = form.get("audio");
+
+  if (!(audioEntry instanceof File)) {
+    return NextResponse.json({ error: "Audio file is required." }, { status: 400 });
+  }
+  if (audioEntry.size === 0) {
+    return NextResponse.json({ error: "No audio detected. Please record your voice and try again." }, { status: 400 });
+  }
+  if (audioEntry.size > 25 * 1024 * 1024) {
+    return NextResponse.json({ error: "Recording too long. Please keep responses under 20 minutes." }, { status: 413 });
+  }
+
+  const historyStr  = form.get("history");
+  const jobContext  = form.get("jobContext");  // optional: job description / role for context
+
+  if (typeof historyStr !== "string") {
+    return NextResponse.json({ error: "Chat history is required." }, { status: 400 });
+  }
+
+  let history: ChatMsg[] = [];
+  try {
+    history = JSON.parse(historyStr);
+    if (!Array.isArray(history)) throw new Error();
+  } catch {
+    return NextResponse.json({ error: "Invalid conversation format. Refresh the page to restart." }, { status: 400 });
+  }
+
+  // Cap history to last 8 exchanges to prevent token overflow
+  const cappedHistory = history.slice(-8);
+
+  /* ── Transcribe audio ───────────────────────────────────── */
+  let transcript = "";
+  try {
+    const whisperResponse = await openai.audio.transcriptions.create({
+      model: "whisper-1",
+      file: audioEntry,
+      language: "en",
+      temperature: 0.2,
+    });
+    transcript = whisperResponse.text?.trim() ?? "";
+    if (!transcript || transcript.length < 2) {
+      return NextResponse.json({
+        error: "Could not understand your audio. Please speak clearly and try again.",
+        transcript: "",
+      }, { status: 400 });
+    }
+  } catch (error: any) {
+    console.error("Whisper error:", error);
+    return NextResponse.json({ error: "Audio transcription failed. Check your microphone and try again." }, { status: 500 });
+  }
+
+  /* ── Build interviewer reply ────────────────────────────── */
+  const updatedHistory = [...cappedHistory, { id: Date.now(), who: "user" as const, text: transcript }];
+  const messages = updatedHistory.map((m) => ({
+    role: m.who === "ai" ? ("assistant" as const) : ("user" as const),
+    content: m.text,
+  }));
+
+  const roleContext = typeof jobContext === "string" && jobContext.trim().length > 0
+    ? `\nYou are interviewing for: ${jobContext.trim().slice(0, 400)}`
+    : "";
+
+  const systemMessage = {
+    role: "system" as const,
+    content: `You are a professional interviewer conducting a realistic job interview.${roleContext}
+
+Your goals:
+1. Ask focused, relevant questions one at a time — specific to the role if context was provided.
+2. After each candidate answer, give ONE sentence of brief, encouraging feedback.
+3. Then ask a natural follow-up question or transition to the next topic.
+4. Keep total response to 2-3 sentences — this is a voice conversation.
+5. If the candidate seems nervous, be warm and encouraging.
+6. If this is the start of the conversation, greet them professionally and ask your first question.
+
+Do not give lengthy explanations. Be concise and conversational.`,
+  };
+
+  let reply = "";
+  try {
+    const chatResp = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [systemMessage, ...messages],
+      temperature: 0.7,
+      max_tokens: 200,
+      presence_penalty: 0.3,
+      frequency_penalty: 0.3,
+    });
+    reply = chatResp.choices[0]?.message?.content?.trim() ?? "";
+    if (!reply) reply = "I heard your response. Could you elaborate a bit more on that?";
+  } catch (error: any) {
+    console.error("GPT error:", error);
+    return NextResponse.json({
+      error: "AI interviewer temporarily unavailable.",
+      transcript,
+      reply: `I heard: "${transcript}". Please try again.`,
+    }, { status: 500 });
+  }
+
+  return NextResponse.json({ transcript, reply, success: true }, {
+    headers: { "Cache-Control": "no-cache" },
+  });
+}
+
 export async function OPTIONS() {
   return new NextResponse(null, {
     status: 204,
     headers: {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'POST, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Methods": "POST, OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type, Authorization",
     },
   });
 }

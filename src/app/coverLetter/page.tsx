@@ -1,87 +1,93 @@
-// src/app/cover-letter/page.tsx
+// src/app/coverLetter/page.tsx
 "use client";
 
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import ResumeUploader from "../components/ResumeUploader";
 import { Document, Packer, Paragraph, TextRun } from "docx";
 import { saveAs } from "file-saver";
 import { motion, AnimatePresence } from "framer-motion";
-import confetti from "canvas-confetti";
 import PlanChecker from "../components/PlanChecker";
 import { supabase } from "../lib/supabaseClient";
 
-const TONES = ["Professional", "Enthusiastic", "Concise"] as const;
-type Tone = (typeof TONES)[number];
+const TONES = [
+  { id: "Professional", label: "Professional", desc: "Formal, achievement-focused",        free: true  },
+  { id: "Enthusiastic", label: "Enthusiastic", desc: "Energetic, shows passion",           free: false },
+  { id: "Concise",      label: "Concise",      desc: "Direct, punchy, 200 words",          free: false },
+  { id: "Formal",       label: "Formal",       desc: "Gov / legal / executive",            free: false },
+  { id: "Creative",     label: "Creative",     desc: "Narrative-led, memorable hook",      free: false },
+] as const;
+
+type Tone = (typeof TONES)[number]["id"];
 
 export default function CoverLetterPage() {
-  const [resumeText, setResumeText] = useState<string>("");
-  const [jobTitle, setJobTitle] = useState<string>("");
-  const [company, setCompany] = useState<string>("");
-  const [jobDesc, setJobDesc] = useState<string>("");
-  const [tone, setTone] = useState<Tone>("Professional");
-  const [coverLetter, setCoverLetter] = useState<string>("");
-  const [loading, setLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
-  const [isEditing, setIsEditing] = useState<boolean>(false);
-  const [editText, setEditText] = useState<string>("");
+  const [resumeText, setResumeText] = useState("");
+  const [jobTitle, setJobTitle]     = useState("");
+  const [company, setCompany]       = useState("");
+  const [jobDesc, setJobDesc]       = useState("");
+  const [tone, setTone]             = useState<Tone>("Professional");
+  const [coverLetter, setCoverLetter] = useState("");
+  const [wordCount, setWordCount]   = useState(0);
+  const [loading, setLoading]       = useState(false);
+  const [error, setError]           = useState<string | null>(null);
+  const [isEditing, setIsEditing]   = useState(false);
+  const [editText, setEditText]     = useState("");
   const [controller, setController] = useState<AbortController | null>(null);
-  const [showTips, setShowTips] = useState(true);
-  const [userPlan, setUserPlan] = useState<string>("free");
-  const letterRef = useRef<HTMLDivElement>(null);
+  const [userPlan, setUserPlan]     = useState<string>("free");
+  const [copied, setCopied]         = useState(false);
+  const resultsRef                  = useRef<HTMLDivElement>(null);
+  const [jobUrl, setJobUrl]         = useState("");
+  const [urlLoading, setUrlLoading] = useState(false);
+  const [urlError, setUrlError]     = useState<string | null>(null);
 
-  useEffect(() => {
-    if (coverLetter && letterRef.current && !isEditing) {
-      const rect = letterRef.current.getBoundingClientRect();
-      confetti({
-        particleCount: 100,
-        spread: 70,
-        origin: {
-          x: (rect.left + rect.width / 2) / window.innerWidth,
-          y: (rect.top + rect.height / 2) / window.innerHeight,
-        },
+  const parseUrl = async () => {
+    if (!jobUrl.trim()) return;
+    setUrlLoading(true);
+    setUrlError(null);
+    try {
+      const res = await fetch("/api/parseJobUrl", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: jobUrl.trim() }),
       });
+      const data = await res.json();
+      if (!res.ok) { setUrlError(data.error); return; }
+      if (data.jobTitle) setJobTitle(data.jobTitle);
+      if (data.company)  setCompany(data.company);
+      if (data.description) setJobDesc(data.description);
+    } catch {
+      setUrlError("Failed to fetch job posting. Paste the description manually.");
+    } finally {
+      setUrlLoading(false);
     }
-  }, [coverLetter, isEditing]);
+  };
 
-  // Check user plan
   useEffect(() => {
-    const checkUserPlan = async () => {
-      if (!supabase) return;
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          const { data: planData } = await supabase
-            .from('user_plans')
-            .select('plan')
-            .eq('user_id', user.id)
-            .single();
-          setUserPlan(planData?.plan || 'free');
-        }
-      } catch (error) {
-        console.error('Error checking user plan:', error);
-      }
-    };
-    checkUserPlan();
+    if (!supabase) return;
+    supabase.auth.getUser().then(({ data }) => {
+      if (!data?.user) return;
+      supabase!.from("user_plans").select("plan").eq("user_id", data.user.id).single()
+        .then(({ data: pd }) => setUserPlan(pd?.plan || "free"));
+    });
   }, []);
 
-  const handleGenerate = async () => {
+  const isPro = userPlan === "pro";
+
+  const handleGenerate = useCallback(async (overrideTone?: Tone) => {
     if (!resumeText || !jobTitle || !company) {
-      setError("Please fill in resume, job title, and company.");
+      setError("Please fill in your resume, job title, and company name.");
       return;
     }
-
+    const activeTone = overrideTone ?? tone;
     const ac = new AbortController();
     setController(ac);
     setLoading(true);
     setError(null);
+    setIsEditing(false);
 
     try {
-      // Get current user
-      if (!supabase) {
-        throw new Error("Authentication service not available");
-      }
+      if (!supabase) throw new Error("Authentication service not available");
       const { data: { user } } = await supabase.auth.getUser();
-      
+
       const res = await fetch("/api/coverLetter", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -90,433 +96,386 @@ export default function CoverLetterPage() {
           jobTitle,
           company,
           jobDesc,
-          tone,
+          tone: isPro ? activeTone : "Professional",
           userId: user?.id,
         }),
         signal: ac.signal,
       });
 
       const data = await res.json();
-      if (!res.ok)
-        throw new Error(data.error || "Failed to generate cover letter");
+      if (!res.ok) throw new Error(data.error || "Failed to generate cover letter");
       if (!data.coverLetter) throw new Error("No cover letter returned");
 
       setCoverLetter(data.coverLetter);
-      setIsEditing(false);
+      setWordCount(data.wordCount ?? data.coverLetter.split(/\s+/).filter(Boolean).length);
+      setTimeout(() => resultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 150);
     } catch (e: any) {
-      if (e.name === "AbortError") setError("Generation cancelled");
-      else setError(e.message || "An unexpected error occurred");
+      if (e.name === "AbortError") setError("Generation cancelled.");
+      else setError(e.message || "An unexpected error occurred.");
     } finally {
       setLoading(false);
       setController(null);
     }
-  };
+  }, [resumeText, jobTitle, company, jobDesc, tone, isPro]);
 
-  const startEdit = () => {
-    setEditText(coverLetter);
-    setIsEditing(true);
-    setTimeout(() => {
-      const textarea = document.querySelector("textarea");
-      textarea?.focus();
-    }, 0);
-  };
-
-  const saveEdit = () => {
-    setCoverLetter(editText.trim());
-    setIsEditing(false);
-  };
-
+  const saveEdit = () => { setCoverLetter(editText.trim()); setIsEditing(false); };
   const cancelEdit = () => {
-    if (editText !== coverLetter && !confirm("Discard unsaved changes?"))
-      return;
+    if (editText !== coverLetter && !confirm("Discard unsaved changes?")) return;
     setIsEditing(false);
+  };
+
+  const copyLetter = () => {
+    navigator.clipboard.writeText(coverLetter);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   };
 
   const downloadDOCX = async () => {
     const doc = new Document({
-      sections: [
-        {
-          properties: {},
-          children: coverLetter.split("\n").map(
-            (line) =>
-              new Paragraph({
-                children: [new TextRun({ text: line })],
-              })
-          ),
-        },
-      ],
+      sections: [{
+        properties: {},
+        children: coverLetter.split("\n").map((line) =>
+          new Paragraph({ children: [new TextRun({ text: line })] })
+        ),
+      }],
     });
     const blob = await Packer.toBlob(doc);
-    saveAs(blob, "CoverLetter.docx");
+    saveAs(blob, `CoverLetter_${company.replace(/\s+/g, "_")}.docx`);
   };
 
+  const canGenerate = !!resumeText && jobTitle.trim().length >= 3 && company.trim().length >= 2;
+
   return (
-    <div className="min-h-screen bg-[#f5f5f7] text-[#1d1d1f] pt-16 pb-16">
-      <header className="max-w-5xl mx-auto text-center mb-8 px-6">
-        <div className="inline-flex items-center justify-center h-12 w-12 bg-[#0071e3]/[0.08] border border-[#0071e3]/20 rounded-2xl mb-5">
-          <svg width="22" height="22" viewBox="0 0 24 24" className="stroke-[#0071e3] fill-none" strokeWidth="1.5">
+    <div className="min-h-screen bg-[#f5f5f7] text-[#1d1d1f] pt-16 pb-24 px-4">
+
+      {/* Header */}
+      <header className="max-w-2xl mx-auto text-center mb-12">
+        <div className="inline-flex items-center justify-center w-14 h-14 rounded-[18px] bg-[#0071e3]/[0.08] border border-[#0071e3]/15 mb-6">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="stroke-[#0071e3]" strokeWidth="1.5">
+            <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
             <polyline points="22,6 12,13 2,6" />
-            <rect x="2" y="6" width="20" height="14" rx="2" ry="2" />
           </svg>
         </div>
-        <h1 className="text-4xl md:text-5xl font-semibold tracking-tight text-[#1d1d1f]">
+        <h1 className="text-5xl font-semibold tracking-tight text-[#1d1d1f] mb-3">
           Cover Letter Generator
         </h1>
-        <p className="mt-3 text-base text-[#6e6e73] max-w-2xl mx-auto">
-          Upload your resume, enter role details, and get a tailored cover letter in seconds.
+        <p className="text-[#6e6e73] text-lg leading-relaxed max-w-lg mx-auto">
+          Upload your resume, pick a tone, and get a tailored, interview-ready cover letter in seconds.
         </p>
       </header>
 
-      {showTips && (
-        <div className="max-w-5xl mx-auto mb-8 px-6">
-          <div className="bg-white border border-black/[0.08] rounded-xl p-4 relative">
-            <button
-              className="absolute top-2 right-2 text-[#86868b] hover:text-[#6e6e73]"
-              onClick={() => setShowTips(false)}
-            >
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M6 18L18 6M6 6l12 12"
-                />
-              </svg>
-            </button>
-            <h3 className="text-lg font-medium text-[#0071e3] mb-2">
-              Quick Cover Letter Tips
-            </h3>
-            <ul className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm text-[#6e6e73]">
-              <li className="flex items-start gap-2">
-                <span className="text-[#0071e3] flex-shrink-0">
-                  ✓
-                </span>
-                <span>Address the letter to a specific person if possible</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="text-[#0071e3] flex-shrink-0">
-                  ✓
-                </span>
-                <span>Highlight relevant skills from your resume</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="text-[#0071e3] flex-shrink-0">
-                  ✓
-                </span>
-                <span>Show enthusiasm for the company and role</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="text-[#0071e3] flex-shrink-0">
-                  ✓
-                </span>
-                <span>Keep it concise and focused on the job</span>
-              </li>
-            </ul>
-          </div>
-        </div>
-      )}
-
-      <section className="w-full max-w-5xl mx-auto px-6">
+      {/* Form */}
+      <section className="max-w-2xl mx-auto">
         <PlanChecker feature="cover_letter">
-          <div className="bg-white rounded-xl border border-black/[0.08] p-6 shadow-xl space-y-6">
-            <h2 className="text-xl font-semibold text-[#1d1d1f]">
-              Create Your Cover Letter
-            </h2>
-            <ResumeUploader onResumeSubmit={setResumeText} />
+          <div className="bg-white rounded-3xl border border-black/[0.06] shadow-sm p-8 space-y-7">
 
-          <div className="grid md:grid-cols-2 gap-4">
+            {/* Resume */}
             <div>
-              <label
-                htmlFor="jobTitle"
-                className="block mb-1 font-semibold text-[#1d1d1f]"
-              >
-                Job Title
-              </label>
-              <input
-                id="jobTitle"
-                className="w-full bg-[#f5f5f7] p-3 rounded border border-black/[0.08] text-[#1d1d1f] focus:ring-2 focus:outline-none focus:ring-[var(--accent)]"
-                placeholder="e.g., Senior Backend Engineer"
-                value={jobTitle}
-                onChange={(e) => setJobTitle(e.target.value)}
-                aria-required="true"
-              />
-            </div>
-            <div>
-              <label
-                htmlFor="company"
-                className="block mb-1 font-semibold text-[#1d1d1f]"
-              >
-                Company
-              </label>
-              <input
-                id="company"
-                className="w-full bg-[#f5f5f7] p-3 rounded border border-black/[0.08] text-[#1d1d1f] focus:ring-2 focus:outline-none focus:ring-[var(--accent)]"
-                placeholder="e.g., Acme Corp"
-                value={company}
-                onChange={(e) => setCompany(e.target.value)}
-                aria-required="true"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label
-              htmlFor="jobDesc"
-              className="block mb-1 font-semibold text-[#1d1d1f]"
-            >
-              Job Description (Optional)
-            </label>
-            <textarea
-              id="jobDesc"
-              className="w-full bg-[#f5f5f7] p-3 rounded border border-black/[0.08] text-[#1d1d1f] focus:ring-2 focus:outline-none focus:ring-[var(--accent)]"
-              rows={4}
-              placeholder="Paste the job description here…"
-              value={jobDesc}
-              onChange={(e) => setJobDesc(e.target.value)}
-            />
-          </div>
-
-          <div className="flex flex-wrap gap-2">
-            {userPlan === 'pro' ? (
-              // Pro users can select any tone
-              TONES.map((t) => (
-                <button
-                  key={t}
-                  type="button"
-                  onClick={() => setTone(t)}
-                  className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                    tone === t
-                      ? "bg-[var(--accent)] text-black ring-2 ring-[var(--accent)]"
-                      : "bg-[#f5f5f7] text-[#6e6e73] hover:bg-[#ebebf0] focus:ring-2 focus:ring-[var(--accent)]"
-                  }`}
-                  aria-pressed={tone === t}
-                >
-                  {t}
-                </button>
-              ))
-            ) : (
-              // Free users can only use Professional tone
-              <div className="flex flex-wrap gap-2 items-center">
-                <button
-                  type="button"
-                  className="px-4 py-2 rounded-lg font-medium bg-[var(--accent)] text-black ring-2 ring-[var(--accent)]"
-                  disabled
-                >
-                  Professional
-                </button>
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    className="px-4 py-2 rounded-lg font-medium bg-[#f5f5f7] text-[#86868b] cursor-not-allowed opacity-50"
-                    disabled
-                  >
-                    Enthusiastic
-                  </button>
-                  <button
-                    type="button"
-                    className="px-4 py-2 rounded-lg font-medium bg-[#f5f5f7] text-[#86868b] cursor-not-allowed opacity-50"
-                    disabled
-                  >
-                    Concise
-                  </button>
-                </div>
-                <span className="text-sm text-[#86868b] ml-2">
-                  (Upgrade to Pro for all tones)
-                </span>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="font-semibold text-[#1d1d1f]">Your Resume</h2>
+                {resumeText && (
+                  <span className="text-xs text-emerald-600 font-medium flex items-center gap-1">
+                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>
+                    Resume loaded
+                  </span>
+                )}
               </div>
-            )}
-          </div>
+              <ResumeUploader onResumeSubmit={setResumeText} />
+            </div>
 
-          <button
-            onClick={handleGenerate}
-            disabled={loading || !resumeText || !jobTitle || !company}
-            className="w-full bg-[var(--accent)] py-3 rounded-lg text-black font-semibold disabled:opacity-50 disabled:cursor-not-allowed hover:-translate-y-1 hover:shadow-xl transition-transform flex items-center justify-center"
-            aria-disabled={loading || !resumeText || !jobTitle || !company}
-          >
-            {loading ? (
-              <>
-                <svg
-                  className="animate-spin h-5 w-5 mr-2 text-black"
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
+            {/* Divider */}
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-[#f0f0f5]" /></div>
+              <div className="relative flex justify-center">
+                <span className="px-3 bg-white text-xs text-[#aeaeb2] font-medium">role details</span>
+              </div>
+            </div>
+
+            {/* URL Import */}
+            <div>
+              <p className="text-xs font-medium text-[#86868b] mb-2">Import from URL</p>
+              <div className="flex items-center gap-2">
+                <div className="relative flex-1">
+                  <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#aeaeb2]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244" />
+                  </svg>
+                  <input
+                    value={jobUrl}
+                    onChange={e => setJobUrl(e.target.value)}
+                    onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); parseUrl(); } }}
+                    placeholder="Paste LinkedIn, Indeed, or Greenhouse URL..."
+                    className="w-full bg-[#f9f9fb] text-[#1d1d1f] placeholder-[#b0b0b8] pl-9 pr-3 py-2.5 rounded-xl border border-[#d2d2d7] focus:outline-none focus:border-[#0071e3] focus:ring-2 focus:ring-[#0071e3]/10 text-sm transition-all"
+                  />
+                </div>
+                <button
+                  onClick={parseUrl}
+                  disabled={urlLoading || !jobUrl.trim()}
+                  className="px-4 py-2.5 rounded-xl bg-[#0071e3] text-white text-sm font-semibold hover:bg-[#0077ed] disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center gap-1.5 shrink-0"
                 >
-                  <circle
-                    className="opacity-25"
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    strokeWidth="4"
-                  />
-                  <path
-                    className="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8v8h8a8 8 0 01-16 0z"
-                  />
-                </svg>
-                Generating…
-              </>
-            ) : (
-              "Generate Cover Letter"
-            )}
-          </button>
-        </div>
+                  {urlLoading ? (
+                    <svg className="animate-spin h-3.5 w-3.5" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8h8a8 8 0 01-16 0z" /></svg>
+                  ) : (
+                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
+                  )}
+                  {urlLoading ? "Parsing…" : "Import"}
+                </button>
+              </div>
+              {urlError && <p className="text-xs text-red-500 mt-1.5">{urlError}</p>}
+              {!urlError && jobUrl && !urlLoading && jobTitle && (
+                <p className="text-xs text-emerald-600 mt-1.5 flex items-center gap-1">
+                  <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                  Auto-filled title, company, and description
+                </p>
+              )}
+            </div>
+
+            {/* Job Title + Company */}
+            <div className="grid sm:grid-cols-2 gap-4">
+              <div>
+                <label htmlFor="jobTitle" className="block mb-1.5 text-sm font-semibold text-[#1d1d1f]">
+                  Job Title <span className="text-red-400">*</span>
+                </label>
+                <input
+                  id="jobTitle"
+                  className="w-full bg-[#f9f9fb] p-3.5 rounded-xl border border-[#d2d2d7] text-[#1d1d1f] placeholder-[#b0b0b8] focus:outline-none focus:border-[#0071e3] focus:ring-2 focus:ring-[#0071e3]/10 text-sm transition-all"
+                  placeholder="e.g., Senior Backend Engineer"
+                  value={jobTitle}
+                  onChange={(e) => setJobTitle(e.target.value)}
+                />
+              </div>
+              <div>
+                <label htmlFor="company" className="block mb-1.5 text-sm font-semibold text-[#1d1d1f]">
+                  Company <span className="text-red-400">*</span>
+                </label>
+                <input
+                  id="company"
+                  className="w-full bg-[#f9f9fb] p-3.5 rounded-xl border border-[#d2d2d7] text-[#1d1d1f] placeholder-[#b0b0b8] focus:outline-none focus:border-[#0071e3] focus:ring-2 focus:ring-[#0071e3]/10 text-sm transition-all"
+                  placeholder="e.g., Stripe"
+                  value={company}
+                  onChange={(e) => setCompany(e.target.value)}
+                />
+              </div>
+            </div>
+
+            {/* Job Description */}
+            <div>
+              <label htmlFor="jobDesc" className="block mb-1.5 text-sm font-semibold text-[#1d1d1f]">
+                Job Description
+                <span className="ml-1.5 text-xs font-normal text-[#86868b]">— recommended for best results</span>
+              </label>
+              <textarea
+                id="jobDesc"
+                className="w-full bg-[#f9f9fb] p-3.5 rounded-xl border border-[#d2d2d7] text-[#1d1d1f] placeholder-[#b0b0b8] focus:outline-none focus:border-[#0071e3] focus:ring-2 focus:ring-[#0071e3]/10 resize-none text-sm leading-relaxed transition-all"
+                rows={4}
+                placeholder="Paste the job description to tailor the letter to this specific role and company…"
+                value={jobDesc}
+                onChange={(e) => setJobDesc(e.target.value)}
+              />
+            </div>
+
+            {/* Divider */}
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-[#f0f0f5]" /></div>
+              <div className="relative flex justify-center">
+                <span className="px-3 bg-white text-xs text-[#aeaeb2] font-medium">tone</span>
+              </div>
+            </div>
+
+            {/* Tone Selector */}
+            <div>
+              {!isPro && (
+                <p className="text-xs text-[#86868b] mb-3">
+                  <span className="font-semibold text-[#0071e3]">Pro</span> — unlock all 5 tones for every application style
+                </p>
+              )}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                {TONES.map((t) => {
+                  const isLocked   = !isPro && !t.free;
+                  const isSelected = tone === t.id && !isLocked;
+                  return (
+                    <button
+                      key={t.id}
+                      type="button"
+                      disabled={isLocked}
+                      onClick={() => !isLocked && setTone(t.id)}
+                      className={`relative flex flex-col items-start px-4 py-3 rounded-xl border text-left transition-all ${
+                        isLocked
+                          ? "bg-[#f9f9fb] text-[#aeaeb2] border-[#e8e8ed] cursor-not-allowed"
+                          : isSelected
+                          ? "bg-[#0071e3] text-white border-[#0071e3] shadow-sm"
+                          : "bg-white text-[#1d1d1f] border-[#d2d2d7] hover:border-[#0071e3]/50 hover:bg-[#f9f9fb]"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between w-full">
+                        <span className={`text-sm font-semibold ${isLocked ? "text-[#aeaeb2]" : isSelected ? "text-white" : "text-[#1d1d1f]"}`}>
+                          {t.label}
+                        </span>
+                        {isLocked && (
+                          <svg className="w-3.5 h-3.5 text-[#aeaeb2]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                            <path d="M7 11V7a5 5 0 0110 0v4" />
+                          </svg>
+                        )}
+                      </div>
+                      <span className={`text-xs mt-0.5 ${isLocked ? "text-[#c8c8cc]" : isSelected ? "text-white/70" : "text-[#86868b]"}`}>
+                        {t.desc}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Generate button */}
+            <button
+              onClick={() => handleGenerate()}
+              disabled={loading || !canGenerate}
+              className="w-full bg-[#0071e3] hover:bg-[#0077ed] active:scale-[.98] py-3.5 rounded-2xl text-white font-semibold disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2 text-sm"
+            >
+              {loading ? (
+                <>
+                  <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8h8a8 8 0 01-16 0z" />
+                  </svg>
+                  Writing your letter…
+                </>
+              ) : coverLetter ? "Regenerate" : "Generate Cover Letter"}
+            </button>
+          </div>
         </PlanChecker>
       </section>
 
-      <section
-        className="w-full max-w-5xl mx-auto mt-8 px-6"
-        aria-live="polite"
-        aria-busy={loading}
-      >
+      {/* Status */}
+      <div className="max-w-2xl mx-auto mt-5" aria-live="polite">
         <AnimatePresence mode="wait">
           {loading && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              className="p-8 bg-white rounded-xl border border-black/[0.08] shadow-xl flex flex-col items-center gap-4"
-            >
-              <div className="relative w-20 h-20">
-                <div className="absolute inset-0 border-4 border-t-[#0071e3] border-r-[#0071e3] border-b-transparent border-l-transparent rounded-full animate-spin" />
+            <motion.div key="loading" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+              className="p-10 bg-white rounded-3xl border border-black/[0.06] shadow-sm flex flex-col items-center gap-5">
+              <div className="relative w-14 h-14">
+                <div className="absolute inset-0 rounded-full border-[3px] border-[#e8e8ed]" />
+                <div className="absolute inset-0 rounded-full border-[3px] border-t-[#0071e3] border-r-[#0071e3]/20 border-b-transparent border-l-transparent animate-spin" />
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="stroke-[#0071e3]" strokeWidth="2">
+                    <path d="M12 20h9M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z" />
+                  </svg>
+                </div>
               </div>
               <div className="text-center">
-                <h3 className="text-xl font-medium text-[#1d1d1f]">
-                  Generating your cover letter...
-                </h3>
-                <p className="text-[#86868b] mt-2">
-                  Our AI is crafting a tailored cover letter for you
-                </p>
+                <p className="font-semibold text-[#1d1d1f]">Writing your cover letter…</p>
+                <p className="text-[#86868b] text-sm mt-1">Crafting a tailored narrative from your resume</p>
               </div>
               {controller && (
-                <button
-                  onClick={() => controller.abort()}
-                  className="mt-2 px-4 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-xl border border-red-500/20 transition-colors"
-                >
-                  Cancel Generation
+                <button onClick={() => controller.abort()}
+                  className="px-4 py-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl border border-red-200 text-sm font-medium transition-colors">
+                  Cancel
                 </button>
               )}
             </motion.div>
           )}
-        </AnimatePresence>
-        <AnimatePresence mode="wait">
-          {error && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              className="p-4 bg-red-500/8 border border-red-500/20 text-red-400 rounded-xl flex items-center justify-center mt-8"
-              role="alert"
-            >
-              <svg
-                className="h-5 w-5 mr-2"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
+          {error && !loading && (
+            <motion.div key="error" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+              className="flex items-start gap-3 p-5 bg-red-50 border border-red-200 text-red-700 rounded-2xl text-sm" role="alert">
+              <svg className="h-5 w-5 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
               {error}
             </motion.div>
           )}
         </AnimatePresence>
-      </section>
+      </div>
 
+      {/* Letter Output */}
       <AnimatePresence>
-        {coverLetter && (
+        {coverLetter && !loading && (
           <motion.section
-            initial={{ opacity: 0, y: 40 }}
-            animate={{ opacity: 1, y: 0, transition: { delay: 0.2 } }}
-            className="w-full max-w-5xl mx-auto mt-8 px-6"
+            ref={resultsRef}
+            key="letter"
+            initial={{ opacity: 0, y: 24 }}
+            animate={{ opacity: 1, y: 0, transition: { duration: 0.4, ease: "easeOut" } }}
+            className="max-w-2xl mx-auto mt-6"
           >
-            <div
-              className="bg-white rounded-xl border border-black/[0.08] p-8 shadow-xl space-y-6"
-              ref={letterRef}
-            >
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-2xl font-semibold text-[#1d1d1f]">
-                  Your Cover Letter
-                </h2>
+            <div className="bg-white rounded-3xl border border-black/[0.06] shadow-sm overflow-hidden">
+
+              {/* Header bar */}
+              <div className="flex items-center justify-between px-6 py-4 border-b border-[#f0f0f5] bg-[#fafafa]">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-8 h-8 rounded-xl bg-[#0071e3]/[0.08] border border-[#0071e3]/15 flex items-center justify-center shrink-0">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" className="stroke-[#0071e3]" strokeWidth="2">
+                      <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+                      <polyline points="22,6 12,13 2,6" />
+                    </svg>
+                  </div>
+                  <div className="min-w-0">
+                    <p className="font-semibold text-[#1d1d1f] text-sm truncate">{jobTitle} — {company}</p>
+                    <p className="text-xs text-[#aeaeb2]">{wordCount} words · {isPro ? tone : "Professional"} tone</p>
+                  </div>
+                </div>
+
                 {!isEditing ? (
-                  <button
-                    onClick={startEdit}
-                    className="px-4 py-2 bg-[var(--accent)] text-black rounded-lg font-medium hover:-translate-y-1 hover:shadow-xl transition-transform"
-                  >
-                    Edit
-                  </button>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button
+                      onClick={copyLetter}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${
+                        copied
+                          ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                          : "bg-white text-[#6e6e73] border-[#d2d2d7] hover:border-[#0071e3]/40 hover:text-[#0071e3]"
+                      }`}
+                    >
+                      {copied ? (
+                        <><svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>Copied</>
+                      ) : (
+                        <><svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>Copy</>
+                      )}
+                    </button>
+                    <button
+                      onClick={downloadDOCX}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-white text-[#6e6e73] border border-[#d2d2d7] hover:border-[#0071e3]/40 hover:text-[#0071e3] transition-all"
+                    >
+                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                      </svg>
+                      DOCX
+                    </button>
+                    <button
+                      onClick={() => { setEditText(coverLetter); setIsEditing(true); }}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-[#0071e3] text-white hover:bg-[#0077ed] transition-colors"
+                    >
+                      <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                      </svg>
+                      Edit
+                    </button>
+                  </div>
                 ) : (
-                  <div className="flex gap-2">
-                    <button
-                      onClick={saveEdit}
-                      className="px-4 py-2 bg-[var(--accent)] text-black rounded-lg font-medium hover:-translate-y-1 hover:shadow-xl transition-transform"
-                    >
-                      Save
-                    </button>
-                    <button
-                      onClick={cancelEdit}
-                      className="px-4 py-2 bg-[#f5f5f7] text-[#6e6e73] rounded-lg font-medium hover:bg-[#ebebf0] transition-colors"
-                    >
-                      Cancel
-                    </button>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button onClick={saveEdit} className="px-3 py-1.5 rounded-lg text-xs font-medium bg-[#0071e3] text-white hover:bg-[#0077ed] transition-colors">Save</button>
+                    <button onClick={cancelEdit} className="px-3 py-1.5 rounded-lg text-xs font-medium bg-white text-[#6e6e73] border border-[#d2d2d7] hover:bg-[#f5f5f7] transition-colors">Cancel</button>
                   </div>
                 )}
               </div>
 
-              {isEditing ? (
-                <textarea
-                  rows={10}
-                  value={editText}
-                  onChange={(e) => setEditText(e.target.value)}
-                  className="w-full bg-[#f5f5f7] text-[#1d1d1f] p-4 rounded border border-black/[0.08] focus:ring-2 focus:outline-none focus:ring-[var(--accent)]"
-                  aria-label="Edit cover letter"
-                />
-              ) : (
-                <pre className="whitespace-pre-wrap text-[#1d1d1f]">
-                  {coverLetter}
-                </pre>
-              )}
+              {/* Letter body — rendered like actual letter paper */}
+              <div className="px-10 py-8 max-w-2xl mx-auto">
+                {isEditing ? (
+                  <textarea
+                    rows={22}
+                    value={editText}
+                    onChange={(e) => setEditText(e.target.value)}
+                    className="w-full bg-[#f9f9fb] text-[#1d1d1f] p-4 rounded-xl border border-[#d2d2d7] focus:outline-none focus:ring-2 focus:ring-[#0071e3]/10 focus:border-[#0071e3] resize-none text-sm leading-[1.8] font-sans transition-all"
+                  />
+                ) : (
+                  <div className="text-[#1d1d1f] text-[15px] leading-[1.9] whitespace-pre-wrap font-serif tracking-[0.01em]">
+                    {coverLetter}
+                  </div>
+                )}
+              </div>
 
-              {!isEditing && (
-                <div className="flex gap-4">
-                  <button
-                    onClick={downloadDOCX}
-                    className="px-4 py-2 bg-[var(--accent)] text-black rounded-lg font-medium hover:-translate-y-1 hover:shadow-xl transition-transform flex items-center"
-                    aria-label="Download cover letter as DOCX"
-                  >
-                    <svg
-                      className="h-5 w-5 mr-2"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                      xmlns="http://www.w3.org/2000/svg"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2"
-                        d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
-                      />
-                    </svg>
-                    Download DOCX
-                  </button>
-                </div>
-              )}
-              <div className="border-t border-black/[0.08] pt-4">
-                <p className="text-[#86868b] text-sm text-center">
-                  <span className="text-[#0071e3]">Pro Tip:</span>{" "}
-                  Personalize your cover letter with specific details about the
-                  company to stand out!
+              <div className="border-t border-[#f0f0f5] px-6 py-4 bg-[#fafafa]">
+                <p className="text-xs text-[#aeaeb2] text-center">
+                  Personalize the opening with a specific detail about {company || "the company"} — referencing a product, recent news, or their mission — for maximum impact.
                 </p>
               </div>
             </div>

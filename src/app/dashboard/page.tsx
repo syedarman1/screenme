@@ -69,6 +69,18 @@ export default function DashboardPage() {
   const isPro = plan === "pro";
 
   const tools: Tool[] = [
+    /* ── Simple (no AI) ── */
+    {
+      title: "Job Tracker", description: "Track applications from saved to offer",
+      href: "/applications", available: true,
+      icon: <svg {...ICON_PROPS}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>,
+    },
+    {
+      title: "My Resumes", description: "Save, version, and manage your resumes",
+      href: "/resumes", available: true,
+      icon: <svg {...ICON_PROPS}><path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"/></svg>,
+    },
+    /* ── AI-powered (simple → complex) ── */
     {
       title: "Resume Scanner", description: "AI-powered ATS scoring and keyword analysis",
       href: "/resume", available: true,
@@ -90,6 +102,12 @@ export default function DashboardPage() {
       status: isPro ? undefined : "unavailable",
       icon: <svg {...ICON_PROPS}><path strokeLinecap="round" strokeLinejoin="round" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"/></svg>,
     },
+    {
+      title: "Resume Tailor", description: "Rewrite your resume to match any job description",
+      href: "/tailor", available: true,
+      icon: <svg {...ICON_PROPS}><path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>,
+    },
+    /* ── Coming soon ── */
     {
       title: "LinkedIn Optimizer", description: "Maximize your profile visibility",
       href: "#", available: false, status: "coming_soon",
@@ -152,8 +170,64 @@ export default function DashboardPage() {
           </div>
         </header>
 
-        {/* Tools */}
+        {/* Plan */}
         <section className="mb-16">
+          <p className="text-xs font-medium text-[#aeaeb2] uppercase tracking-widest mb-5">Your plan</p>
+          <div className={`rounded-2xl border p-7 ${isPro ? "border-[#0071e3]/20 bg-[#f0f7ff]" : "border-black/[0.08] bg-white"}`}>
+            <div className="flex items-start justify-between flex-wrap gap-6 mb-6">
+              <div>
+                <div className="flex items-center gap-3 mb-1.5">
+                  <h2 className="text-xl font-semibold text-[#1d1d1f]">{isPro ? "Pro" : "Free"}</h2>
+                  {isPro && (
+                    <span className="text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-full bg-[#0071e3]/[0.08] text-[#0071e3] border border-[#0071e3]/20">Active</span>
+                  )}
+                </div>
+                <p className="text-sm text-[#6e6e73]">
+                  {isPro ? "Unlimited access to all features." : "3 scans · 2 cover letters · 2 job matches · 2 tailors per month. 10 applications · 3 resumes."}
+                </p>
+              </div>
+              {!isPro && (
+                <button onClick={handleUpgrade} disabled={busy}
+                  className="px-5 py-2.5 rounded-xl bg-[#0071e3] hover:bg-[#0077ed] text-white font-semibold text-sm transition-colors disabled:opacity-50 cursor-pointer">
+                  {busy ? "Loading…" : "Upgrade — $15/mo"}
+                </button>
+              )}
+            </div>
+
+            {/* Usage bars */}
+            {!isPro && usage && (
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 pt-5 border-t border-black/[0.06]">
+                {[
+                  { label: "Resume Scans",   used: usage.resume_scans   || 0, limit: 3 },
+                  { label: "Cover Letters",  used: usage.cover_letters  || 0, limit: 2 },
+                  { label: "Job Matches",    used: usage.job_matches    || 0, limit: 2 },
+                  { label: "Resume Tailors", used: usage.resume_tailors || 0, limit: 2 },
+                ].map(({ label, used, limit }) => {
+                  const remaining = Math.max(0, limit - used);
+                  const pct = Math.min(100, (used / limit) * 100);
+                  const depleted = remaining === 0;
+                  return (
+                    <div key={label}>
+                      <div className="flex justify-between items-baseline mb-2">
+                        <p className="text-xs text-[#6e6e73]">{label}</p>
+                        <p className={`text-sm font-semibold tabular-nums ${depleted ? "text-red-500" : "text-[#1d1d1f]"}`}>
+                          {remaining}<span className="text-[#aeaeb2] font-normal text-xs">/{limit}</span>
+                        </p>
+                      </div>
+                      <div className="h-1 w-full rounded-full bg-[#e8e8ed] overflow-hidden">
+                        <div className={`h-full rounded-full transition-all duration-700 ${depleted ? "bg-red-500" : "bg-[#0071e3]"}`}
+                          style={{ width: `${pct}%` }} />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </section>
+
+        {/* Tools */}
+        <section>
           <p className="text-xs font-medium text-[#aeaeb2] uppercase tracking-widest mb-5">Your tools</p>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {tools.map(tool => {
@@ -203,61 +277,6 @@ export default function DashboardPage() {
                 </div>
               );
             })}
-          </div>
-        </section>
-
-        {/* Plan */}
-        <section>
-          <p className="text-xs font-medium text-[#aeaeb2] uppercase tracking-widest mb-5">Your plan</p>
-          <div className={`rounded-2xl border p-7 ${isPro ? "border-[#0071e3]/20 bg-[#f0f7ff]" : "border-black/[0.08] bg-white"}`}>
-            <div className="flex items-start justify-between flex-wrap gap-6 mb-6">
-              <div>
-                <div className="flex items-center gap-3 mb-1.5">
-                  <h2 className="text-xl font-semibold text-[#1d1d1f]">{isPro ? "Pro" : "Free"}</h2>
-                  {isPro && (
-                    <span className="text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-full bg-[#0071e3]/[0.08] text-[#0071e3] border border-[#0071e3]/20">Active</span>
-                  )}
-                </div>
-                <p className="text-sm text-[#6e6e73]">
-                  {isPro ? "Unlimited access to all features." : "3 scans · 2 cover letters · 2 job matches per month."}
-                </p>
-              </div>
-              {!isPro && (
-                <button onClick={handleUpgrade} disabled={busy}
-                  className="px-5 py-2.5 rounded-xl bg-[#0071e3] hover:bg-[#0077ed] text-white font-semibold text-sm transition-colors disabled:opacity-50 cursor-pointer">
-                  {busy ? "Loading…" : "Upgrade — $15/mo"}
-                </button>
-              )}
-            </div>
-
-            {/* Usage bars */}
-            {!isPro && usage && (
-              <div className="grid grid-cols-3 gap-4 pt-5 border-t border-black/[0.06]">
-                {[
-                  { label: "Resume Scans",   used: usage.resume_scans  || 0, limit: 3 },
-                  { label: "Cover Letters",  used: usage.cover_letters || 0, limit: 2 },
-                  { label: "Job Matches",    used: usage.job_matches   || 0, limit: 2 },
-                ].map(({ label, used, limit }) => {
-                  const remaining = Math.max(0, limit - used);
-                  const pct = Math.min(100, (used / limit) * 100);
-                  const depleted = remaining === 0;
-                  return (
-                    <div key={label}>
-                      <div className="flex justify-between items-baseline mb-2">
-                        <p className="text-xs text-[#6e6e73]">{label}</p>
-                        <p className={`text-sm font-semibold tabular-nums ${depleted ? "text-red-500" : "text-[#1d1d1f]"}`}>
-                          {remaining}<span className="text-[#aeaeb2] font-normal text-xs">/{limit}</span>
-                        </p>
-                      </div>
-                      <div className="h-1 w-full rounded-full bg-[#e8e8ed] overflow-hidden">
-                        <div className={`h-full rounded-full transition-all duration-700 ${depleted ? "bg-red-500" : "bg-[#0071e3]"}`}
-                          style={{ width: `${pct}%` }} />
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
           </div>
         </section>
       </div>

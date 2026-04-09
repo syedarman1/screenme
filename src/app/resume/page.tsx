@@ -1,11 +1,10 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef } from "react";
 import ResumeUploader from "../components/ResumeUploader";
 import { motion, AnimatePresence } from "framer-motion";
 import { CircularProgressbar, buildStyles } from "react-circular-progressbar";
 import "react-circular-progressbar/dist/styles.css";
-import confetti from "canvas-confetti";
 import PlanChecker from "../components/PlanChecker";
 import { supabase } from "../lib/supabaseClient";
 
@@ -40,6 +39,12 @@ interface StrengthObj {
 
 interface Audit {
   score: number;
+  subscores?: {
+    content: number;
+    formatting: number;
+    ats: number;
+    keywords: number;
+  };
   issues: IssueObj[];
   actions: ActionObj[];
   strengths?: StrengthObj[];
@@ -53,51 +58,120 @@ interface Audit {
   };
 }
 
-const badgeColor = {
-  low: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
-  medium: "bg-[#0071e3]/[0.08] text-[#0071e3] border-[#0071e3]/20",
-  high: "bg-red-500/10 text-red-400 border-red-500/20",
-} as const;
+type ActiveTab = "issues" | "strengths" | "keywords";
 
-const sectionIcons = {
-  Education: "🎓",
-  Skills: "🛠️",
-  Experience: "💼",
-  Projects: "🚀",
-  Summary: "📋",
-  Certifications: "🏆",
-  Other: "📝",
-} as const;
+/* ── helpers ─────────────────────────────────────────────── */
+function scoreColor(s: number) {
+  if (s >= 85) return "#34c759";
+  if (s >= 70) return "#0071e3";
+  if (s >= 50) return "#ff9f0a";
+  return "#ff3b30";
+}
+function scoreLabel(s: number) {
+  if (s >= 85) return "Excellent";
+  if (s >= 70) return "Good";
+  if (s >= 50) return "Fair";
+  return "Needs Work";
+}
+function scoreBadge(s: number) {
+  if (s >= 85) return "bg-emerald-50 text-emerald-700 border-emerald-200";
+  if (s >= 70) return "bg-[#f0f7ff] text-[#0071e3] border-[#0071e3]/20";
+  if (s >= 50) return "bg-amber-50 text-amber-700 border-amber-200";
+  return "bg-red-50 text-red-700 border-red-200";
+}
 
+const SEV_BORDER: Record<Severity, string> = {
+  high:   "border-l-red-500",
+  medium: "border-l-amber-400",
+  low:    "border-l-emerald-500",
+};
+const SEV_BADGE: Record<Severity, string> = {
+  high:   "bg-red-50 text-red-700 border-red-200",
+  medium: "bg-amber-50 text-amber-700 border-amber-200",
+  low:    "bg-emerald-50 text-emerald-700 border-emerald-200",
+};
+const SEV_DOT: Record<Severity, string> = {
+  high:   "bg-red-500",
+  medium: "bg-amber-400",
+  low:    "bg-emerald-500",
+};
+
+/* ── CopyButton ───────────────────────────────────────────── */
+function CopyButton({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <button
+      onClick={() => {
+        navigator.clipboard.writeText(text).then(() => {
+          setCopied(true);
+          setTimeout(() => setCopied(false), 2000);
+        });
+      }}
+      className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-medium transition-all ${
+        copied
+          ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+          : "bg-[#f5f5f7] text-[#6e6e73] border border-[#d2d2d7] hover:border-[#0071e3] hover:text-[#0071e3]"
+      }`}
+    >
+      {copied ? (
+        <>
+          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
+          </svg>
+          Copied
+        </>
+      ) : (
+        <>
+          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+          </svg>
+          Copy
+        </>
+      )}
+    </button>
+  );
+}
+
+/* ── SubScoreBar ──────────────────────────────────────────── */
+function SubScoreBar({ label, value }: { label: string; value: number }) {
+  const c = scoreColor(value);
+  return (
+    <div>
+      <div className="flex justify-between mb-1.5">
+        <span className="text-xs text-[#6e6e73] font-medium">{label}</span>
+        <span className="text-xs font-semibold" style={{ color: c }}>{value}</span>
+      </div>
+      <div className="h-1.5 rounded-full bg-[#e8e8ed] overflow-hidden">
+        <motion.div
+          className="h-full rounded-full"
+          style={{ backgroundColor: c }}
+          initial={{ width: 0 }}
+          animate={{ width: `${value}%` }}
+          transition={{ duration: 0.8, ease: "easeOut" }}
+        />
+      </div>
+    </div>
+  );
+}
+
+/* ── Main component ───────────────────────────────────────── */
 export default function ResumeScreen() {
-  const [audit, setAudit] = useState<Audit | null>(null);
+  const [audit, setAudit]     = useState<Audit | null>(null);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError]     = useState<string | null>(null);
   const [controller, setController] = useState<AbortController | null>(null);
-  const [activeTab, setActiveTab] = useState<"issues" | "strengths" | "keywords">("issues");
-  const [showTips, setShowTips] = useState(true);
-  const scoreRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (audit?.score && audit.score >= 85 && scoreRef.current) {
-      const rect = scoreRef.current.getBoundingClientRect();
-      confetti({
-        particleCount: 80,
-        spread: 60,
-        origin: {
-          x: (rect.left + rect.width / 2) / window.innerWidth,
-          y: (rect.top + rect.height / 2) / window.innerHeight,
-        },
-      });
-    }
-  }, [audit?.score]);
+  const [activeTab, setActiveTab]   = useState<ActiveTab>("issues");
+  const [openIdx, setOpenIdx]       = useState<number | null>(null);
+  const resultsRef = useRef<HTMLDivElement>(null);
 
   const sendToApi = async (resume: string) => {
+    if (!resume.trim()) return;
     const ac = new AbortController();
     setController(ac);
     setLoading(true);
     setError(null);
     setAudit(null);
+    setOpenIdx(null);
 
     try {
       if (!supabase) throw new Error("Authentication service not available");
@@ -115,402 +189,431 @@ export default function ResumeScreen() {
       });
 
       if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || "Failed to analyze resume");
+        const d = await res.json().catch(() => ({}));
+        throw new Error(d.error || "Failed to analyze resume");
       }
 
       const data: Audit = await res.json();
       setAudit(data);
       setActiveTab("issues");
+      setTimeout(() => resultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 150);
     } catch (e: any) {
-      if (e.name === "AbortError") setError("Analysis cancelled");
-      else setError(e.message || "An unexpected error occurred");
+      if (e.name === "AbortError") setError("Analysis cancelled.");
+      else setError(e.message || "Something went wrong. Please try again.");
     } finally {
       setLoading(false);
       setController(null);
     }
   };
 
-  const getScoreColor = (score: number) => {
-    if (score >= 85) return "var(--score-excellent)";
-    if (score >= 70) return "var(--score-good)";
-    if (score >= 50) return "var(--score-average)";
-    return "var(--score-needs-work)";
-  };
+  /* derived counts */
+  const highCount   = audit?.issues.filter(i => i.severity === "high").length   ?? 0;
+  const medCount    = audit?.issues.filter(i => i.severity === "medium").length  ?? 0;
+  const totalFound  = audit?.keywords?.reduce((n, k) => n + k.terms.length, 0)   ?? 0;
+  const totalMissing = audit?.keywords?.reduce((n, k) => n + (k.missing?.length ?? 0), 0) ?? 0;
 
-  const getScoreLabel = (score: number) => {
-    if (score >= 85) return "Excellent";
-    if (score >= 70) return "Good";
-    if (score >= 50) return "Average";
-    return "Needs Work";
-  };
-
-  const handleCopyText = (text: string) => {
-    navigator.clipboard.writeText(text);
-  };
+  const tabs: { id: ActiveTab; label: string; badge?: number }[] = [
+    { id: "issues",    label: "Issues & Fixes",  badge: audit?.issues.length },
+    { id: "strengths", label: "Strengths",        badge: audit?.strengths?.length },
+    { id: "keywords",  label: "Keywords",         badge: audit ? totalFound + totalMissing : undefined },
+  ];
 
   return (
-    <div className="min-h-screen bg-[#f5f5f7] text-[#1d1d1f] py-16">
-      {/* Header */}
-      <header className="max-w-6xl mx-auto text-center mb-12 px-4">
-        <div className="inline-flex items-center justify-center h-12 w-12 bg-[#0071e3]/[0.08] border border-[#0071e3]/20 rounded-2xl mb-5">
-          <svg width="22" height="22" viewBox="0 0 24 24" className="stroke-[#0071e3] fill-none" strokeWidth="1.5">
-            <path d="M4 2h10l6 6v14H4V2z" />
-            <path d="M14 2v6h6" />
+    <div className="min-h-screen bg-[#f5f5f7] text-[#1d1d1f] py-16 px-4">
+
+      {/* ── Page header ─────────────────────────────────── */}
+      <header className="max-w-2xl mx-auto text-center mb-14">
+        <div className="inline-flex items-center justify-center w-14 h-14 rounded-[18px] bg-[#0071e3]/[0.08] border border-[#0071e3]/15 mb-6">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="stroke-[#0071e3]" strokeWidth="1.5">
+            <path d="M4 2h10l6 6v14H4V2z" /><path d="M14 2v6h6" />
+            <path d="M8 12h8M8 16h5" />
           </svg>
         </div>
-        <h1 className="text-4xl md:text-5xl font-semibold tracking-tight text-[#1d1d1f]">
+        <h1 className="text-5xl font-semibold tracking-tight text-[#1d1d1f] mb-3">
           Resume Scanner
         </h1>
-        <p className="mt-3 text-base text-[#6e6e73] max-w-xl mx-auto leading-relaxed">
-          AI-powered insights to optimize your resume for ATS and recruiters.
+        <p className="text-[#6e6e73] text-lg leading-relaxed max-w-lg mx-auto">
+          Get an instant AI-powered audit — score, gaps, rewrites, and keywords in seconds.
         </p>
       </header>
 
-      {/* Quick Tips */}
-      {showTips && (
-        <div className="max-w-6xl mx-auto mb-12 px-4">
-          <div className="bg-white border border-black/[0.08] rounded-2xl p-6 relative">
-            <button
-              className="absolute top-4 right-4 text-[#6e6e73] hover:text-[#6e6e73] transition-colors"
-              onClick={() => setShowTips(false)}
-              aria-label="Close tips"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-            <h3 className="text-sm font-semibold text-[#0071e3] mb-4 uppercase tracking-widest">
-              Resume Optimization Tips
-            </h3>
-            <ul className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm text-[#6e6e73]">
-              {[
-                "Use action verbs and quantify achievements for impact.",
-                "Tailor your resume to match job-specific keywords.",
-                "Ensure consistent formatting for a professional look.",
-                "Highlight relevant skills and experiences upfront.",
-              ].map((tip, i) => (
-                <li key={i} className="flex items-start gap-2">
-                  <span className="text-[#0071e3] flex-shrink-0">✓</span>
-                  <span>{tip}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </div>
-      )}
-
-      {/* Uploader */}
-      <section className="max-w-6xl mx-auto px-4">
+      {/* ── Upload card ─────────────────────────────────── */}
+      <section className="max-w-2xl mx-auto">
         <PlanChecker feature="resume_scan">
-          <div className="bg-white rounded-2xl border border-black/[0.08] p-8">
-            <h2 className="text-2xl font-semibold text-[#1d1d1f] mb-6">
-              Upload Your Resume
-            </h2>
+          <div className="bg-white rounded-3xl border border-black/[0.06] shadow-sm p-8">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-xl font-semibold text-[#1d1d1f]">Your Resume</h2>
+              {audit && (
+                <button
+                  onClick={() => { setAudit(null); setError(null); }}
+                  className="text-xs text-[#0071e3] hover:underline font-medium"
+                >
+                  Scan another
+                </button>
+              )}
+            </div>
             <ResumeUploader onResumeSubmit={sendToApi} />
           </div>
         </PlanChecker>
       </section>
 
-      {/* Status */}
-      <section className="max-w-6xl mx-auto mt-12 px-4" aria-live="polite" aria-busy={loading}>
+      {/* ── Status states ───────────────────────────────── */}
+      <div className="max-w-2xl mx-auto mt-6 space-y-4" aria-live="polite">
         <AnimatePresence mode="wait">
           {loading && (
             <motion.div
-              initial={{ opacity: 0, y: 20 }}
+              key="loading"
+              initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              className="p-8 bg-white rounded-2xl border border-black/[0.08] flex flex-col items-center gap-4"
+              exit={{ opacity: 0, y: -12 }}
+              className="bg-white rounded-3xl border border-black/[0.06] shadow-sm p-10 flex flex-col items-center gap-5"
             >
-              <div className="relative w-16 h-16">
-                <div className="absolute inset-0 border-4 border-t-[#0071e3] border-r-[#0071e3] border-b-transparent border-l-transparent rounded-full animate-spin" />
+              {/* Animated scan bars */}
+              <div className="relative w-16 h-16 flex items-center justify-center">
+                <div className="absolute inset-0 rounded-full border-[3px] border-[#e8e8ed]" />
+                <div className="absolute inset-0 rounded-full border-[3px] border-t-[#0071e3] border-r-[#0071e3]/20 border-b-transparent border-l-transparent animate-spin" />
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" className="stroke-[#0071e3]" strokeWidth="1.5">
+                  <path d="M9 12l2 2 4-4" /><circle cx="12" cy="12" r="9" />
+                </svg>
               </div>
               <div className="text-center">
-                <h3 className="text-xl font-semibold text-[#1d1d1f]">
-                  Analyzing Resume...
-                </h3>
-                <p className="text-[#86868b] mt-2">
-                  Our AI is scanning for optimization opportunities.
-                </p>
+                <p className="font-semibold text-[#1d1d1f] text-lg">Analyzing your resume…</p>
+                <p className="text-[#86868b] text-sm mt-1">Scanning for improvements, keywords, and formatting issues.</p>
               </div>
               {controller && (
                 <button
                   onClick={() => controller.abort()}
-                  className="mt-4 px-5 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-xl border border-red-500/20 transition-colors font-medium"
+                  className="px-5 py-2 rounded-xl bg-red-50 text-red-600 border border-red-200 text-sm font-medium hover:bg-red-100 transition-colors"
                 >
-                  Cancel Analysis
+                  Cancel
                 </button>
               )}
             </motion.div>
           )}
-        </AnimatePresence>
-        <AnimatePresence mode="wait">
-          {error && (
+
+          {error && !loading && (
             <motion.div
-              initial={{ opacity: 0, y: 20 }}
+              key="error"
+              initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              className="p-6 bg-red-500/8 border border-red-500/20 text-red-400 rounded-2xl flex items-center justify-center mt-8"
+              exit={{ opacity: 0 }}
+              className="flex items-start gap-3 p-5 bg-red-50 border border-red-200 rounded-2xl text-red-700 text-sm"
               role="alert"
             >
-              <svg className="h-5 w-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-5 h-5 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
               {error}
             </motion.div>
           )}
         </AnimatePresence>
-      </section>
+      </div>
 
-      {/* Feedback */}
+      {/* ── Results ─────────────────────────────────────── */}
       <AnimatePresence>
         {audit && (
-          <motion.section
-            initial={{ opacity: 0, y: 40 }}
-            animate={{ opacity: 1, y: 0, transition: { delay: 0.2 } }}
-            className="max-w-6xl mx-auto mt-12 px-4"
+          <motion.div
+            ref={resultsRef}
+            key="results"
+            initial={{ opacity: 0, y: 24 }}
+            animate={{ opacity: 1, y: 0, transition: { duration: 0.4, ease: "easeOut" } }}
+            className="max-w-2xl mx-auto mt-8 space-y-4"
           >
-            <div className="bg-white rounded-2xl border border-black/[0.08] overflow-hidden">
-              {/* Header with Score */}
-              <div className="bg-black/[0.02] p-8 border-b border-black/[0.08]">
-                <div className="flex flex-col md:flex-row gap-8 items-center">
-                  <div ref={scoreRef} className="w-32 h-32 flex-shrink-0">
-                    <CircularProgressbar
-                      value={audit.score}
-                      text={`${audit.score}`}
-                      styles={buildStyles({
-                        textSize: "28px",
-                        pathColor: getScoreColor(audit.score),
-                        textColor: getScoreColor(audit.score),
-                        trailColor: "#e8e8ed",
-                        pathTransitionDuration: 0.8,
-                      })}
-                    />
-                  </div>
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-3">
-                      <h2 className="text-3xl font-bold text-[#1d1d1f]">
-                        Resume Score
-                      </h2>
-                      <span
-                        className="px-4 py-1.5 rounded-full text-sm font-semibold"
-                        style={{
-                          backgroundColor: `${getScoreColor(audit.score)}20`,
-                          color: getScoreColor(audit.score),
-                        }}
-                      >
-                        {getScoreLabel(audit.score)}
+
+            {/* ── Score card ──────────────────────────── */}
+            <div className="bg-white rounded-3xl border border-black/[0.06] shadow-sm overflow-hidden">
+              <div className="p-8">
+                <div className="flex flex-col sm:flex-row items-center sm:items-start gap-7">
+
+                  {/* Circular score */}
+                  <div className="relative flex-shrink-0">
+                    <div className="w-32 h-32">
+                      <CircularProgressbar
+                        value={audit.score}
+                        text={`${audit.score}`}
+                        styles={buildStyles({
+                          textSize: "26px",
+                          pathColor: scoreColor(audit.score),
+                          textColor: "#1d1d1f",
+                          trailColor: "#f0f0f5",
+                          pathTransitionDuration: 1,
+                        })}
+                      />
+                    </div>
+                    <div className="absolute -bottom-1 left-1/2 -translate-x-1/2">
+                      <span className={`px-3 py-0.5 rounded-full text-xs font-semibold border ${scoreBadge(audit.score)}`}>
+                        {scoreLabel(audit.score)}
                       </span>
                     </div>
-                    <p className="text-[#6e6e73] leading-relaxed text-lg">
-                      {audit.summary || (audit.score >= 85
-                        ? "Outstanding resume! You're well-positioned to impress recruiters."
-                        : audit.score >= 70
-                          ? "Solid resume with minor areas for enhancement."
-                          : audit.score >= 50
-                            ? "Your resume needs key improvements to stand out."
-                            : "Significant updates are needed for effectiveness.")}
+                  </div>
+
+                  {/* Right column */}
+                  <div className="flex-1 min-w-0 text-center sm:text-left">
+                    <h2 className="text-2xl font-bold text-[#1d1d1f] mb-2">Resume Score</h2>
+                    <p className="text-[#6e6e73] text-sm leading-relaxed mb-5">
+                      {audit.summary || (
+                        audit.score >= 85 ? "Outstanding — you're well-positioned to impress recruiters." :
+                        audit.score >= 70 ? "Solid resume with a few areas worth polishing." :
+                        audit.score >= 50 ? "Decent foundation — address the high-priority issues below to stand out." :
+                        "Significant updates needed to pass ATS screening and catch recruiter attention."
+                      )}
                     </p>
+
+                    {/* Stat pills */}
+                    <div className="flex flex-wrap justify-center sm:justify-start gap-2">
+                      {highCount > 0 && (
+                        <span className="flex items-center gap-1.5 px-3 py-1 bg-red-50 border border-red-200 rounded-full text-xs font-medium text-red-700">
+                          <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
+                          {highCount} high priority
+                        </span>
+                      )}
+                      {medCount > 0 && (
+                        <span className="flex items-center gap-1.5 px-3 py-1 bg-amber-50 border border-amber-200 rounded-full text-xs font-medium text-amber-700">
+                          <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+                          {medCount} medium
+                        </span>
+                      )}
+                      {(audit.strengths?.length ?? 0) > 0 && (
+                        <span className="flex items-center gap-1.5 px-3 py-1 bg-emerald-50 border border-emerald-200 rounded-full text-xs font-medium text-emerald-700">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                          {audit.strengths!.length} strengths
+                        </span>
+                      )}
+                      {audit.metadata && (
+                        <span className="flex items-center gap-1.5 px-3 py-1 bg-[#f5f5f7] border border-[#d2d2d7] rounded-full text-xs font-medium text-[#6e6e73]">
+                          {audit.metadata.sectionsFound} sections
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
+
+                {/* Sub-scores */}
+                {audit.subscores && (
+                  <div className="mt-7 pt-6 border-t border-[#f0f0f5] grid grid-cols-2 gap-x-8 gap-y-4">
+                    <SubScoreBar label="Content Quality"    value={audit.subscores.content} />
+                    <SubScoreBar label="ATS Compatibility"  value={audit.subscores.ats} />
+                    <SubScoreBar label="Formatting"         value={audit.subscores.formatting} />
+                    <SubScoreBar label="Keyword Density"    value={audit.subscores.keywords} />
+                  </div>
+                )}
               </div>
+            </div>
+
+            {/* ── Analysis card ───────────────────────── */}
+            <div className="bg-white rounded-3xl border border-black/[0.06] shadow-sm overflow-hidden">
 
               {/* Tabs */}
-              <div className="border-b border-black/[0.08] bg-black/[0.02]">
-                <div className="flex max-w-full overflow-x-auto scrollbar-hidden px-4">
-                  {[
-                    { id: "issues", label: `Issues & Actions (${audit.issues.length})` },
-                    { id: "strengths", label: `Strengths (${audit.strengths?.length || 0})` },
-                    { id: "keywords", label: "Keywords" },
-                  ].map((tab) => (
-                    <button
-                      key={tab.id}
-                      className={`px-6 py-4 text-sm font-semibold transition-colors relative ${
+              <div className="flex border-b border-[#f0f0f5] px-2">
+                {tabs.map((tab) => (
+                  <button
+                    key={tab.id}
+                    onClick={() => { setActiveTab(tab.id); setOpenIdx(null); }}
+                    className={`flex items-center gap-2 px-5 py-4 text-sm font-semibold transition-colors relative whitespace-nowrap ${
+                      activeTab === tab.id
+                        ? "text-[#0071e3] after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-full after:h-[2px] after:bg-[#0071e3]"
+                        : "text-[#86868b] hover:text-[#1d1d1f]"
+                    }`}
+                  >
+                    {tab.label}
+                    {tab.badge !== undefined && tab.badge > 0 && (
+                      <span className={`px-1.5 py-0.5 rounded-full text-xs leading-none font-semibold ${
                         activeTab === tab.id
-                          ? "text-[var(--accent)] after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-full after:h-1 after:bg-[var(--accent)]"
-                          : "text-[#86868b] hover:text-[#1d1d1f]"
-                      }`}
-                      onClick={() => setActiveTab(tab.id as typeof activeTab)}
-                    >
-                      {tab.label}
-                    </button>
-                  ))}
-                </div>
+                          ? "bg-[#0071e3]/10 text-[#0071e3]"
+                          : "bg-[#f0f0f5] text-[#86868b]"
+                      }`}>
+                        {tab.badge}
+                      </span>
+                    )}
+                  </button>
+                ))}
               </div>
 
-              {/* Tab Content */}
-              <div className="p-8">
+              {/* Tab body */}
+              <div className="p-6">
+
+                {/* ISSUES & FIXES */}
                 {activeTab === "issues" && (
-                  <>
-                    {audit.issues.length === 0 ? (
-                      <div className="p-8 bg-emerald-500/8 border border-emerald-500/20 text-emerald-400 rounded-2xl text-center">
-                        <svg className="h-10 w-10 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  audit.issues.length === 0 ? (
+                    <div className="py-12 flex flex-col items-center gap-3 text-center">
+                      <div className="w-12 h-12 rounded-2xl bg-emerald-50 border border-emerald-200 flex items-center justify-center">
+                        <svg className="w-6 h-6 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
                         </svg>
-                        <h3 className="text-xl font-semibold text-emerald-400 mb-2">
-                          No Issues Detected!
-                        </h3>
-                        <p>Your resume is optimized and ready to shine!</p>
                       </div>
-                    ) : (
-                      <ul className="space-y-6">
-                        {audit.issues.map((issue, i) => (
-                          <li key={i} role="listitem" className="animate-fadeIn">
-                            <details className="group border border-black/[0.08] rounded-xl overflow-hidden">
-                              <summary className="cursor-pointer flex items-center gap-4 p-5 bg-[#f5f5f7] hover:bg-white transition-colors">
-                                <span className={`px-3 py-1 text-xs rounded-full border font-medium ${badgeColor[issue.severity]}`}>
-                                  {issue.severity.toUpperCase()}
-                                </span>
-                                <span className="flex items-center gap-3">
-                                  <span className="text-[#86868b] text-lg">
-                                    {sectionIcons[issue.section as keyof typeof sectionIcons] || "📄"}
-                                  </span>
-                                  <span className="font-semibold text-[#1d1d1f]">
-                                    {issue.section}
-                                  </span>
-                                </span>
-                                <span className="text-[#6e6e73] truncate flex-1 text-sm">
-                                  {issue.text}
-                                </span>
-                                <svg className="w-5 h-5 text-[#6e6e73] group-open:rotate-180 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-                                </svg>
-                              </summary>
-                              <div className="p-6 space-y-4 bg-[#f5f5f7] border-t border-black/[0.08]">
-                                {issue.line && (
-                                  <div className="bg-black/[0.02] p-4 rounded-lg border border-black/[0.08]">
-                                    <p className="text-[#86868b] text-sm mb-2">Original Text:</p>
-                                    <p className="text-[#6e6e73] italic">"{issue.line}"</p>
+                      <p className="font-semibold text-[#1d1d1f]">No issues found</p>
+                      <p className="text-[#86868b] text-sm">Your resume looks clean and well-optimized.</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      {audit.issues.map((issue, i) => (
+                        <div
+                          key={i}
+                          className={`rounded-2xl border border-[#e8e8ed] border-l-4 overflow-hidden ${SEV_BORDER[issue.severity]}`}
+                        >
+                          {/* Row */}
+                          <button
+                            onClick={() => setOpenIdx(openIdx === i ? null : i)}
+                            aria-expanded={openIdx === i}
+                            className="w-full flex items-center gap-3 px-5 py-4 text-left hover:bg-[#fafafa] transition-colors"
+                          >
+                            <span className={`w-2 h-2 rounded-full flex-shrink-0 ${SEV_DOT[issue.severity]}`} />
+                            <span className={`flex-shrink-0 text-xs font-semibold px-2.5 py-0.5 rounded-full border ${SEV_BADGE[issue.severity]}`}>
+                              {issue.severity.charAt(0).toUpperCase() + issue.severity.slice(1)}
+                            </span>
+                            <span className="flex-shrink-0 text-xs font-medium text-[#6e6e73] bg-[#f5f5f7] px-2.5 py-0.5 rounded-full border border-[#e8e8ed]">
+                              {issue.section}
+                            </span>
+                            <span className="text-[#1d1d1f] text-sm truncate flex-1">{issue.text}</span>
+                            <svg
+                              className={`w-4 h-4 text-[#86868b] flex-shrink-0 transition-transform duration-200 ${openIdx === i ? "rotate-180" : ""}`}
+                              fill="none" viewBox="0 0 24 24" stroke="currentColor"
+                            >
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                            </svg>
+                          </button>
+
+                          {/* Expanded */}
+                          {openIdx === i && (
+                            <div className="px-5 pb-5 space-y-4 border-t border-[#f0f0f5]">
+                              {/* Original */}
+                              {issue.line && (
+                                <div className="mt-4 p-4 bg-[#fafafa] rounded-xl border border-[#e8e8ed]">
+                                  <p className="text-[10px] font-semibold text-[#86868b] uppercase tracking-widest mb-2">Original</p>
+                                  <p className="text-[#1d1d1f] text-sm leading-relaxed italic">"{issue.line}"</p>
+                                </div>
+                              )}
+
+                              {/* Issue */}
+                              <div>
+                                <p className="text-[10px] font-semibold text-[#86868b] uppercase tracking-widest mb-1.5">Issue</p>
+                                <p className="text-[#1d1d1f] text-sm leading-relaxed">{issue.text}</p>
+                                {issue.reason && <p className="mt-1 text-[#86868b] text-xs">{issue.reason}</p>}
+                              </div>
+
+                              {/* Suggested rewrite */}
+                              {audit.actions[i] && (
+                                <div className="p-4 bg-[#f0f7ff] rounded-xl border border-[#0071e3]/15">
+                                  <div className="flex items-center justify-between mb-2">
+                                    <p className="text-[10px] font-semibold text-[#0071e3] uppercase tracking-widest">Suggested Rewrite</p>
+                                    <CopyButton text={audit.actions[i].rewrite} />
                                   </div>
-                                )}
-                                <div>
-                                  <p className="text-[#86868b] text-sm mb-2">Issue:</p>
-                                  <p className="text-[#6e6e73]">{issue.text}</p>
-                                  {issue.reason && (
-                                    <p className="mt-2 text-[#86868b] text-sm">{issue.reason}</p>
+                                  <p className="text-[#1d1d1f] text-sm leading-relaxed">{audit.actions[i].rewrite}</p>
+                                  {audit.actions[i].improvement && (
+                                    <p className="mt-3 text-[#6e6e73] text-xs">
+                                      <span className="font-semibold text-[#0071e3]">Why it works: </span>
+                                      {audit.actions[i].improvement}
+                                    </p>
                                   )}
-                                </div>
-                                {audit.actions[i] && (
-                                  <div className="bg-white p-5 rounded-lg border border-black/[0.08]">
-                                    <div className="flex justify-between items-center mb-3">
-                                      <h4 className="text-[#1d1d1f] font-semibold">Suggested Improvement</h4>
-                                      <button
-                                        onClick={() => handleCopyText(audit.actions[i].rewrite)}
-                                        className="p-2 hover:bg-white/[0.07] rounded-lg transition-colors"
-                                        aria-label="Copy suggested action"
-                                      >
-                                        <svg className="h-5 w-5 text-[#86868b]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                                        </svg>
-                                      </button>
-                                    </div>
-                                    <p className="text-[#1d1d1f] leading-relaxed">{audit.actions[i].rewrite}</p>
-                                    {audit.actions[i].improvement && (
-                                      <p className="mt-3 text-[#86868b] text-sm">
-                                        <span className="text-[#0071e3]">Why this works:</span>{" "}
-                                        {audit.actions[i].improvement}
-                                      </p>
-                                    )}
-                                  </div>
-                                )}
-                              </div>
-                            </details>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </>
-                )}
-
-                {activeTab === "strengths" && (
-                  <>
-                    {!audit.strengths || audit.strengths.length === 0 ? (
-                      <div className="p-8 bg-white/20 border border-black/[0.08] rounded-2xl text-center">
-                        <p className="text-[#86868b] text-lg">
-                          No specific strengths identified yet. Keep refining your resume!
-                        </p>
-                      </div>
-                    ) : (
-                      <ul className="space-y-6">
-                        {audit.strengths.map((strength, i) => (
-                          <li key={i} className="bg-emerald-500/8 border border-emerald-500/15 rounded-xl p-6">
-                            <div className="flex items-center gap-3 mb-3">
-                              <span className="text-xl">{sectionIcons[strength.section as keyof typeof sectionIcons] || "📄"}</span>
-                              <h4 className="font-semibold text-emerald-400 text-lg">{strength.section}</h4>
-                            </div>
-                            <p className="text-[#1d1d1f] mb-2">{strength.text}</p>
-                            <p className="text-[#86868b] text-sm">
-                              <span className="text-emerald-400">Why this works:</span> {strength.reason}
-                            </p>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </>
-                )}
-
-                {activeTab === "keywords" && (
-                  <>
-                    {!audit.keywords || audit.keywords.length === 0 ? (
-                      <div className="p-8 bg-white/20 border border-black/[0.08] rounded-2xl text-center">
-                        <p className="text-[#86868b] text-lg">
-                          No keyword analysis available. Upload a resume to get started.
-                        </p>
-                      </div>
-                    ) : (
-                      <div className="space-y-6">
-                        {audit.keywords.map((keyword, i) => (
-                          <div key={i} className="border border-black/[0.08] rounded-xl overflow-hidden">
-                            <div className="bg-black/[0.02] p-4 font-semibold text-[#1d1d1f] text-lg">
-                              {keyword.category}
-                            </div>
-                            <div className="p-6">
-                              <div className="mb-6">
-                                <h4 className="text-sm text-[#86868b] mb-3 font-medium">Found Keywords</h4>
-                                <div className="flex flex-wrap gap-3">
-                                  {keyword.terms.map((term, j) => (
-                                    <span
-                                      key={j}
-                                      className="px-3 py-1.5 bg-black/[0.03] text-[#1d1d1f] rounded-full border border-white/[0.1] text-sm font-medium"
-                                    >
-                                      {term}
-                                    </span>
-                                  ))}
-                                </div>
-                              </div>
-                              {keyword.missing && keyword.missing.length > 0 && (
-                                <div>
-                                  <h4 className="text-sm text-[#86868b] mb-3 font-medium">Suggested Keywords</h4>
-                                  <div className="flex flex-wrap gap-3">
-                                    {keyword.missing.map((term, j) => (
-                                      <span
-                                        key={j}
-                                        className="px-3 py-1.5 bg-[#0071e3]/[0.08] text-[#0071e3] rounded-full border border-[#0071e3]/20 text-sm font-medium"
-                                      >
-                                        {term}
-                                      </span>
-                                    ))}
-                                  </div>
                                 </div>
                               )}
                             </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )
+                )}
+
+                {/* STRENGTHS */}
+                {activeTab === "strengths" && (
+                  !audit.strengths || audit.strengths.length === 0 ? (
+                    <div className="py-12 flex flex-col items-center gap-3 text-center">
+                      <p className="text-[#86868b]">No specific strengths identified yet.</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {audit.strengths.map((s, i) => (
+                        <div key={i} className="flex gap-4 p-5 bg-emerald-50 border border-emerald-200 rounded-2xl">
+                          <div className="w-8 h-8 rounded-xl bg-emerald-100 border border-emerald-200 flex items-center justify-center flex-shrink-0 mt-0.5">
+                            <svg className="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
+                            </svg>
                           </div>
-                        ))}
-                      </div>
-                    )}
-                  </>
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2 mb-1.5">
+                              <span className="text-xs font-semibold px-2 py-0.5 bg-white border border-emerald-200 rounded-full text-emerald-700">
+                                {s.section}
+                              </span>
+                            </div>
+                            <p className="text-[#1d1d1f] text-sm leading-relaxed">{s.text}</p>
+                            <p className="mt-1.5 text-emerald-700 text-xs">
+                              <span className="font-semibold">Why it works: </span>{s.reason}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )
+                )}
+
+                {/* KEYWORDS */}
+                {activeTab === "keywords" && (
+                  !audit.keywords || audit.keywords.length === 0 ? (
+                    <div className="py-12 flex flex-col items-center gap-3 text-center">
+                      <p className="text-[#86868b]">No keyword data available.</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-5">
+                      {audit.keywords.map((kw, i) => (
+                        <div key={i}>
+                          <div className="flex items-center gap-2 mb-3">
+                            <h3 className="text-sm font-semibold text-[#1d1d1f]">{kw.category}</h3>
+                            <span className="text-xs text-[#86868b]">
+                              {kw.terms.length} found
+                              {kw.missing && kw.missing.length > 0 ? ` · ${kw.missing.length} suggested` : ""}
+                            </span>
+                          </div>
+
+                          {kw.terms.length > 0 && (
+                            <div className="flex flex-wrap gap-2 mb-3">
+                              {kw.terms.map((t, j) => (
+                                <span key={j} className="flex items-center gap-1 px-3 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-full text-xs font-medium">
+                                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
+                                  </svg>
+                                  {t}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+
+                          {kw.missing && kw.missing.length > 0 && (
+                            <>
+                              <p className="text-[10px] font-semibold text-[#86868b] uppercase tracking-widest mb-2">Consider adding</p>
+                              <div className="flex flex-wrap gap-2">
+                                {kw.missing.map((t, j) => (
+                                  <span key={j} className="flex items-center gap-1 px-3 py-1 bg-[#f0f7ff] text-[#0071e3] border border-[#0071e3]/20 rounded-full text-xs font-medium">
+                                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 5v14M5 12h14" />
+                                    </svg>
+                                    {t}
+                                  </span>
+                                ))}
+                              </div>
+                            </>
+                          )}
+
+                          {i < (audit.keywords?.length ?? 0) - 1 && (
+                            <div className="mt-5 border-t border-[#f0f0f5]" />
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )
                 )}
               </div>
 
-              {/* Footer with Tip */}
-              <div className="border-t border-black/[0.08] p-6 bg-[#f5f5f7]/30">
-                <p className="text-[#86868b] text-sm text-center">
-                  <span className="text-[#0071e3] font-semibold">Pro Tip:</span>{" "}
-                  Recruiters scan resumes in 6–7 seconds. Optimize for clarity and impact!
+              {/* Footer */}
+              <div className="px-6 py-4 bg-[#fafafa] border-t border-[#f0f0f5]">
+                <p className="text-center text-xs text-[#86868b]">
+                  <span className="font-semibold text-[#0071e3]">Tip: </span>
+                  Recruiters spend 6–7 seconds on a first pass. Lead with impact, quantify everything, and keep it to one page if you have under 10 years of experience.
                 </p>
               </div>
             </div>
-          </motion.section>
+
+          </motion.div>
         )}
       </AnimatePresence>
     </div>
