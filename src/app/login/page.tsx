@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { supabase } from "../lib/supabaseClient";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import Logo from "../components/Logo";
 
 export default function AuthPage() {
   const [email,        setEmail]        = useState("");
@@ -74,27 +75,23 @@ export default function AuthPage() {
   };
 
   return (
-    <div className="min-h-[100dvh] bg-[#f5f5f7] flex flex-col items-center justify-center p-4 relative overflow-hidden">
-      {/* Subtle blue glow */}
-      <div aria-hidden className="pointer-events-none absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[400px] bg-[#0071e3] opacity-[0.06] rounded-full blur-[100px]" />
-
-      <div className="w-full max-w-sm relative z-10">
+    <div className="min-h-[100dvh] bg-bg flex flex-col items-center justify-center p-4">
+      <div className="w-full max-w-sm">
         {/* Wordmark */}
         <div className="text-center mb-8">
-          <Link href="/" className="inline-block text-xl font-semibold text-[#1d1d1f] tracking-tight">
-            Screen<span className="text-[#0071e3]">Me</span>
+          <Link href="/" className="inline-flex justify-center">
+            <Logo className="text-base" />
           </Link>
-          <h1 className="text-2xl font-semibold text-[#1d1d1f] mt-5 mb-1 tracking-tight">Welcome back</h1>
-          <p className="text-sm text-[#86868b]">Sign in to your account</p>
+          <h1 className="text-2xl font-semibold text-fg mt-5 mb-1 tracking-tight">Welcome back</h1>
+          <p className="text-sm text-fg-subtle">Sign in to your account</p>
         </div>
 
-        <div className="rounded-2xl border border-black/[0.08] bg-white shadow-md p-7 flex flex-col gap-4">
+        <div className="card p-6 flex flex-col gap-4">
           {/* Google */}
           <button
             onClick={handleGoogle}
             disabled={loading}
-            className="w-full bg-[#1d1d1f] text-white font-medium py-2.5 rounded-xl hover:bg-[#2d2d2f]
-                     transition-colors duration-200 flex items-center justify-center gap-2.5 text-sm disabled:opacity-50 cursor-pointer google-btn"
+            className="btn btn-primary w-full py-2.5 disabled:opacity-50"
           >
             <svg className="w-4 h-4" viewBox="0 0 24 24" aria-hidden>
               <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -107,7 +104,7 @@ export default function AuthPage() {
 
           <div className="flex items-center gap-3">
             <div className="flex-1 h-px bg-black/[0.06]" />
-            <span className="text-xs text-[#aeaeb2]">or</span>
+            <span className="text-xs text-fg-subtle">or</span>
             <div className="flex-1 h-px bg-black/[0.06]" />
           </div>
 
@@ -118,20 +115,20 @@ export default function AuthPage() {
             </div>
           )}
           {message && (
-            <div role="status" className="p-3 rounded-xl border border-[#0071e3]/20 bg-[#0071e3]/[0.06]">
-              <p className="text-sm text-[#0071e3]">{message}</p>
+            <div role="status" className="p-3 rounded-lg border border-border bg-surface-2">
+              <p className="text-sm text-fg">{message}</p>
             </div>
           )}
 
           {/* Form */}
           <form onSubmit={handleLogin} className="flex flex-col gap-3" noValidate>
             <div>
-              <label htmlFor="email" className="block text-xs font-medium text-[#6e6e73] mb-1.5">Email</label>
+              <label htmlFor="email" className="block text-xs font-medium text-fg-muted mb-1.5">Email</label>
               <input
                 id="email" type="email" autoComplete="email" required
                 placeholder="you@example.com"
-                className="w-full bg-[#f5f5f7] text-[#1d1d1f] placeholder-[#aeaeb2] px-3.5 py-2.5 rounded-xl
-                         border border-black/[0.08] focus:outline-none focus:border-[#0071e3]/60 focus:bg-white
+                className="w-full bg-bg text-fg placeholder-[#aeaeb2] px-3.5 py-2.5 rounded-xl
+                         border border-border focus:outline-none focus:border-border-2 focus:bg-surface
                          transition-colors text-sm"
                 value={email}
                 onChange={e => { setEmail(e.target.value); clear(); setShowCreate(false); }}
@@ -139,14 +136,14 @@ export default function AuthPage() {
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-xs font-medium text-[#6e6e73] mb-1.5">Password</label>
+              <label htmlFor="password" className="block text-xs font-medium text-fg-muted mb-1.5">Password</label>
               <div className="relative">
                 <input
                   id="password" type={showPassword ? "text" : "password"} autoComplete="current-password" required
                   placeholder="••••••"
                   minLength={6}
-                  className="w-full bg-[#f5f5f7] text-[#1d1d1f] placeholder-[#aeaeb2] px-3.5 py-2.5 pr-10 rounded-xl
-                           border border-black/[0.08] focus:outline-none focus:border-[#0071e3]/60 focus:bg-white
+                  className="w-full bg-bg text-fg placeholder-[#aeaeb2] px-3.5 py-2.5 pr-10 rounded-xl
+                           border border-border focus:outline-none focus:border-border-2 focus:bg-surface
                            transition-colors text-sm"
                   value={password}
                   onChange={e => { setPassword(e.target.value); clear(); setShowCreate(false); }}
@@ -154,7 +151,7 @@ export default function AuthPage() {
                 <button
                   type="button"
                   onClick={() => setShowPassword(v => !v)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[#86868b] hover:text-[#6e6e73] transition-colors cursor-pointer"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-fg-subtle hover:text-fg-muted transition-colors cursor-pointer"
                   aria-label={showPassword ? "Hide password" : "Show password"}
                 >
                   {showPassword
@@ -167,9 +164,7 @@ export default function AuthPage() {
 
             <button
               type="submit" disabled={loading}
-              className="w-full bg-[#0071e3] text-white font-semibold py-2.5 rounded-xl
-                       hover:bg-[#0077ed] transition-colors duration-200 disabled:opacity-50 text-sm
-                       flex items-center justify-center gap-2 cursor-pointer mt-1 shadow-sm"
+              className="btn btn-primary w-full py-2.5 disabled:opacity-50 mt-1"
             >
               {loading && <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>}
               {loading ? "Signing in…" : "Continue"}
@@ -179,16 +174,16 @@ export default function AuthPage() {
           {/* Forgot */}
           <div className="text-right -mt-1">
             <button type="button" onClick={() => setShowForgot(v => !v)}
-              className="text-xs text-[#86868b] hover:text-[#6e6e73] transition-colors cursor-pointer">
+              className="text-xs text-fg-subtle hover:text-fg-muted transition-colors cursor-pointer">
               Forgot password?
             </button>
           </div>
 
           {showForgot && (
-            <div className="pt-3 border-t border-black/[0.06] flex flex-col gap-2">
-              <p className="text-xs text-[#86868b]">Enter your email above and we'll send a reset link.</p>
+            <div className="pt-3 border-t border-border flex flex-col gap-2">
+              <p className="text-xs text-fg-subtle">Enter your email above and we'll send a reset link.</p>
               <button type="button" onClick={handleForgot} disabled={loading}
-                className="w-full bg-[#f5f5f7] border border-black/[0.08] text-[#6e6e73] hover:text-[#1d1d1f] hover:bg-[#ebebf0]
+                className="w-full bg-bg border border-border text-fg-muted hover:text-fg hover:bg-[#ebebf0]
                           font-medium py-2.5 rounded-xl transition-colors text-sm cursor-pointer disabled:opacity-50">
                 {loading ? "Sending…" : "Send reset email"}
               </button>
@@ -196,10 +191,10 @@ export default function AuthPage() {
           )}
 
           {showCreate && (
-            <div className="pt-3 border-t border-black/[0.06] flex flex-col gap-2">
-              <p className="text-xs text-[#86868b] text-center">Don't have an account?</p>
+            <div className="pt-3 border-t border-border flex flex-col gap-2">
+              <p className="text-xs text-fg-subtle text-center">Don't have an account?</p>
               <button type="button" onClick={handleCreate} disabled={loading}
-                className="w-full bg-[#f5f5f7] border border-black/[0.08] text-[#1d1d1f] hover:bg-[#ebebf0]
+                className="w-full bg-bg border border-border text-fg hover:bg-[#ebebf0]
                           font-medium py-2.5 rounded-xl transition-colors text-sm cursor-pointer disabled:opacity-50">
                 {loading ? "Creating…" : "Create account"}
               </button>
@@ -207,9 +202,9 @@ export default function AuthPage() {
           )}
         </div>
 
-        <p className="text-center text-[#aeaeb2] text-xs mt-5">
+        <p className="text-center text-fg-subtle text-xs mt-5">
           By continuing you agree to our{" "}
-          <Link href="/contact" className="hover:text-[#6e6e73] transition-colors">Terms of Service</Link>
+          <Link href="/contact" className="hover:text-fg-muted transition-colors">Terms of Service</Link>
         </p>
       </div>
     </div>
