@@ -33,8 +33,9 @@ export default function DashboardPage() {
         setUser(data.user);
 
         const { data: pd, error: pe } = await supabase.from("user_plans").select("plan").eq("user_id", data.user.id).single();
-        if (pe?.code === "PGRST116") await supabase.from("user_plans").insert({ user_id: data.user.id, plan: "free" });
-        else if (pe) throw pe;
+        // No client-side writes to user_plans — a signup trigger seeds the row
+        // and the server creates it on first use. Default to free until then.
+        if (pe && pe.code !== "PGRST116") throw pe;
         setPlan(pd?.plan || "free");
 
         const { data: ud } = await supabase.from("user_usage").select("*").eq("user_id", data.user.id).single();
