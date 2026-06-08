@@ -96,15 +96,15 @@ export default function ResumeUploader({ onResumeSubmit, simple = false }: Resum
     <div className="space-y-4">
       {/* Mode toggle */}
       {!simple && (
-        <div className="flex gap-1 p-1 bg-[#f5f5f7] rounded-xl w-fit">
+        <div className="flex gap-1 p-1 bg-bg rounded-xl w-fit">
           {(["upload", "paste"] as const).map((m) => (
             <button
               key={m}
               onClick={() => setMode(m)}
               className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${
                 mode === m
-                  ? "bg-white text-[#1d1d1f] shadow-sm"
-                  : "text-[#6e6e73] hover:text-[#1d1d1f]"
+                  ? "bg-white text-fg shadow-sm"
+                  : "text-fg-muted hover:text-fg"
               }`}
             >
               {m === "upload" ? "Upload File" : "Paste Text"}
@@ -124,25 +124,25 @@ export default function ResumeUploader({ onResumeSubmit, simple = false }: Resum
               onClick={() => inputRef.current?.click()}
               className={`relative flex flex-col items-center justify-center gap-3 p-10 rounded-2xl border-2 border-dashed cursor-pointer transition-all ${
                 dragging
-                  ? "border-[#0071e3] bg-[#f0f7ff]"
-                  : "border-[#d2d2d7] bg-[#f9f9fb] hover:border-[#0071e3] hover:bg-[#f0f7ff]"
+                  ? "border-border bg-surface-2"
+                  : "border-border-2 bg-bg hover:border-border hover:bg-surface-2"
               }`}
             >
               <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-colors ${
-                dragging ? "bg-[#0071e3]/10" : "bg-white border border-[#e0e0e5]"
+                dragging ? "bg-accent/10" : "bg-white border border-[#e0e0e5]"
               }`}>
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none"
-                  className={dragging ? "stroke-[#0071e3]" : "stroke-[#6e6e73]"} strokeWidth="1.5">
+                  className={dragging ? "stroke-fg" : "stroke-fg-muted"} strokeWidth="1.5">
                   <path d="M4 17v2a2 2 0 002 2h12a2 2 0 002-2v-2" />
                   <polyline points="16 6 12 2 8 6" />
                   <line x1="12" y1="2" x2="12" y2="15" />
                 </svg>
               </div>
               <div className="text-center">
-                <p className="font-semibold text-[#1d1d1f] text-sm">
+                <p className="font-semibold text-fg text-sm">
                   {dragging ? "Drop your resume here" : "Drop your resume or click to browse"}
                 </p>
-                <p className="text-[#86868b] text-xs mt-1">PDF or TXT · Max 10MB</p>
+                <p className="text-fg-subtle text-xs mt-1">PDF or TXT · Max 10MB</p>
               </div>
               <input
                 ref={inputRef}
@@ -155,30 +155,30 @@ export default function ResumeUploader({ onResumeSubmit, simple = false }: Resum
               />
             </div>
           ) : (
-            <div className="flex items-center justify-between px-5 py-4 bg-[#f0f7ff] border border-[#0071e3]/20 rounded-2xl">
+            <div className="flex items-center justify-between px-5 py-4 bg-surface-2 border border-border/20 rounded-2xl">
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 bg-[#0071e3]/10 rounded-xl flex items-center justify-center flex-shrink-0">
+                <div className="w-9 h-9 bg-accent/10 rounded-xl flex items-center justify-center flex-shrink-0">
                   {loading ? (
-                    <div className="w-4 h-4 border-2 border-t-[#0071e3] border-r-[#0071e3]/30 border-b-transparent border-l-transparent rounded-full animate-spin" />
+                    <div className="w-4 h-4 border-2 border-t-fg border-r-fg/30 border-b-transparent border-l-transparent rounded-full animate-spin" />
                   ) : (
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="stroke-[#0071e3]" strokeWidth="2">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="stroke-fg" strokeWidth="2">
                       <path d="M4 2h10l6 6v14H4V2z" />
                       <path d="M14 2v6h6" />
                     </svg>
                   )}
                 </div>
                 <div>
-                  <p className="text-[#1d1d1f] text-sm font-medium">{file.name}</p>
+                  <p className="text-fg text-sm font-medium">{file.name}</p>
                   {!loading && charCount > 0 && (
-                    <p className="text-[#86868b] text-xs">~{wordCount.toLocaleString()} words extracted</p>
+                    <p className="text-fg-subtle text-xs">~{wordCount.toLocaleString()} words extracted</p>
                   )}
-                  {loading && <p className="text-[#0071e3] text-xs">Extracting text…</p>}
+                  {loading && <p className="text-fg text-xs">Extracting text…</p>}
                 </div>
               </div>
               {!loading && (
                 <button
                   onClick={handleClear}
-                  className="text-[#6e6e73] hover:text-[#1d1d1f] transition-colors p-1"
+                  className="text-fg-muted hover:text-fg transition-colors p-1"
                   aria-label="Remove file"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -199,14 +199,14 @@ export default function ResumeUploader({ onResumeSubmit, simple = false }: Resum
             value={pasteText}
             onChange={(e) => handlePaste(e.target.value)}
             placeholder="Paste your full resume text here — include all sections: experience, education, skills, achievements…"
-            className="w-full bg-white text-[#1d1d1f] placeholder-[#b0b0b8] p-4 rounded-2xl border border-[#d2d2d7] focus:outline-none focus:border-[#0071e3] focus:ring-2 focus:ring-[#0071e3]/10 text-sm leading-relaxed resize-none transition-all"
+            className="w-full bg-white text-fg placeholder:text-fg-subtle p-4 rounded-2xl border border-border-2 focus:outline-none focus:border-border focus:ring-2 focus:ring-fg/10 text-sm leading-relaxed resize-none transition-all"
           />
           {pasteText.length > 0 && (
             <div className="flex items-center justify-between mt-2 px-1">
-              <span className="text-xs text-[#86868b]">~{Math.round(pasteText.length / 5).toLocaleString()} words</span>
+              <span className="text-xs text-fg-subtle">~{Math.round(pasteText.length / 5).toLocaleString()} words</span>
               <button
                 onClick={handleClear}
-                className="text-xs text-[#6e6e73] hover:text-[#1d1d1f] transition-colors"
+                className="text-xs text-fg-muted hover:text-fg transition-colors"
               >
                 Clear
               </button>

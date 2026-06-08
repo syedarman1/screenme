@@ -114,19 +114,19 @@ export default function TailorPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#f5f5f7] text-[#1d1d1f] pt-16 pb-24 px-4">
+    <div className="min-h-screen bg-bg text-fg pt-16 pb-24 px-4">
 
       {/* Header */}
       <header className="max-w-2xl mx-auto text-center mb-12">
-        <div className="inline-flex items-center justify-center w-14 h-14 rounded-[18px] bg-[#0071e3]/[0.08] border border-[#0071e3]/15 mb-6">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="stroke-[#0071e3]" strokeWidth="1.5">
+        <div className="inline-flex items-center justify-center w-14 h-14 rounded-[18px] bg-accent/[0.08] border border-border/15 mb-6">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="stroke-fg" strokeWidth="1.5">
             <path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
           </svg>
         </div>
-        <h1 className="text-5xl font-semibold tracking-tight text-[#1d1d1f] mb-3">
+        <h1 className="text-5xl font-semibold tracking-tight text-fg mb-3">
           Resume Tailor
         </h1>
-        <p className="text-[#6e6e73] text-lg leading-relaxed max-w-lg mx-auto">
+        <p className="text-fg-muted text-lg leading-relaxed max-w-lg mx-auto">
           Rewrite your resume to perfectly match any job description — then save it to your library with one click.
         </p>
       </header>
@@ -134,12 +134,12 @@ export default function TailorPage() {
       {/* Form */}
       <section className="max-w-2xl mx-auto">
         <PlanChecker feature="resume_tailor">
-        <div className="bg-white rounded-3xl border border-black/[0.06] shadow-sm p-8 space-y-7">
+        <div className="bg-white rounded-3xl border border-border shadow-sm p-8 space-y-7">
 
           {/* Resume */}
           <div>
             <div className="flex items-center justify-between mb-4">
-              <h2 className="font-semibold text-[#1d1d1f]">Your Resume</h2>
+              <h2 className="font-semibold text-fg">Your Resume</h2>
               {resumeTxt && (
                 <span className="text-xs text-emerald-600 font-medium flex items-center gap-1">
                   <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
@@ -156,21 +156,21 @@ export default function TailorPage() {
           <div className="relative">
             <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-[#f0f0f5]" /></div>
             <div className="relative flex justify-center">
-              <span className="px-3 bg-white text-xs text-[#aeaeb2] font-medium">target role</span>
+              <span className="px-3 bg-white text-xs text-fg-subtle font-medium">target role</span>
             </div>
           </div>
 
           {/* Job Description */}
           <div>
-            <label htmlFor="jd-input" className="block mb-2 font-semibold text-[#1d1d1f] text-sm">
+            <label htmlFor="jd-input" className="block mb-2 font-semibold text-fg text-sm">
               Job Description
-              <span className="ml-1.5 text-xs font-normal text-[#86868b]">— paste a URL or the full posting</span>
+              <span className="ml-1.5 text-xs font-normal text-fg-subtle">— paste a URL or the full posting</span>
             </label>
 
             {/* URL parser */}
             <div className="flex items-center gap-2 mb-3">
               <div className="relative flex-1">
-                <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#aeaeb2]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-fg-subtle" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244" />
                 </svg>
                 <input
@@ -178,13 +178,13 @@ export default function TailorPage() {
                   onChange={e => setJobUrl(e.target.value)}
                   onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); parseUrl(); } }}
                   placeholder="Paste LinkedIn, Indeed, or Greenhouse URL..."
-                  className="w-full bg-[#f9f9fb] text-[#1d1d1f] placeholder-[#b0b0b8] pl-9 pr-3 py-2.5 rounded-xl border border-[#d2d2d7] focus:outline-none focus:border-[#0071e3] focus:ring-2 focus:ring-[#0071e3]/10 text-sm transition-all"
+                  className="w-full bg-bg text-fg placeholder:text-fg-subtle pl-9 pr-3 py-2.5 rounded-xl border border-border-2 focus:outline-none focus:border-border focus:ring-2 focus:ring-fg/10 text-sm transition-all"
                 />
               </div>
               <button
                 onClick={parseUrl}
                 disabled={urlLoading || !jobUrl.trim()}
-                className="px-4 py-2.5 rounded-xl bg-[#0071e3] text-white text-sm font-semibold hover:bg-[#0077ed] disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center gap-1.5 shrink-0"
+                className="px-4 py-2.5 rounded-xl bg-accent text-white text-sm font-semibold hover:bg-accent-hover disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center gap-1.5 shrink-0"
               >
                 {urlLoading ? (
                   <svg className="animate-spin h-3.5 w-3.5" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8h8a8 8 0 01-16 0z" /></svg>
@@ -202,10 +202,10 @@ export default function TailorPage() {
               onChange={(e) => setJdTxt(e.target.value)}
               rows={7}
               placeholder="Or paste the full job description here — include responsibilities, requirements, and qualifications…"
-              className="w-full bg-[#f9f9fb] text-[#1d1d1f] placeholder-[#b0b0b8] p-4 rounded-2xl border border-[#d2d2d7] focus:outline-none focus:border-[#0071e3] focus:ring-2 focus:ring-[#0071e3]/10 resize-none text-sm leading-relaxed transition-all"
+              className="w-full bg-bg text-fg placeholder:text-fg-subtle p-4 rounded-2xl border border-border-2 focus:outline-none focus:border-border focus:ring-2 focus:ring-fg/10 resize-none text-sm leading-relaxed transition-all"
             />
             {jdTxt.length > 0 && (
-              <p className="text-right text-xs text-[#aeaeb2] mt-1">{jdTxt.length} characters</p>
+              <p className="text-right text-xs text-fg-subtle mt-1">{jdTxt.length} characters</p>
             )}
           </div>
 
@@ -214,7 +214,7 @@ export default function TailorPage() {
             <button
               disabled={loading || !resumeTxt || jdTxt.trim().length < 30}
               onClick={handleTailor}
-              className="flex-1 py-3.5 rounded-2xl text-white bg-[#0071e3] font-semibold disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#0077ed] active:scale-[.98] transition-all flex items-center justify-center gap-2 text-sm"
+              className="flex-1 py-3.5 rounded-2xl text-white bg-accent font-semibold disabled:opacity-40 disabled:cursor-not-allowed hover:bg-accent-hover active:scale-[.98] transition-all flex items-center justify-center gap-2 text-sm"
             >
               {loading ? (
                 <>
@@ -230,7 +230,7 @@ export default function TailorPage() {
               <button
                 onClick={reset}
                 disabled={loading}
-                className="px-5 py-3.5 rounded-2xl bg-[#f5f5f7] text-[#6e6e73] font-semibold border border-[#e0e0e5] hover:bg-[#ebebf0] transition-colors disabled:opacity-40 text-sm"
+                className="px-5 py-3.5 rounded-2xl bg-bg text-fg-muted font-semibold border border-[#e0e0e5] hover:bg-surface-2 transition-colors disabled:opacity-40 text-sm"
               >
                 Clear
               </button>
@@ -245,19 +245,19 @@ export default function TailorPage() {
         <AnimatePresence mode="wait">
           {loading && (
             <motion.div key="loading" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-              className="p-10 bg-white rounded-3xl border border-black/[0.06] shadow-sm flex flex-col items-center gap-5">
+              className="p-10 bg-white rounded-3xl border border-border shadow-sm flex flex-col items-center gap-5">
               <div className="relative w-14 h-14">
                 <div className="absolute inset-0 rounded-full border-[3px] border-[#e8e8ed]" />
-                <div className="absolute inset-0 rounded-full border-[3px] border-t-[#0071e3] border-r-[#0071e3]/20 border-b-transparent border-l-transparent animate-spin" />
+                <div className="absolute inset-0 rounded-full border-[3px] border-t-fg border-r-fg/20 border-b-transparent border-l-transparent animate-spin" />
                 <div className="absolute inset-0 flex items-center justify-center">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="stroke-[#0071e3]" strokeWidth="2">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="stroke-fg" strokeWidth="2">
                     <path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                   </svg>
                 </div>
               </div>
               <div className="text-center">
-                <p className="font-semibold text-[#1d1d1f]">Tailoring your resume…</p>
-                <p className="text-[#86868b] text-sm mt-1">Rewriting to maximize relevance for this role</p>
+                <p className="font-semibold text-fg">Tailoring your resume…</p>
+                <p className="text-fg-subtle text-sm mt-1">Rewriting to maximize relevance for this role</p>
               </div>
             </motion.div>
           )}
@@ -283,19 +283,19 @@ export default function TailorPage() {
             animate={{ opacity: 1, y: 0, transition: { duration: 0.4, ease: "easeOut" } }}
             className="max-w-2xl mx-auto mt-6"
           >
-            <div className="bg-white rounded-3xl border border-black/[0.06] shadow-sm overflow-hidden">
+            <div className="bg-white rounded-3xl border border-border shadow-sm overflow-hidden">
 
               {/* Header bar */}
               <div className="flex items-center justify-between px-6 py-4 border-b border-[#f0f0f5] bg-[#fafafa]">
                 <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-xl bg-[#0071e3]/[0.08] border border-[#0071e3]/15 flex items-center justify-center shrink-0">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" className="stroke-[#0071e3]" strokeWidth="2">
+                  <div className="w-8 h-8 rounded-xl bg-accent/[0.08] border border-border/15 flex items-center justify-center shrink-0">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" className="stroke-fg" strokeWidth="2">
                       <path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                     </svg>
                   </div>
                   <div>
-                    <p className="font-semibold text-[#1d1d1f] text-sm">Tailored Resume</p>
-                    <p className="text-xs text-[#aeaeb2]">{wordCount} words</p>
+                    <p className="font-semibold text-fg text-sm">Tailored Resume</p>
+                    <p className="text-xs text-fg-subtle">{wordCount} words</p>
                   </div>
                 </div>
 
@@ -306,7 +306,7 @@ export default function TailorPage() {
                     className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${
                       copied
                         ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                        : "bg-white text-[#6e6e73] border-[#d2d2d7] hover:border-[#0071e3]/40 hover:text-[#0071e3]"
+                        : "bg-white text-fg-muted border-border-2 hover:border-border/40 hover:text-fg"
                     }`}
                   >
                     {copied ? (
@@ -320,7 +320,7 @@ export default function TailorPage() {
                   {userId && !saved && !showSaveInput && (
                     <button
                       onClick={() => { setSaveName(""); setShowSaveInput(true); }}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-[#0071e3] text-white hover:bg-[#0077ed] transition-colors cursor-pointer"
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-accent text-white hover:bg-accent-hover transition-colors cursor-pointer"
                     >
                       <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
@@ -339,25 +339,25 @@ export default function TailorPage() {
 
               {/* Save name input (inline) */}
               {showSaveInput && (
-                <div className="flex items-center gap-2 px-6 py-3 border-b border-[#f0f0f5] bg-[#f0f7ff]">
+                <div className="flex items-center gap-2 px-6 py-3 border-b border-[#f0f0f5] bg-surface-2">
                   <input
                     value={saveName}
                     onChange={e => setSaveName(e.target.value)}
                     onKeyDown={e => { if (e.key === "Enter") saveToResumes(); }}
                     placeholder="Resume name (e.g. Frontend Engineer v2)"
                     autoFocus
-                    className="flex-1 px-3 py-2 rounded-lg border border-[#0071e3]/20 bg-white text-sm text-[#1d1d1f] placeholder:text-[#aeaeb2] focus:outline-none focus:ring-2 focus:ring-[#0071e3]/20"
+                    className="flex-1 px-3 py-2 rounded-lg border border-border/20 bg-white text-sm text-fg placeholder:text-fg-subtle focus:outline-none focus:ring-2 focus:ring-fg/10"
                   />
                   <button
                     onClick={saveToResumes}
                     disabled={saving}
-                    className="px-4 py-2 rounded-lg bg-[#0071e3] text-white text-xs font-semibold hover:bg-[#0077ed] disabled:opacity-50 transition-colors cursor-pointer"
+                    className="px-4 py-2 rounded-lg bg-accent text-white text-xs font-semibold hover:bg-accent-hover disabled:opacity-50 transition-colors cursor-pointer"
                   >
                     {saving ? "Saving…" : "Save"}
                   </button>
                   <button
                     onClick={() => setShowSaveInput(false)}
-                    className="px-3 py-2 rounded-lg text-xs text-[#6e6e73] hover:bg-[#f5f5f7] transition-colors cursor-pointer"
+                    className="px-3 py-2 rounded-lg text-xs text-fg-muted hover:bg-bg transition-colors cursor-pointer"
                   >
                     Cancel
                   </button>
@@ -366,13 +366,13 @@ export default function TailorPage() {
 
               {/* Resume body */}
               <div className="px-10 py-8 max-w-2xl mx-auto">
-                <div className="text-[#1d1d1f] text-sm leading-[1.8] whitespace-pre-wrap font-mono">
+                <div className="text-fg text-sm leading-[1.8] whitespace-pre-wrap font-mono">
                   {tailored}
                 </div>
               </div>
 
               <div className="border-t border-[#f0f0f5] px-6 py-4 bg-[#fafafa]">
-                <p className="text-xs text-[#aeaeb2] text-center">
+                <p className="text-xs text-fg-subtle text-center">
                   Review the tailored version carefully — all facts are preserved from your original, but verify before submitting.
                 </p>
               </div>

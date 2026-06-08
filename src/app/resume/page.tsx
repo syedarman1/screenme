@@ -62,10 +62,10 @@ type ActiveTab = "issues" | "strengths" | "keywords";
 
 /* ── helpers ─────────────────────────────────────────────── */
 function scoreColor(s: number) {
-  if (s >= 85) return "#34c759";
-  if (s >= 70) return "#0071e3";
-  if (s >= 50) return "#ff9f0a";
-  return "#ff3b30";
+  if (s >= 85) return "#3D7C52";
+  if (s >= 70) return "#525252";
+  if (s >= 50) return "#B45309";
+  return "#C44B42";
 }
 function scoreLabel(s: number) {
   if (s >= 85) return "Excellent";
@@ -75,7 +75,7 @@ function scoreLabel(s: number) {
 }
 function scoreBadge(s: number) {
   if (s >= 85) return "bg-emerald-50 text-emerald-700 border-emerald-200";
-  if (s >= 70) return "bg-[#f0f7ff] text-[#0071e3] border-[#0071e3]/20";
+  if (s >= 70) return "bg-surface-2 text-fg border-border/20";
   if (s >= 50) return "bg-amber-50 text-amber-700 border-amber-200";
   return "bg-red-50 text-red-700 border-red-200";
 }
@@ -110,7 +110,7 @@ function CopyButton({ text }: { text: string }) {
       className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-medium transition-all ${
         copied
           ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-          : "bg-[#f5f5f7] text-[#6e6e73] border border-[#d2d2d7] hover:border-[#0071e3] hover:text-[#0071e3]"
+          : "bg-bg text-fg-muted border border-border-2 hover:border-border hover:text-fg"
       }`}
     >
       {copied ? (
@@ -138,10 +138,10 @@ function SubScoreBar({ label, value }: { label: string; value: number }) {
   return (
     <div>
       <div className="flex justify-between mb-1.5">
-        <span className="text-xs text-[#6e6e73] font-medium">{label}</span>
+        <span className="text-xs text-fg-muted font-medium">{label}</span>
         <span className="text-xs font-semibold" style={{ color: c }}>{value}</span>
       </div>
-      <div className="h-1.5 rounded-full bg-[#e8e8ed] overflow-hidden">
+      <div className="h-1.5 rounded-full bg-surface-2 overflow-hidden">
         <motion.div
           className="h-full rounded-full"
           style={{ backgroundColor: c }}
@@ -219,20 +219,20 @@ export default function ResumeScreen() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#f5f5f7] text-[#1d1d1f] py-16 px-4">
+    <div className="min-h-screen bg-bg text-fg py-16 px-4">
 
       {/* ── Page header ─────────────────────────────────── */}
       <header className="max-w-2xl mx-auto text-center mb-14">
-        <div className="inline-flex items-center justify-center w-14 h-14 rounded-[18px] bg-[#0071e3]/[0.08] border border-[#0071e3]/15 mb-6">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="stroke-[#0071e3]" strokeWidth="1.5">
+        <div className="inline-flex items-center justify-center w-14 h-14 rounded-[18px] bg-accent/[0.08] border border-border/15 mb-6">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="stroke-fg" strokeWidth="1.5">
             <path d="M4 2h10l6 6v14H4V2z" /><path d="M14 2v6h6" />
             <path d="M8 12h8M8 16h5" />
           </svg>
         </div>
-        <h1 className="text-5xl font-semibold tracking-tight text-[#1d1d1f] mb-3">
+        <h1 className="text-5xl font-semibold tracking-tight text-fg mb-3">
           Resume Scanner
         </h1>
-        <p className="text-[#6e6e73] text-lg leading-relaxed max-w-lg mx-auto">
+        <p className="text-fg-muted text-lg leading-relaxed max-w-lg mx-auto">
           Get an instant AI-powered audit — score, gaps, rewrites, and keywords in seconds.
         </p>
       </header>
@@ -240,13 +240,13 @@ export default function ResumeScreen() {
       {/* ── Upload card ─────────────────────────────────── */}
       <section className="max-w-2xl mx-auto">
         <PlanChecker feature="resume_scan">
-          <div className="bg-white rounded-3xl border border-black/[0.06] shadow-sm p-8">
+          <div className="bg-white rounded-3xl border border-border shadow-sm p-8">
             <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-semibold text-[#1d1d1f]">Your Resume</h2>
+              <h2 className="text-xl font-semibold text-fg">Your Resume</h2>
               {audit && (
                 <button
                   onClick={() => { setAudit(null); setError(null); }}
-                  className="text-xs text-[#0071e3] hover:underline font-medium"
+                  className="text-xs text-fg hover:underline font-medium"
                 >
                   Scan another
                 </button>
@@ -266,19 +266,19 @@ export default function ResumeScreen() {
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -12 }}
-              className="bg-white rounded-3xl border border-black/[0.06] shadow-sm p-10 flex flex-col items-center gap-5"
+              className="bg-white rounded-3xl border border-border shadow-sm p-10 flex flex-col items-center gap-5"
             >
               {/* Animated scan bars */}
               <div className="relative w-16 h-16 flex items-center justify-center">
                 <div className="absolute inset-0 rounded-full border-[3px] border-[#e8e8ed]" />
-                <div className="absolute inset-0 rounded-full border-[3px] border-t-[#0071e3] border-r-[#0071e3]/20 border-b-transparent border-l-transparent animate-spin" />
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" className="stroke-[#0071e3]" strokeWidth="1.5">
+                <div className="absolute inset-0 rounded-full border-[3px] border-t-fg border-r-fg/20 border-b-transparent border-l-transparent animate-spin" />
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" className="stroke-fg" strokeWidth="1.5">
                   <path d="M9 12l2 2 4-4" /><circle cx="12" cy="12" r="9" />
                 </svg>
               </div>
               <div className="text-center">
-                <p className="font-semibold text-[#1d1d1f] text-lg">Analyzing your resume…</p>
-                <p className="text-[#86868b] text-sm mt-1">Scanning for improvements, keywords, and formatting issues.</p>
+                <p className="font-semibold text-fg text-lg">Analyzing your resume…</p>
+                <p className="text-fg-subtle text-sm mt-1">Scanning for improvements, keywords, and formatting issues.</p>
               </div>
               {controller && (
                 <button
@@ -321,7 +321,7 @@ export default function ResumeScreen() {
           >
 
             {/* ── Score card ──────────────────────────── */}
-            <div className="bg-white rounded-3xl border border-black/[0.06] shadow-sm overflow-hidden">
+            <div className="bg-white rounded-3xl border border-border shadow-sm overflow-hidden">
               <div className="p-8">
                 <div className="flex flex-col sm:flex-row items-center sm:items-start gap-7">
 
@@ -334,7 +334,7 @@ export default function ResumeScreen() {
                         styles={buildStyles({
                           textSize: "26px",
                           pathColor: scoreColor(audit.score),
-                          textColor: "#1d1d1f",
+                          textColor: "#171717",
                           trailColor: "#f0f0f5",
                           pathTransitionDuration: 1,
                         })}
@@ -349,8 +349,8 @@ export default function ResumeScreen() {
 
                   {/* Right column */}
                   <div className="flex-1 min-w-0 text-center sm:text-left">
-                    <h2 className="text-2xl font-bold text-[#1d1d1f] mb-2">Resume Score</h2>
-                    <p className="text-[#6e6e73] text-sm leading-relaxed mb-5">
+                    <h2 className="text-2xl font-bold text-fg mb-2">Resume Score</h2>
+                    <p className="text-fg-muted text-sm leading-relaxed mb-5">
                       {audit.summary || (
                         audit.score >= 85 ? "Outstanding — you're well-positioned to impress recruiters." :
                         audit.score >= 70 ? "Solid resume with a few areas worth polishing." :
@@ -380,7 +380,7 @@ export default function ResumeScreen() {
                         </span>
                       )}
                       {audit.metadata && (
-                        <span className="flex items-center gap-1.5 px-3 py-1 bg-[#f5f5f7] border border-[#d2d2d7] rounded-full text-xs font-medium text-[#6e6e73]">
+                        <span className="flex items-center gap-1.5 px-3 py-1 bg-bg border border-border-2 rounded-full text-xs font-medium text-fg-muted">
                           {audit.metadata.sectionsFound} sections
                         </span>
                       )}
@@ -401,7 +401,7 @@ export default function ResumeScreen() {
             </div>
 
             {/* ── Analysis card ───────────────────────── */}
-            <div className="bg-white rounded-3xl border border-black/[0.06] shadow-sm overflow-hidden">
+            <div className="bg-white rounded-3xl border border-border shadow-sm overflow-hidden">
 
               {/* Tabs */}
               <div className="flex border-b border-[#f0f0f5] px-2">
@@ -411,16 +411,16 @@ export default function ResumeScreen() {
                     onClick={() => { setActiveTab(tab.id); setOpenIdx(null); }}
                     className={`flex items-center gap-2 px-5 py-4 text-sm font-semibold transition-colors relative whitespace-nowrap ${
                       activeTab === tab.id
-                        ? "text-[#0071e3] after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-full after:h-[2px] after:bg-[#0071e3]"
-                        : "text-[#86868b] hover:text-[#1d1d1f]"
+                        ? "text-fg after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-full after:h-[2px] after:bg-accent"
+                        : "text-fg-subtle hover:text-fg"
                     }`}
                   >
                     {tab.label}
                     {tab.badge !== undefined && tab.badge > 0 && (
                       <span className={`px-1.5 py-0.5 rounded-full text-xs leading-none font-semibold ${
                         activeTab === tab.id
-                          ? "bg-[#0071e3]/10 text-[#0071e3]"
-                          : "bg-[#f0f0f5] text-[#86868b]"
+                          ? "bg-accent/10 text-fg"
+                          : "bg-[#f0f0f5] text-fg-subtle"
                       }`}>
                         {tab.badge}
                       </span>
@@ -441,8 +441,8 @@ export default function ResumeScreen() {
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
                         </svg>
                       </div>
-                      <p className="font-semibold text-[#1d1d1f]">No issues found</p>
-                      <p className="text-[#86868b] text-sm">Your resume looks clean and well-optimized.</p>
+                      <p className="font-semibold text-fg">No issues found</p>
+                      <p className="text-fg-subtle text-sm">Your resume looks clean and well-optimized.</p>
                     </div>
                   ) : (
                     <div className="space-y-2">
@@ -461,12 +461,12 @@ export default function ResumeScreen() {
                             <span className={`flex-shrink-0 text-xs font-semibold px-2.5 py-0.5 rounded-full border ${SEV_BADGE[issue.severity]}`}>
                               {issue.severity.charAt(0).toUpperCase() + issue.severity.slice(1)}
                             </span>
-                            <span className="flex-shrink-0 text-xs font-medium text-[#6e6e73] bg-[#f5f5f7] px-2.5 py-0.5 rounded-full border border-[#e8e8ed]">
+                            <span className="flex-shrink-0 text-xs font-medium text-fg-muted bg-bg px-2.5 py-0.5 rounded-full border border-[#e8e8ed]">
                               {issue.section}
                             </span>
-                            <span className="text-[#1d1d1f] text-sm truncate flex-1">{issue.text}</span>
+                            <span className="text-fg text-sm truncate flex-1">{issue.text}</span>
                             <svg
-                              className={`w-4 h-4 text-[#86868b] flex-shrink-0 transition-transform duration-200 ${openIdx === i ? "rotate-180" : ""}`}
+                              className={`w-4 h-4 text-fg-subtle flex-shrink-0 transition-transform duration-200 ${openIdx === i ? "rotate-180" : ""}`}
                               fill="none" viewBox="0 0 24 24" stroke="currentColor"
                             >
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
@@ -479,29 +479,29 @@ export default function ResumeScreen() {
                               {/* Original */}
                               {issue.line && (
                                 <div className="mt-4 p-4 bg-[#fafafa] rounded-xl border border-[#e8e8ed]">
-                                  <p className="text-[10px] font-semibold text-[#86868b] uppercase tracking-widest mb-2">Original</p>
-                                  <p className="text-[#1d1d1f] text-sm leading-relaxed italic">"{issue.line}"</p>
+                                  <p className="text-[10px] font-semibold text-fg-subtle uppercase tracking-widest mb-2">Original</p>
+                                  <p className="text-fg text-sm leading-relaxed italic">"{issue.line}"</p>
                                 </div>
                               )}
 
                               {/* Issue */}
                               <div>
-                                <p className="text-[10px] font-semibold text-[#86868b] uppercase tracking-widest mb-1.5">Issue</p>
-                                <p className="text-[#1d1d1f] text-sm leading-relaxed">{issue.text}</p>
-                                {issue.reason && <p className="mt-1 text-[#86868b] text-xs">{issue.reason}</p>}
+                                <p className="text-[10px] font-semibold text-fg-subtle uppercase tracking-widest mb-1.5">Issue</p>
+                                <p className="text-fg text-sm leading-relaxed">{issue.text}</p>
+                                {issue.reason && <p className="mt-1 text-fg-subtle text-xs">{issue.reason}</p>}
                               </div>
 
                               {/* Suggested rewrite */}
                               {audit.actions[i] && (
-                                <div className="p-4 bg-[#f0f7ff] rounded-xl border border-[#0071e3]/15">
+                                <div className="p-4 bg-surface-2 rounded-xl border border-border/15">
                                   <div className="flex items-center justify-between mb-2">
-                                    <p className="text-[10px] font-semibold text-[#0071e3] uppercase tracking-widest">Suggested Rewrite</p>
+                                    <p className="text-[10px] font-semibold text-fg uppercase tracking-widest">Suggested Rewrite</p>
                                     <CopyButton text={audit.actions[i].rewrite} />
                                   </div>
-                                  <p className="text-[#1d1d1f] text-sm leading-relaxed">{audit.actions[i].rewrite}</p>
+                                  <p className="text-fg text-sm leading-relaxed">{audit.actions[i].rewrite}</p>
                                   {audit.actions[i].improvement && (
-                                    <p className="mt-3 text-[#6e6e73] text-xs">
-                                      <span className="font-semibold text-[#0071e3]">Why it works: </span>
+                                    <p className="mt-3 text-fg-muted text-xs">
+                                      <span className="font-semibold text-fg">Why it works: </span>
                                       {audit.actions[i].improvement}
                                     </p>
                                   )}
@@ -519,7 +519,7 @@ export default function ResumeScreen() {
                 {activeTab === "strengths" && (
                   !audit.strengths || audit.strengths.length === 0 ? (
                     <div className="py-12 flex flex-col items-center gap-3 text-center">
-                      <p className="text-[#86868b]">No specific strengths identified yet.</p>
+                      <p className="text-fg-subtle">No specific strengths identified yet.</p>
                     </div>
                   ) : (
                     <div className="space-y-3">
@@ -536,7 +536,7 @@ export default function ResumeScreen() {
                                 {s.section}
                               </span>
                             </div>
-                            <p className="text-[#1d1d1f] text-sm leading-relaxed">{s.text}</p>
+                            <p className="text-fg text-sm leading-relaxed">{s.text}</p>
                             <p className="mt-1.5 text-emerald-700 text-xs">
                               <span className="font-semibold">Why it works: </span>{s.reason}
                             </p>
@@ -551,15 +551,15 @@ export default function ResumeScreen() {
                 {activeTab === "keywords" && (
                   !audit.keywords || audit.keywords.length === 0 ? (
                     <div className="py-12 flex flex-col items-center gap-3 text-center">
-                      <p className="text-[#86868b]">No keyword data available.</p>
+                      <p className="text-fg-subtle">No keyword data available.</p>
                     </div>
                   ) : (
                     <div className="space-y-5">
                       {audit.keywords.map((kw, i) => (
                         <div key={i}>
                           <div className="flex items-center gap-2 mb-3">
-                            <h3 className="text-sm font-semibold text-[#1d1d1f]">{kw.category}</h3>
-                            <span className="text-xs text-[#86868b]">
+                            <h3 className="text-sm font-semibold text-fg">{kw.category}</h3>
+                            <span className="text-xs text-fg-subtle">
                               {kw.terms.length} found
                               {kw.missing && kw.missing.length > 0 ? ` · ${kw.missing.length} suggested` : ""}
                             </span>
@@ -580,10 +580,10 @@ export default function ResumeScreen() {
 
                           {kw.missing && kw.missing.length > 0 && (
                             <>
-                              <p className="text-[10px] font-semibold text-[#86868b] uppercase tracking-widest mb-2">Consider adding</p>
+                              <p className="text-[10px] font-semibold text-fg-subtle uppercase tracking-widest mb-2">Consider adding</p>
                               <div className="flex flex-wrap gap-2">
                                 {kw.missing.map((t, j) => (
-                                  <span key={j} className="flex items-center gap-1 px-3 py-1 bg-[#f0f7ff] text-[#0071e3] border border-[#0071e3]/20 rounded-full text-xs font-medium">
+                                  <span key={j} className="flex items-center gap-1 px-3 py-1 bg-surface-2 text-fg border border-border/20 rounded-full text-xs font-medium">
                                     <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 5v14M5 12h14" />
                                     </svg>
@@ -606,8 +606,8 @@ export default function ResumeScreen() {
 
               {/* Footer */}
               <div className="px-6 py-4 bg-[#fafafa] border-t border-[#f0f0f5]">
-                <p className="text-center text-xs text-[#86868b]">
-                  <span className="font-semibold text-[#0071e3]">Tip: </span>
+                <p className="text-center text-xs text-fg-subtle">
+                  <span className="font-semibold text-fg">Tip: </span>
                   Recruiters spend 6–7 seconds on a first pass. Lead with impact, quantify everything, and keep it to one page if you have under 10 years of experience.
                 </p>
               </div>
