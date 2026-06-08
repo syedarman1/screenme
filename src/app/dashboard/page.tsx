@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
-import { type User } from "@supabase/supabase-js";
+import { type User, type RealtimeChannel } from "@supabase/supabase-js";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
@@ -24,6 +24,7 @@ export default function DashboardPage() {
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
+    let channel: RealtimeChannel | null = null;
     (async () => {
       try {
         if (!supabase) { setError("Auth unavailable."); return; }
@@ -39,17 +40,22 @@ export default function DashboardPage() {
         const { data: ud } = await supabase.from("user_usage").select("*").eq("user_id", data.user.id).single();
         setUsage(ud);
 
-        const sub = supabase.channel("plan_watch")
-          .on("postgres_changes", { event: "UPDATE", schema: "public", table: "user_plans", filter: `user_id=eq.${data.user.id}` },
-            p => setPlan(p.new.plan))
-          .subscribe();
-        return () => { supabase?.removeChannel(sub); };
+        // Live plan updates — isolated so a realtime hiccup never gates the dashboard.
+        try {
+          channel = supabase.channel(`plan_watch:${data.user.id}`)
+            .on("postgres_changes", { event: "UPDATE", schema: "public", table: "user_plans", filter: `user_id=eq.${data.user.id}` },
+              p => setPlan(p.new.plan))
+            .subscribe();
+        } catch (subErr) {
+          console.warn("plan_watch realtime subscription failed:", subErr);
+        }
       } catch (err: any) {
         setError(err.message || "Something went wrong.");
       } finally {
         setLoading(false);
       }
     })();
+    return () => { if (channel && supabase) supabase.removeChannel(channel); };
   }, [router]);
 
   const handleUpgrade = async () => {
