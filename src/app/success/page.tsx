@@ -335,7 +335,7 @@ function SuccessPageContent() {
         return (
           <div className="text-center">
             <svg
-              className="w-16 h-16 mx-auto mb-4 text-red-500"
+              className="w-16 h-16 mx-auto mb-4 text-red"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -363,7 +363,7 @@ function SuccessPageContent() {
               </button>
               <Link
                 href="/dashboard"
-                className="px-6 py-2 bg-bg border border-border text-fg-muted font-medium rounded-xl hover:bg-[#ebebf0] transition"
+                className="px-6 py-2 bg-bg border border-border text-fg-muted font-medium rounded-lg hover:bg-[#ebebf0] transition"
               >
                 Back to Dashboard
               </Link>

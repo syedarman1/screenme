@@ -4,6 +4,7 @@ import React, { useState, useRef, useCallback, useEffect } from "react";
 import ResumeUploader from "../components/ResumeUploader";
 import { motion, AnimatePresence } from "framer-motion";
 import PlanChecker from "../components/PlanChecker";
+import PageHeader from "../components/PageHeader";
 import { supabase } from "../lib/supabaseClient";
 
 export default function TailorPage() {
@@ -114,34 +115,24 @@ export default function TailorPage() {
   };
 
   return (
-    <div className="min-h-screen bg-bg text-fg pt-16 pb-24 px-4">
+    <div className="page-shell">
+      <div className="page-inner-sm">
+        <PageHeader
+          label="Resume Tailor"
+          title="Match any job description"
+          description="Rewrite your resume to fit a role, then save it to your library."
+        />
 
-      {/* Header */}
-      <header className="max-w-2xl mx-auto text-center mb-12">
-        <div className="inline-flex items-center justify-center w-14 h-14 rounded-[18px] bg-accent/[0.08] border border-border/15 mb-6">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="stroke-fg" strokeWidth="1.5">
-            <path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-          </svg>
-        </div>
-        <h1 className="text-5xl font-semibold tracking-tight text-fg mb-3">
-          Resume Tailor
-        </h1>
-        <p className="text-fg-muted text-lg leading-relaxed max-w-lg mx-auto">
-          Rewrite your resume to perfectly match any job description — then save it to your library with one click.
-        </p>
-      </header>
-
-      {/* Form */}
-      <section className="max-w-2xl mx-auto">
+        <section>
         <PlanChecker feature="resume_tailor">
-        <div className="bg-white rounded-3xl border border-border shadow-sm p-8 space-y-7">
+        <div className="card p-6 space-y-6">
 
           {/* Resume */}
           <div>
             <div className="flex items-center justify-between mb-4">
               <h2 className="font-semibold text-fg">Your Resume</h2>
               {resumeTxt && (
-                <span className="text-xs text-emerald-600 font-medium flex items-center gap-1">
+                <span className="text-xs text-green font-medium flex items-center gap-1">
                   <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                   </svg>
@@ -154,9 +145,9 @@ export default function TailorPage() {
 
           {/* Divider */}
           <div className="relative">
-            <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-[#f0f0f5]" /></div>
+            <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-border" /></div>
             <div className="relative flex justify-center">
-              <span className="px-3 bg-white text-xs text-fg-subtle font-medium">target role</span>
+              <span className="px-3 bg-surface text-xs text-fg-subtle font-medium">Target role</span>
             </div>
           </div>
 
@@ -178,13 +169,13 @@ export default function TailorPage() {
                   onChange={e => setJobUrl(e.target.value)}
                   onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); parseUrl(); } }}
                   placeholder="Paste LinkedIn, Indeed, or Greenhouse URL..."
-                  className="w-full bg-bg text-fg placeholder:text-fg-subtle pl-9 pr-3 py-2.5 rounded-xl border border-border-2 focus:outline-none focus:border-border focus:ring-2 focus:ring-fg/10 text-sm transition-all"
+                  className="w-full bg-bg text-fg placeholder:text-fg-subtle pl-9 pr-3 py-2.5 rounded-lg border border-border-2 focus:outline-none focus:border-border focus:ring-2 focus:ring-fg/10 text-sm transition-all"
                 />
               </div>
               <button
                 onClick={parseUrl}
                 disabled={urlLoading || !jobUrl.trim()}
-                className="px-4 py-2.5 rounded-xl bg-accent text-white text-sm font-semibold hover:bg-accent-hover disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center gap-1.5 shrink-0"
+                className="btn btn-primary px-4 py-2.5 text-sm disabled:opacity-40 shrink-0"
               >
                 {urlLoading ? (
                   <svg className="animate-spin h-3.5 w-3.5" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8h8a8 8 0 01-16 0z" /></svg>
@@ -194,7 +185,7 @@ export default function TailorPage() {
                 {urlLoading ? "Parsing…" : "Import"}
               </button>
             </div>
-            {urlError && <p className="text-xs text-red-500 mb-2">{urlError}</p>}
+            {urlError && <p className="text-xs text-red mb-2">{urlError}</p>}
 
             <textarea
               id="jd-input"
@@ -202,7 +193,7 @@ export default function TailorPage() {
               onChange={(e) => setJdTxt(e.target.value)}
               rows={7}
               placeholder="Or paste the full job description here — include responsibilities, requirements, and qualifications…"
-              className="w-full bg-bg text-fg placeholder:text-fg-subtle p-4 rounded-2xl border border-border-2 focus:outline-none focus:border-border focus:ring-2 focus:ring-fg/10 resize-none text-sm leading-relaxed transition-all"
+              className="textarea"
             />
             {jdTxt.length > 0 && (
               <p className="text-right text-xs text-fg-subtle mt-1">{jdTxt.length} characters</p>
@@ -214,7 +205,7 @@ export default function TailorPage() {
             <button
               disabled={loading || !resumeTxt || jdTxt.trim().length < 30}
               onClick={handleTailor}
-              className="flex-1 py-3.5 rounded-2xl text-white bg-accent font-semibold disabled:opacity-40 disabled:cursor-not-allowed hover:bg-accent-hover active:scale-[.98] transition-all flex items-center justify-center gap-2 text-sm"
+              className="btn btn-primary flex-1 py-3 disabled:opacity-40"
             >
               {loading ? (
                 <>
@@ -230,7 +221,7 @@ export default function TailorPage() {
               <button
                 onClick={reset}
                 disabled={loading}
-                className="px-5 py-3.5 rounded-2xl bg-bg text-fg-muted font-semibold border border-[#e0e0e5] hover:bg-surface-2 transition-colors disabled:opacity-40 text-sm"
+                className="btn btn-secondary px-5 py-3 disabled:opacity-40"
               >
                 Clear
               </button>
@@ -245,9 +236,9 @@ export default function TailorPage() {
         <AnimatePresence mode="wait">
           {loading && (
             <motion.div key="loading" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-              className="p-10 bg-white rounded-3xl border border-border shadow-sm flex flex-col items-center gap-5">
+              className="card p-10 flex flex-col items-center gap-5">
               <div className="relative w-14 h-14">
-                <div className="absolute inset-0 rounded-full border-[3px] border-[#e8e8ed]" />
+                <div className="absolute inset-0 rounded-full border-[3px] border-border" />
                 <div className="absolute inset-0 rounded-full border-[3px] border-t-fg border-r-fg/20 border-b-transparent border-l-transparent animate-spin" />
                 <div className="absolute inset-0 flex items-center justify-center">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="stroke-fg" strokeWidth="2">
@@ -263,7 +254,7 @@ export default function TailorPage() {
           )}
           {error && !loading && (
             <motion.div key="error" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-              className="flex items-start gap-3 p-5 bg-red-50 border border-red-200 text-red-700 rounded-2xl text-sm" role="alert">
+              className="alert-error" role="alert">
               <svg className="h-5 w-5 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
@@ -283,12 +274,12 @@ export default function TailorPage() {
             animate={{ opacity: 1, y: 0, transition: { duration: 0.4, ease: "easeOut" } }}
             className="max-w-2xl mx-auto mt-6"
           >
-            <div className="bg-white rounded-3xl border border-border shadow-sm overflow-hidden">
+            <div className="card overflow-hidden">
 
               {/* Header bar */}
-              <div className="flex items-center justify-between px-6 py-4 border-b border-[#f0f0f5] bg-[#fafafa]">
+              <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-bg">
                 <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-xl bg-accent/[0.08] border border-border/15 flex items-center justify-center shrink-0">
+                  <div className="w-8 h-8 rounded-lg bg-surface-2 border border-border/15 flex items-center justify-center shrink-0">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" className="stroke-fg" strokeWidth="2">
                       <path d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                     </svg>
@@ -305,8 +296,8 @@ export default function TailorPage() {
                     onClick={copyResume}
                     className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${
                       copied
-                        ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                        : "bg-white text-fg-muted border-border-2 hover:border-border/40 hover:text-fg"
+                        ? "pill-success"
+                        : "bg-surface text-fg-muted border-border-2 hover:border-border/40 hover:text-fg"
                     }`}
                   >
                     {copied ? (
@@ -329,7 +320,7 @@ export default function TailorPage() {
                     </button>
                   )}
                   {saved && (
-                    <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                    <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold pill-success border border-emerald-200">
                       <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
                       Saved
                     </span>
@@ -339,14 +330,14 @@ export default function TailorPage() {
 
               {/* Save name input (inline) */}
               {showSaveInput && (
-                <div className="flex items-center gap-2 px-6 py-3 border-b border-[#f0f0f5] bg-surface-2">
+                <div className="flex items-center gap-2 px-6 py-3 border-b border-border bg-surface-2">
                   <input
                     value={saveName}
                     onChange={e => setSaveName(e.target.value)}
                     onKeyDown={e => { if (e.key === "Enter") saveToResumes(); }}
                     placeholder="Resume name (e.g. Frontend Engineer v2)"
                     autoFocus
-                    className="flex-1 px-3 py-2 rounded-lg border border-border/20 bg-white text-sm text-fg placeholder:text-fg-subtle focus:outline-none focus:ring-2 focus:ring-fg/10"
+                    className="flex-1 px-3 py-2 rounded-lg border border-border/20 bg-surface text-sm text-fg placeholder:text-fg-subtle focus:outline-none focus:ring-2 focus:ring-fg/10"
                   />
                   <button
                     onClick={saveToResumes}
@@ -371,7 +362,7 @@ export default function TailorPage() {
                 </div>
               </div>
 
-              <div className="border-t border-[#f0f0f5] px-6 py-4 bg-[#fafafa]">
+              <div className="border-t border-border px-6 py-4 bg-bg">
                 <p className="text-xs text-fg-subtle text-center">
                   Review the tailored version carefully — all facts are preserved from your original, but verify before submitting.
                 </p>
@@ -380,6 +371,7 @@ export default function TailorPage() {
           </motion.section>
         )}
       </AnimatePresence>
+      </div>
     </div>
   );
 }

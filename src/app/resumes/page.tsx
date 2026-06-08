@@ -124,29 +124,29 @@ export default function ResumesPage() {
     <div className="min-h-screen bg-bg flex items-center justify-center p-6">
       <div className="text-center">
         <p className="text-sm text-fg-muted mb-4">Please sign in to manage your resumes.</p>
-        <Link href="/login" className="px-6 py-2.5 bg-accent text-white rounded-xl text-sm font-semibold">Sign in</Link>
+        <Link href="/login" className="px-6 py-2.5 bg-accent text-white rounded-lg text-sm font-semibold">Sign in</Link>
       </div>
     </div>
   );
 
   return (
-    <div className="min-h-screen bg-bg text-fg">
-      <div className="max-w-4xl mx-auto px-6 pt-20 pb-20">
+    <div className="page-shell">
+      <div className="page-inner-md">
 
         {/* Header */}
         <header className="mb-10">
-          <p className="text-xs font-medium text-fg-subtle mb-2 uppercase tracking-widest">Resume Manager</p>
+          <p className="section-label mb-2">Resume Manager</p>
           <div className="flex items-center justify-between flex-wrap gap-4">
             <h1 className="text-3xl md:text-4xl font-semibold tracking-tight">My Resumes</h1>
             {atLimit ? (
-              <Link href="/dashboard" className="flex items-center gap-2 px-4 py-2.5 bg-orange hover:bg-[#e8910a] text-white text-sm font-semibold rounded-xl transition-colors">
+              <Link href="/dashboard" className="flex items-center gap-2 px-4 py-2.5 bg-orange hover:bg-[#e8910a] text-white text-sm font-semibold rounded-lg transition-colors">
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
                 {isPro ? "Max reached" : "Limit reached — Upgrade"}
               </Link>
             ) : (
               <button
                 onClick={() => setShowSave(true)}
-                className="flex items-center gap-2 px-4 py-2.5 bg-accent hover:bg-accent-hover text-white text-sm font-semibold rounded-xl transition-colors cursor-pointer"
+                className="flex items-center gap-2 px-4 py-2.5 bg-accent hover:bg-accent-hover text-white text-sm font-semibold rounded-lg transition-colors cursor-pointer"
               >
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
                 Save New Resume
@@ -158,7 +158,7 @@ export default function ResumesPage() {
         {/* Stats */}
         {resumes.length > 0 && (
           <div className="flex gap-3 mb-8 overflow-x-auto pb-1">
-            <div className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border min-w-fit ${atLimit ? "border-[#ff9f0a]/30 bg-orange/[0.06]" : "border-border bg-white"}`}>
+            <div className={`flex items-center gap-2 px-4 py-2.5 rounded-lg border min-w-fit ${atLimit ? "border-[#ff9f0a]/30 bg-orange/[0.06]" : "border-border bg-surface"}`}>
               <span className="text-xs font-medium text-fg-muted">Saved</span>
               <span className={`text-sm font-semibold tabular-nums ${atLimit ? "text-orange" : "text-fg"}`}>{resumes.length}</span>
               <span className="text-xs text-fg-subtle">/ {resumeLimit}</span>
@@ -168,7 +168,7 @@ export default function ResumesPage() {
               if (scored.length === 0) return null;
               const avg = Math.round(scored.reduce((a, r) => a + (r.score ?? 0), 0) / scored.length);
               return (
-                <div className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-border bg-white min-w-fit">
+                <div className="flex items-center gap-2 px-4 py-2.5 rounded-lg border border-border bg-surface min-w-fit">
                   <span className="text-xs font-medium text-fg-muted">Avg Score</span>
                   <span className="text-sm font-semibold tabular-nums" style={{ color: scoreColor(avg) }}>{avg}</span>
                 </div>
@@ -178,7 +178,7 @@ export default function ResumesPage() {
         )}
 
         {error && (
-          <div className="mb-6 p-4 rounded-2xl border border-red-200 bg-red-50 text-red-600 text-sm">{error}</div>
+          <div className="alert-error mb-6" role="alert">{error}</div>
         )}
 
         {loading ? (
@@ -190,7 +190,7 @@ export default function ResumesPage() {
           </div>
         ) : resumes.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20">
-            <div className="w-16 h-16 rounded-3xl bg-accent/[0.08] border border-border/15 flex items-center justify-center mb-5">
+            <div className="w-16 h-16 rounded-lg bg-surface-2 border border-border/15 flex items-center justify-center mb-5">
               <svg className="w-7 h-7 text-fg" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
               </svg>
@@ -201,7 +201,7 @@ export default function ResumesPage() {
             </p>
             <button
               onClick={() => setShowSave(true)}
-              className="mt-4 px-5 py-2.5 bg-accent hover:bg-accent-hover text-white text-sm font-semibold rounded-xl transition-colors cursor-pointer"
+              className="mt-4 px-5 py-2.5 bg-accent hover:bg-accent-hover text-white text-sm font-semibold rounded-lg transition-colors cursor-pointer"
             >
               Save your first resume
             </button>
@@ -209,7 +209,7 @@ export default function ResumesPage() {
         ) : (
           <div className="grid gap-3">
             {resumes.map(resume => (
-              <div key={resume.id} className="bg-white rounded-2xl border border-border p-5 hover:shadow-sm hover:border-border-2 transition-all group">
+              <div key={resume.id} className="bg-surface rounded-lg border border-border p-5 hover:shadow-sm hover:border-border-2 transition-all group">
                 <div className="flex items-center justify-between gap-4">
                   <div className="flex items-center gap-4 flex-1 min-w-0">
                     {/* Score ring */}
@@ -255,7 +255,7 @@ export default function ResumesPage() {
                   <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                     <button
                       onClick={() => { setRenameId(resume.id); setRenameName(resume.name); }}
-                      className="p-2 rounded-xl hover:bg-bg transition-colors cursor-pointer" title="Rename"
+                      className="p-2 rounded-lg hover:bg-bg transition-colors cursor-pointer" title="Rename"
                     >
                       <svg className="w-4 h-4 text-fg-subtle" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487z" />
@@ -263,7 +263,7 @@ export default function ResumesPage() {
                     </button>
                     <Link
                       href="/resume"
-                      className="p-2 rounded-xl hover:bg-bg transition-colors" title="Scan this resume"
+                      className="p-2 rounded-lg hover:bg-bg transition-colors" title="Scan this resume"
                     >
                       <svg className="w-4 h-4 text-fg" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
@@ -271,7 +271,7 @@ export default function ResumesPage() {
                     </Link>
                     <button
                       onClick={() => deleteResume(resume.id)}
-                      className="p-2 rounded-xl hover:bg-red-50 transition-colors cursor-pointer" title="Delete"
+                      className="p-2 rounded-lg hover:bg-red-bg transition-colors cursor-pointer" title="Delete"
                     >
                       <svg className="w-4 h-4 text-red" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
@@ -347,22 +347,22 @@ function SaveResumeModal({ userId, onClose, onSaved }: {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onClick={onClose} />
-      <form onSubmit={handleSubmit} className="relative bg-white rounded-3xl border border-border shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto p-7">
+      <form onSubmit={handleSubmit} className="relative bg-surface rounded-lg border border-border shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto p-7">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-lg font-semibold text-fg">Save Resume</h2>
-          <button type="button" onClick={onClose} className="p-2 rounded-xl hover:bg-bg transition-colors cursor-pointer">
+          <button type="button" onClick={onClose} className="p-2 rounded-lg hover:bg-bg transition-colors cursor-pointer">
             <svg className="w-5 h-5 text-fg-subtle" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
           </button>
         </div>
 
-        {err && <div className="mb-4 p-3 rounded-xl bg-red-50 border border-red-200 text-red-600 text-sm">{err}</div>}
+        {err && <div className="mb-4 p-3 rounded-lg pill-danger text-sm">{err}</div>}
 
         <div className="flex flex-col gap-4">
           {/* Name */}
           <label className="flex flex-col gap-1.5">
             <span className="text-xs font-medium text-fg-muted">Resume Name</span>
             <input value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Software Engineer v2"
-              className="px-4 py-3 rounded-xl border border-border bg-bg text-sm text-fg placeholder:text-fg-subtle focus:outline-none focus:ring-2 focus:ring-fg/15 focus:border-border/40 transition-all" />
+              className="px-4 py-3 rounded-lg border border-border bg-bg text-sm text-fg placeholder:text-fg-subtle focus:outline-none focus:ring-2 focus:ring-fg/15 focus:border-border/40 transition-all" />
           </label>
 
           {/* Mode toggle */}
@@ -381,11 +381,11 @@ function SaveResumeModal({ userId, onClose, onSaved }: {
           {mode === "paste" ? (
             <textarea value={content} onChange={e => setContent(e.target.value)} rows={8}
               placeholder="Paste your resume text here..."
-              className="px-4 py-3 rounded-xl border border-border bg-bg text-sm text-fg placeholder:text-fg-subtle focus:outline-none focus:ring-2 focus:ring-fg/15 focus:border-border/40 transition-all resize-none font-mono leading-relaxed" />
+              className="px-4 py-3 rounded-lg border border-border bg-bg text-sm text-fg placeholder:text-fg-subtle focus:outline-none focus:ring-2 focus:ring-fg/15 focus:border-border/40 transition-all resize-none font-mono leading-relaxed" />
           ) : (
             <div>
               <input type="file" accept=".txt" onChange={handleFile}
-                className="block w-full text-sm text-fg-muted file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-semibold file:bg-accent/[0.08] file:text-fg hover:file:bg-accent/[0.14] file:cursor-pointer" />
+                className="block w-full text-sm text-fg-muted file:mr-4 file:py-2.5 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-surface-2 file:text-fg hover:file:bg-accent/[0.14] file:cursor-pointer" />
               {content && (
                 <p className="mt-2 text-xs text-green">File loaded ({content.length.toLocaleString()} characters)</p>
               )}
@@ -400,11 +400,11 @@ function SaveResumeModal({ userId, onClose, onSaved }: {
         {/* Actions */}
         <div className="flex items-center justify-end gap-3 mt-7 pt-5 border-t border-border">
           <button type="button" onClick={onClose}
-            className="px-5 py-2.5 rounded-xl border border-border text-sm font-medium text-fg-muted hover:bg-bg transition-colors cursor-pointer">
+            className="px-5 py-2.5 rounded-lg border border-border text-sm font-medium text-fg-muted hover:bg-bg transition-colors cursor-pointer">
             Cancel
           </button>
           <button type="submit" disabled={saving}
-            className="px-5 py-2.5 rounded-xl bg-accent hover:bg-accent-hover text-white text-sm font-semibold transition-colors disabled:opacity-50 cursor-pointer">
+            className="px-5 py-2.5 rounded-lg bg-accent hover:bg-accent-hover text-white text-sm font-semibold transition-colors disabled:opacity-50 cursor-pointer">
             {saving ? "Saving..." : "Save Resume"}
           </button>
         </div>

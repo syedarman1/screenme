@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { CircularProgressbar, buildStyles } from "react-circular-progressbar";
 import "react-circular-progressbar/dist/styles.css";
 import PlanChecker from "../components/PlanChecker";
+import PageHeader from "../components/PageHeader";
 import { supabase } from "../lib/supabaseClient";
 
 export type Severity = "low" | "medium" | "high";
@@ -74,10 +75,10 @@ function scoreLabel(s: number) {
   return "Needs Work";
 }
 function scoreBadge(s: number) {
-  if (s >= 85) return "bg-emerald-50 text-emerald-700 border-emerald-200";
+  if (s >= 85) return "pill-success";
   if (s >= 70) return "bg-surface-2 text-fg border-border/20";
   if (s >= 50) return "bg-amber-50 text-amber-700 border-amber-200";
-  return "bg-red-50 text-red-700 border-red-200";
+  return "pill-danger";
 }
 
 const SEV_BORDER: Record<Severity, string> = {
@@ -86,14 +87,14 @@ const SEV_BORDER: Record<Severity, string> = {
   low:    "border-l-emerald-500",
 };
 const SEV_BADGE: Record<Severity, string> = {
-  high:   "bg-red-50 text-red-700 border-red-200",
+  high:   "pill-danger",
   medium: "bg-amber-50 text-amber-700 border-amber-200",
-  low:    "bg-emerald-50 text-emerald-700 border-emerald-200",
+  low:    "pill-success",
 };
 const SEV_DOT: Record<Severity, string> = {
-  high:   "bg-red-500",
+  high:   "bg-red",
   medium: "bg-amber-400",
-  low:    "bg-emerald-500",
+  low:    "bg-green",
 };
 
 /* ── CopyButton ───────────────────────────────────────────── */
@@ -109,7 +110,7 @@ function CopyButton({ text }: { text: string }) {
       }}
       className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-medium transition-all ${
         copied
-          ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+          ? "pill-success border border-emerald-200"
           : "bg-bg text-fg-muted border border-border-2 hover:border-border hover:text-fg"
       }`}
     >
@@ -219,28 +220,17 @@ export default function ResumeScreen() {
   ];
 
   return (
-    <div className="min-h-screen bg-bg text-fg py-16 px-4">
+    <div className="page-shell">
+      <div className="page-inner-sm">
+        <PageHeader
+          label="Resume Scanner"
+          title="Audit your resume"
+          description="Get an instant AI-powered score, gaps, rewrites, and keywords in seconds."
+        />
 
-      {/* ── Page header ─────────────────────────────────── */}
-      <header className="max-w-2xl mx-auto text-center mb-14">
-        <div className="inline-flex items-center justify-center w-14 h-14 rounded-[18px] bg-accent/[0.08] border border-border/15 mb-6">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="stroke-fg" strokeWidth="1.5">
-            <path d="M4 2h10l6 6v14H4V2z" /><path d="M14 2v6h6" />
-            <path d="M8 12h8M8 16h5" />
-          </svg>
-        </div>
-        <h1 className="text-5xl font-semibold tracking-tight text-fg mb-3">
-          Resume Scanner
-        </h1>
-        <p className="text-fg-muted text-lg leading-relaxed max-w-lg mx-auto">
-          Get an instant AI-powered audit — score, gaps, rewrites, and keywords in seconds.
-        </p>
-      </header>
-
-      {/* ── Upload card ─────────────────────────────────── */}
-      <section className="max-w-2xl mx-auto">
+        <section>
         <PlanChecker feature="resume_scan">
-          <div className="bg-white rounded-3xl border border-border shadow-sm p-8">
+          <div className="card p-6">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-xl font-semibold text-fg">Your Resume</h2>
               {audit && (
@@ -266,11 +256,11 @@ export default function ResumeScreen() {
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -12 }}
-              className="bg-white rounded-3xl border border-border shadow-sm p-10 flex flex-col items-center gap-5"
+              className="bg-surface rounded-lg border border-border shadow-sm p-10 flex flex-col items-center gap-5"
             >
               {/* Animated scan bars */}
               <div className="relative w-16 h-16 flex items-center justify-center">
-                <div className="absolute inset-0 rounded-full border-[3px] border-[#e8e8ed]" />
+                <div className="absolute inset-0 rounded-full border-[3px] border-border" />
                 <div className="absolute inset-0 rounded-full border-[3px] border-t-fg border-r-fg/20 border-b-transparent border-l-transparent animate-spin" />
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" className="stroke-fg" strokeWidth="1.5">
                   <path d="M9 12l2 2 4-4" /><circle cx="12" cy="12" r="9" />
@@ -283,7 +273,7 @@ export default function ResumeScreen() {
               {controller && (
                 <button
                   onClick={() => controller.abort()}
-                  className="px-5 py-2 rounded-xl bg-red-50 text-red-600 border border-red-200 text-sm font-medium hover:bg-red-100 transition-colors"
+                  className="px-5 py-2 rounded-lg pill-danger text-sm font-medium hover:bg-red-bg transition-colors"
                 >
                   Cancel
                 </button>
@@ -297,7 +287,7 @@ export default function ResumeScreen() {
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0 }}
-              className="flex items-start gap-3 p-5 bg-red-50 border border-red-200 rounded-2xl text-red-700 text-sm"
+              className="alert-error"
               role="alert"
             >
               <svg className="w-5 h-5 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -321,7 +311,7 @@ export default function ResumeScreen() {
           >
 
             {/* ── Score card ──────────────────────────── */}
-            <div className="bg-white rounded-3xl border border-border shadow-sm overflow-hidden">
+            <div className="bg-surface rounded-lg border border-border shadow-sm overflow-hidden">
               <div className="p-8">
                 <div className="flex flex-col sm:flex-row items-center sm:items-start gap-7">
 
@@ -362,20 +352,20 @@ export default function ResumeScreen() {
                     {/* Stat pills */}
                     <div className="flex flex-wrap justify-center sm:justify-start gap-2">
                       {highCount > 0 && (
-                        <span className="flex items-center gap-1.5 px-3 py-1 bg-red-50 border border-red-200 rounded-full text-xs font-medium text-red-700">
-                          <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
+                        <span className="flex items-center gap-1.5 px-3 py-1 pill-danger rounded-full text-xs font-medium">
+                          <span className="w-1.5 h-1.5 rounded-full bg-red" />
                           {highCount} high priority
                         </span>
                       )}
                       {medCount > 0 && (
-                        <span className="flex items-center gap-1.5 px-3 py-1 bg-amber-50 border border-amber-200 rounded-full text-xs font-medium text-amber-700">
-                          <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+                        <span className="flex items-center gap-1.5 px-3 py-1 pill-warning rounded-full text-xs font-medium">
+                          <span className="w-1.5 h-1.5 rounded-full bg-orange" />
                           {medCount} medium
                         </span>
                       )}
                       {(audit.strengths?.length ?? 0) > 0 && (
-                        <span className="flex items-center gap-1.5 px-3 py-1 bg-emerald-50 border border-emerald-200 rounded-full text-xs font-medium text-emerald-700">
-                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                        <span className="flex items-center gap-1.5 px-3 py-1 pill-success rounded-full text-xs font-medium">
+                          <span className="w-1.5 h-1.5 rounded-full bg-green" />
                           {audit.strengths!.length} strengths
                         </span>
                       )}
@@ -390,7 +380,7 @@ export default function ResumeScreen() {
 
                 {/* Sub-scores */}
                 {audit.subscores && (
-                  <div className="mt-7 pt-6 border-t border-[#f0f0f5] grid grid-cols-2 gap-x-8 gap-y-4">
+                  <div className="mt-7 pt-6 border-t border-border grid grid-cols-2 gap-x-8 gap-y-4">
                     <SubScoreBar label="Content Quality"    value={audit.subscores.content} />
                     <SubScoreBar label="ATS Compatibility"  value={audit.subscores.ats} />
                     <SubScoreBar label="Formatting"         value={audit.subscores.formatting} />
@@ -401,10 +391,10 @@ export default function ResumeScreen() {
             </div>
 
             {/* ── Analysis card ───────────────────────── */}
-            <div className="bg-white rounded-3xl border border-border shadow-sm overflow-hidden">
+            <div className="bg-surface rounded-lg border border-border shadow-sm overflow-hidden">
 
               {/* Tabs */}
-              <div className="flex border-b border-[#f0f0f5] px-2">
+              <div className="flex border-b border-border px-2">
                 {tabs.map((tab) => (
                   <button
                     key={tab.id}
@@ -436,8 +426,8 @@ export default function ResumeScreen() {
                 {activeTab === "issues" && (
                   audit.issues.length === 0 ? (
                     <div className="py-12 flex flex-col items-center gap-3 text-center">
-                      <div className="w-12 h-12 rounded-2xl bg-emerald-50 border border-emerald-200 flex items-center justify-center">
-                        <svg className="w-6 h-6 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <div className="w-12 h-12 rounded-lg pill-success flex items-center justify-center">
+                        <svg className="w-6 h-6 text-green" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
                         </svg>
                       </div>
@@ -449,19 +439,19 @@ export default function ResumeScreen() {
                       {audit.issues.map((issue, i) => (
                         <div
                           key={i}
-                          className={`rounded-2xl border border-[#e8e8ed] border-l-4 overflow-hidden ${SEV_BORDER[issue.severity]}`}
+                          className={`rounded-lg border border-border border-l-4 overflow-hidden ${SEV_BORDER[issue.severity]}`}
                         >
                           {/* Row */}
                           <button
                             onClick={() => setOpenIdx(openIdx === i ? null : i)}
                             aria-expanded={openIdx === i}
-                            className="w-full flex items-center gap-3 px-5 py-4 text-left hover:bg-[#fafafa] transition-colors"
+                            className="w-full flex items-center gap-3 px-5 py-4 text-left hover:bg-bg transition-colors"
                           >
                             <span className={`w-2 h-2 rounded-full flex-shrink-0 ${SEV_DOT[issue.severity]}`} />
                             <span className={`flex-shrink-0 text-xs font-semibold px-2.5 py-0.5 rounded-full border ${SEV_BADGE[issue.severity]}`}>
                               {issue.severity.charAt(0).toUpperCase() + issue.severity.slice(1)}
                             </span>
-                            <span className="flex-shrink-0 text-xs font-medium text-fg-muted bg-bg px-2.5 py-0.5 rounded-full border border-[#e8e8ed]">
+                            <span className="flex-shrink-0 text-xs font-medium text-fg-muted bg-bg px-2.5 py-0.5 rounded-full border border-border">
                               {issue.section}
                             </span>
                             <span className="text-fg text-sm truncate flex-1">{issue.text}</span>
@@ -475,10 +465,10 @@ export default function ResumeScreen() {
 
                           {/* Expanded */}
                           {openIdx === i && (
-                            <div className="px-5 pb-5 space-y-4 border-t border-[#f0f0f5]">
+                            <div className="px-5 pb-5 space-y-4 border-t border-border">
                               {/* Original */}
                               {issue.line && (
-                                <div className="mt-4 p-4 bg-[#fafafa] rounded-xl border border-[#e8e8ed]">
+                                <div className="mt-4 p-4 bg-bg rounded-lg border border-border">
                                   <p className="text-[10px] font-semibold text-fg-subtle uppercase tracking-widest mb-2">Original</p>
                                   <p className="text-fg text-sm leading-relaxed italic">"{issue.line}"</p>
                                 </div>
@@ -493,7 +483,7 @@ export default function ResumeScreen() {
 
                               {/* Suggested rewrite */}
                               {audit.actions[i] && (
-                                <div className="p-4 bg-surface-2 rounded-xl border border-border/15">
+                                <div className="p-4 bg-surface-2 rounded-lg border border-border/15">
                                   <div className="flex items-center justify-between mb-2">
                                     <p className="text-[10px] font-semibold text-fg uppercase tracking-widest">Suggested Rewrite</p>
                                     <CopyButton text={audit.actions[i].rewrite} />
@@ -524,20 +514,20 @@ export default function ResumeScreen() {
                   ) : (
                     <div className="space-y-3">
                       {audit.strengths.map((s, i) => (
-                        <div key={i} className="flex gap-4 p-5 bg-emerald-50 border border-emerald-200 rounded-2xl">
-                          <div className="w-8 h-8 rounded-xl bg-emerald-100 border border-emerald-200 flex items-center justify-center flex-shrink-0 mt-0.5">
-                            <svg className="w-4 h-4 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <div key={i} className="flex gap-4 p-5 pill-success rounded-lg">
+                          <div className="icon-box mt-0.5">
+                            <svg className="w-4 h-4 text-green" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
                             </svg>
                           </div>
                           <div className="min-w-0">
                             <div className="flex items-center gap-2 mb-1.5">
-                              <span className="text-xs font-semibold px-2 py-0.5 bg-white border border-emerald-200 rounded-full text-emerald-700">
+                              <span className="text-xs font-semibold px-2 py-0.5 pill-success rounded-full">
                                 {s.section}
                               </span>
                             </div>
                             <p className="text-fg text-sm leading-relaxed">{s.text}</p>
-                            <p className="mt-1.5 text-emerald-700 text-xs">
+                            <p className="mt-1.5 text-green text-xs">
                               <span className="font-semibold">Why it works: </span>{s.reason}
                             </p>
                           </div>
@@ -568,7 +558,7 @@ export default function ResumeScreen() {
                           {kw.terms.length > 0 && (
                             <div className="flex flex-wrap gap-2 mb-3">
                               {kw.terms.map((t, j) => (
-                                <span key={j} className="flex items-center gap-1 px-3 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-full text-xs font-medium">
+                                <span key={j} className="flex items-center gap-1 px-3 py-1 pill-success border border-emerald-200 rounded-full text-xs font-medium">
                                   <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
                                   </svg>
@@ -595,7 +585,7 @@ export default function ResumeScreen() {
                           )}
 
                           {i < (audit.keywords?.length ?? 0) - 1 && (
-                            <div className="mt-5 border-t border-[#f0f0f5]" />
+                            <div className="mt-5 border-t border-border" />
                           )}
                         </div>
                       ))}
@@ -605,7 +595,7 @@ export default function ResumeScreen() {
               </div>
 
               {/* Footer */}
-              <div className="px-6 py-4 bg-[#fafafa] border-t border-[#f0f0f5]">
+              <div className="px-6 py-4 bg-bg border-t border-border">
                 <p className="text-center text-xs text-fg-subtle">
                   <span className="font-semibold text-fg">Tip: </span>
                   Recruiters spend 6–7 seconds on a first pass. Lead with impact, quantify everything, and keep it to one page if you have under 10 years of experience.
@@ -616,6 +606,7 @@ export default function ResumeScreen() {
           </motion.div>
         )}
       </AnimatePresence>
+      </div>
     </div>
   );
 }
