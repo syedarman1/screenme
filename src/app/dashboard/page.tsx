@@ -16,12 +16,12 @@ const ICON_PROPS = { className: "w-5 h-5", fill: "none", viewBox: "0 0 24 24", s
 
 export default function DashboardPage() {
   const router = useRouter();
-  const [user,     setUser]    = useState<User | null>(null);
-  const [loading,  setLoading] = useState(true);
-  const [error,    setError]   = useState<string | null>(null);
-  const [plan,     setPlan]    = useState<string | null>(null);
-  const [usage,    setUsage]   = useState<any>(null);
-  const [busy,     setBusy]    = useState(false);
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [plan, setPlan] = useState<string | null>(null);
+  const [usage, setUsage] = useState<any>(null);
+  const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -69,7 +69,6 @@ export default function DashboardPage() {
   const isPro = plan === "pro";
 
   const tools: Tool[] = [
-    /* ── Simple (no AI) ── */
     {
       title: "Job Tracker", description: "Track applications from saved to offer",
       href: "/applications", available: true,
@@ -80,7 +79,6 @@ export default function DashboardPage() {
       href: "/resumes", available: true,
       icon: <svg {...ICON_PROPS}><path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"/></svg>,
     },
-    /* ── AI-powered (simple → complex) ── */
     {
       title: "Resume Scanner", description: "AI-powered ATS scoring and keyword analysis",
       href: "/resume", available: true,
@@ -107,7 +105,6 @@ export default function DashboardPage() {
       href: "/tailor", available: true,
       icon: <svg {...ICON_PROPS}><path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>,
     },
-    /* ── Coming soon ── */
     {
       title: "LinkedIn Optimizer", description: "Maximize your profile visibility",
       href: "#", available: false, status: "coming_soon",
@@ -120,10 +117,9 @@ export default function DashboardPage() {
     },
   ];
 
-  /* ── Loading / error ── */
   if (loading) return (
-    <div className="min-h-screen bg-[#f5f5f7] flex items-center justify-center">
-      <svg className="animate-spin h-7 w-7 text-[#0071e3]" fill="none" viewBox="0 0 24 24">
+    <div className="min-h-screen bg-bg flex items-center justify-center">
+      <svg className="animate-spin h-6 w-6 text-fg-muted" fill="none" viewBox="0 0 24 24">
         <circle className="opacity-20" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
         <path className="opacity-80" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
       </svg>
@@ -131,14 +127,11 @@ export default function DashboardPage() {
   );
 
   if (error) return (
-    <div className="min-h-screen bg-[#f5f5f7] flex items-center justify-center p-6">
-      <div className="max-w-sm w-full text-center">
-        <div className="w-12 h-12 rounded-2xl bg-red-500/10 border border-red-500/15 flex items-center justify-center mx-auto mb-4">
-          <svg className="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-        </div>
-        <h2 className="text-base font-semibold text-[#1d1d1f] mb-2">Access required</h2>
-        <p className="text-sm text-[#6e6e73] mb-6">{error}</p>
-        <Link href="/login" className="inline-block px-6 py-2.5 bg-[#0071e3] hover:bg-[#0077ed] text-white font-semibold rounded-xl text-sm transition-colors">Sign in</Link>
+    <div className="min-h-screen bg-bg flex items-center justify-center p-6">
+      <div className="card max-w-sm w-full text-center p-6">
+        <h2 className="text-base font-semibold text-fg mb-2">Access required</h2>
+        <p className="text-sm text-fg-muted mb-5">{error}</p>
+        <Link href="/login" className="btn btn-primary">Sign in</Link>
       </div>
     </div>
   );
@@ -147,60 +140,44 @@ export default function DashboardPage() {
     || (user?.email ? user.email.split("@")[0].charAt(0).toUpperCase() + user.email.split("@")[0].slice(1) : "");
 
   return (
-    <div className="min-h-screen bg-[#f5f5f7] text-[#1d1d1f]">
-      {/* ambient */}
-      <div aria-hidden className="fixed inset-0 -z-10 pointer-events-none">
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[700px] h-[300px] bg-[#0071e3] opacity-[0.04] rounded-full blur-[140px]" />
-      </div>
-
-      <div className="max-w-6xl mx-auto px-6 pt-24 pb-24">
-
-        {/* Header */}
-        <header className="mb-14">
-          <p className="text-xs font-medium text-[#aeaeb2] mb-2 uppercase tracking-widest">Dashboard</p>
-          <div className="flex items-center justify-between flex-wrap gap-4">
-            <h1 className="text-4xl md:text-5xl font-semibold tracking-tight text-[#1d1d1f]">
+    <div className="min-h-screen bg-bg text-fg">
+      <div className="max-w-6xl mx-auto px-6 pt-20 pb-20">
+        <header className="mb-10">
+          <p className="section-label mb-2">Dashboard</p>
+          <div className="flex items-center justify-between flex-wrap gap-3">
+            <h1 className="text-3xl md:text-4xl font-semibold tracking-tight text-fg">
               Hey, {firstName}
             </h1>
-            {isPro && (
-              <span className="px-3.5 py-1.5 rounded-full border border-[#0071e3]/25 bg-[#0071e3]/[0.08] text-[#0071e3] text-xs font-semibold uppercase tracking-wider">
-                Pro
-              </span>
-            )}
+            {isPro && <span className="badge badge-accent">Pro</span>}
           </div>
         </header>
 
-        {/* Plan */}
-        <section className="mb-16">
-          <p className="text-xs font-medium text-[#aeaeb2] uppercase tracking-widest mb-5">Your plan</p>
-          <div className={`rounded-2xl border p-7 ${isPro ? "border-[#0071e3]/20 bg-[#f0f7ff]" : "border-black/[0.08] bg-white"}`}>
-            <div className="flex items-start justify-between flex-wrap gap-6 mb-6">
+        <section className="mb-12">
+          <p className="section-label mb-4">Your plan</p>
+          <div className="card p-6">
+            <div className="flex items-start justify-between flex-wrap gap-4 mb-5">
               <div>
-                <div className="flex items-center gap-3 mb-1.5">
-                  <h2 className="text-xl font-semibold text-[#1d1d1f]">{isPro ? "Pro" : "Free"}</h2>
-                  {isPro && (
-                    <span className="text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-full bg-[#0071e3]/[0.08] text-[#0071e3] border border-[#0071e3]/20">Active</span>
-                  )}
+                <div className="flex items-center gap-2 mb-1">
+                  <h2 className="text-lg font-semibold text-fg">{isPro ? "Pro" : "Free"}</h2>
+                  {isPro && <span className="badge badge-accent">Active</span>}
                 </div>
-                <p className="text-sm text-[#6e6e73]">
-                  {isPro ? "Unlimited access to all features." : "3 scans · 2 cover letters · 2 job matches · 2 tailors per month. 10 applications · 3 resumes."}
+                <p className="text-sm text-fg-muted">
+                  {isPro ? "Unlimited access to all features." : "3 scans · 2 cover letters · 2 job matches · 2 tailors per month."}
                 </p>
               </div>
               {!isPro && (
-                <button onClick={handleUpgrade} disabled={busy}
-                  className="px-5 py-2.5 rounded-xl bg-[#0071e3] hover:bg-[#0077ed] text-white font-semibold text-sm transition-colors disabled:opacity-50 cursor-pointer">
+                <button onClick={handleUpgrade} disabled={busy} className="btn btn-primary disabled:opacity-50">
                   {busy ? "Loading…" : "Upgrade — $15/mo"}
                 </button>
               )}
             </div>
 
-            {/* Usage bars */}
             {!isPro && usage && (
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 pt-5 border-t border-black/[0.06]">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-5 border-t border-border">
                 {[
-                  { label: "Resume Scans",   used: usage.resume_scans   || 0, limit: 3 },
-                  { label: "Cover Letters",  used: usage.cover_letters  || 0, limit: 2 },
-                  { label: "Job Matches",    used: usage.job_matches    || 0, limit: 2 },
+                  { label: "Resume Scans", used: usage.resume_scans || 0, limit: 3 },
+                  { label: "Cover Letters", used: usage.cover_letters || 0, limit: 2 },
+                  { label: "Job Matches", used: usage.job_matches || 0, limit: 2 },
                   { label: "Resume Tailors", used: usage.resume_tailors || 0, limit: 2 },
                 ].map(({ label, used, limit }) => {
                   const remaining = Math.max(0, limit - used);
@@ -208,14 +185,14 @@ export default function DashboardPage() {
                   const depleted = remaining === 0;
                   return (
                     <div key={label}>
-                      <div className="flex justify-between items-baseline mb-2">
-                        <p className="text-xs text-[#6e6e73]">{label}</p>
-                        <p className={`text-sm font-semibold tabular-nums ${depleted ? "text-red-500" : "text-[#1d1d1f]"}`}>
-                          {remaining}<span className="text-[#aeaeb2] font-normal text-xs">/{limit}</span>
+                      <div className="flex justify-between items-baseline mb-1.5">
+                        <p className="text-xs text-fg-muted">{label}</p>
+                        <p className={`text-sm font-semibold tabular-nums ${depleted ? "text-red" : "text-fg"}`}>
+                          {remaining}<span className="text-fg-subtle font-normal text-xs">/{limit}</span>
                         </p>
                       </div>
-                      <div className="h-1 w-full rounded-full bg-[#e8e8ed] overflow-hidden">
-                        <div className={`h-full rounded-full transition-all duration-700 ${depleted ? "bg-red-500" : "bg-[#0071e3]"}`}
+                      <div className="h-1 w-full rounded-full bg-surface-2 overflow-hidden">
+                        <div className={`h-full rounded-full transition-all duration-300 ${depleted ? "bg-red" : "bg-fg"}`}
                           style={{ width: `${pct}%` }} />
                       </div>
                     </div>
@@ -226,54 +203,38 @@ export default function DashboardPage() {
           </div>
         </section>
 
-        {/* Tools */}
         <section>
-          <p className="text-xs font-medium text-[#aeaeb2] uppercase tracking-widest mb-5">Your tools</p>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {tools.map(tool => {
+          <p className="section-label mb-4">Your tools</p>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {tools.map((tool) => {
               const muted = !tool.available;
               return (
-                <div key={tool.title} className="relative">
-                  <div className={`rounded-2xl border p-5 flex flex-col gap-4 h-full transition-all duration-300
-                    ${muted
-                      ? "bg-white border-black/[0.06] opacity-50"
-                      : "bg-white border-black/[0.08] hover:border-[#0071e3]/30 hover:shadow-md"
-                    }`}>
-                    {!tool.available && (
-                      <span className={`absolute top-3.5 right-3.5 text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full border
-                        ${tool.isPro
-                          ? "bg-[#0071e3]/[0.08] text-[#0071e3] border-[#0071e3]/20"
-                          : "bg-[#f5f5f7] text-[#aeaeb2] border-black/[0.06]"
-                        }`}>
-                        {tool.isPro ? "Pro" : "Soon"}
-                      </span>
-                    )}
-                    <div className={`w-9 h-9 rounded-xl flex items-center justify-center border
-                      ${muted
-                        ? "bg-[#f5f5f7] border-black/[0.06] text-[#c7c7cc]"
-                        : "bg-[#0071e3]/[0.08] border-[#0071e3]/15 text-[#0071e3]"
-                      }`}>
-                      {tool.icon}
-                    </div>
-                    <div className="flex-1">
-                      <h3 className={`text-sm font-semibold mb-1 ${muted ? "text-[#aeaeb2]" : "text-[#1d1d1f]"}`}>{tool.title}</h3>
-                      <p className={`text-xs leading-relaxed ${muted ? "text-[#c7c7cc]" : "text-[#6e6e73]"}`}>{tool.description}</p>
-                    </div>
-                    {tool.available ? (
-                      <Link href={tool.href}
-                        className="flex items-center justify-center gap-1.5 py-2.5 rounded-xl bg-[#0071e3] hover:bg-[#0077ed] text-white text-xs font-semibold transition-colors group">
-                        Open
-                        <svg className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7"/></svg>
-                      </Link>
-                    ) : tool.isPro ? (
-                      <button onClick={handleUpgrade}
-                        className="py-2.5 rounded-xl border border-[#0071e3]/20 bg-[#0071e3]/[0.06] text-[#0071e3] text-xs font-medium hover:bg-[#0071e3]/[0.12] transition-colors cursor-pointer">
-                        Upgrade to unlock
-                      </button>
-                    ) : (
-                      <div className="py-2.5 rounded-xl bg-[#f5f5f7] text-[#aeaeb2] text-xs text-center">Coming soon</div>
-                    )}
+                <div key={tool.title} className={`card relative p-5 flex flex-col gap-3 h-full ${muted ? "opacity-50" : ""}`}>
+                  {!tool.available && (
+                    <span className={`badge absolute top-4 right-4 ${tool.isPro ? "badge-accent" : "badge-muted"}`}>
+                      {tool.isPro ? "Pro" : "Soon"}
+                    </span>
+                  )}
+                  <div className={`w-9 h-9 rounded-md flex items-center justify-center border ${
+                    muted ? "bg-surface-2 border-border text-fg-subtle" : "bg-surface-2 border-border text-fg"
+                  }`}>
+                    {tool.icon}
                   </div>
+                  <div className="flex-1">
+                    <h3 className={`text-sm font-semibold mb-1 ${muted ? "text-fg-subtle" : "text-fg"}`}>{tool.title}</h3>
+                    <p className={`text-xs leading-relaxed ${muted ? "text-fg-subtle" : "text-fg-muted"}`}>{tool.description}</p>
+                  </div>
+                  {tool.available ? (
+                    <Link href={tool.href} className="btn btn-primary w-full py-2 text-xs">
+                      Open
+                    </Link>
+                  ) : tool.isPro ? (
+                    <button onClick={handleUpgrade} className="btn btn-secondary w-full py-2 text-xs">
+                      Upgrade to unlock
+                    </button>
+                  ) : (
+                    <div className="py-2 rounded-md bg-surface-2 text-fg-subtle text-xs text-center">Coming soon</div>
+                  )}
                 </div>
               );
             })}

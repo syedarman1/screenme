@@ -1,9 +1,6 @@
 "use client";
 
 import React from "react";
-import { motion } from "framer-motion";
-
-const EASE = [0.16, 1, 0.3, 1] as const;
 
 const FEATURES = [
   {
@@ -47,68 +44,56 @@ const FEATURES = [
   },
 ];
 
-function FeatureCard({ f, i }: { f: typeof FEATURES[number]; i: number }) {
+function FeatureCard({ f }: { f: typeof FEATURES[number] }) {
   const muted = f.soon;
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true }}
-      transition={{ duration: 0.45, delay: i * 0.06, ease: EASE }}
-      className={`relative p-6 flex flex-col gap-4 rounded-2xl border transition-all duration-300 group
-        ${muted
-          ? "bg-[#f5f5f7] border-black/[0.04] opacity-50"
-          : "bg-white border-black/[0.08] hover:border-[#0071e3]/30 hover:shadow-md"
-        }`}
+    <div
+      className={`card relative p-5 flex flex-col gap-3 group ${
+        muted ? "opacity-50" : ""
+      }`}
     >
       {(f.pro || f.soon) && (
-        <span className={`absolute top-4 right-4 text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full border
-          ${f.pro ? "bg-[#0071e3]/10 text-[#0071e3] border-[#0071e3]/20"
-                  : "bg-black/[0.04] text-[#aeaeb2] border-black/[0.06]"}`}>
+        <span className={`badge absolute top-4 right-4 ${f.pro ? "badge-accent" : "badge-muted"}`}>
           {f.pro ? "Pro" : "Soon"}
         </span>
       )}
-      <div className={`w-10 h-10 rounded-xl flex items-center justify-center border transition-colors duration-300
-        ${muted
-          ? "bg-black/[0.03] border-black/[0.04] text-[#aeaeb2]"
-          : "bg-[#0071e3]/8 border-[#0071e3]/15 text-[#0071e3] group-hover:bg-[#0071e3]/12"
-        }`}>
-        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+      <div
+        className={`w-9 h-9 rounded-md flex items-center justify-center border transition-colors duration-200 ${
+          muted
+            ? "bg-surface-2 border-border text-fg-subtle"
+            : "bg-surface-2 border-border text-fg"
+        }`}
+      >
+        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
           {f.icon}
         </svg>
       </div>
       <div>
-        <h3 className={`text-sm font-semibold mb-1.5 ${muted ? "text-[#aeaeb2]" : "text-[#1d1d1f]"}`}>{f.title}</h3>
-        <p className={`text-sm leading-relaxed ${muted ? "text-[#d2d2d7]" : "text-[#6e6e73]"}`}>{f.description}</p>
+        <h3 className={`text-sm font-semibold mb-1 ${muted ? "text-fg-subtle" : "text-fg"}`}>{f.title}</h3>
+        <p className={`text-sm leading-relaxed ${muted ? "text-fg-subtle" : "text-fg-muted"}`}>{f.description}</p>
       </div>
-    </motion.div>
+    </div>
   );
 }
 
 export default function FeaturesSection() {
   return (
-    <section id="features" className="py-32 bg-[#f5f5f7] relative border-t border-black/[0.05]">
-      <div aria-hidden className="pointer-events-none absolute right-0 top-1/2 -translate-y-1/2 w-[400px] h-[600px] bg-[#0071e3] opacity-[0.04] rounded-full blur-[120px] -z-10" />
-
+    <section id="features" className="py-24 bg-bg section-divider">
       <div className="max-w-6xl mx-auto px-6">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.55, ease: EASE }}
-          className="max-w-xl mb-16"
-        >
-          <p className="text-xs font-semibold uppercase tracking-widest text-[#0071e3] mb-4">Features</p>
-          <h2 className="text-4xl md:text-5xl font-semibold tracking-tight text-[#1d1d1f] mb-4">
-            Everything you need
-            <br />
-            <span className="text-[#6e6e73]">to get hired.</span>
+        <div className="max-w-xl mb-12">
+          <p className="section-label mb-3">Features</p>
+          <h2 className="text-3xl md:text-4xl font-semibold tracking-tight text-fg mb-3">
+            Everything you need to get hired.
           </h2>
-          <p className="text-[#6e6e73] text-base leading-relaxed">Six AI tools, one platform — from your first resume upload to your offer letter.</p>
-        </motion.div>
+          <p className="text-fg-muted text-base leading-relaxed">
+            Six tools, one platform — from your first resume upload to your offer letter.
+          </p>
+        </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          {FEATURES.map((f, i) => <FeatureCard key={f.id} f={f} i={i} />)}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {FEATURES.map((f) => (
+            <FeatureCard key={f.id} f={f} />
+          ))}
         </div>
       </div>
     </section>
