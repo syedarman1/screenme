@@ -110,23 +110,23 @@ export default function ApplicationsPage() {
     <div className="min-h-screen bg-bg flex items-center justify-center p-6">
       <div className="text-center">
         <p className="text-sm text-fg-muted mb-4">Please sign in to track your applications.</p>
-        <Link href="/login" className="px-6 py-2.5 bg-accent text-white rounded-xl text-sm font-semibold">Sign in</Link>
+        <Link href="/login" className="px-6 py-2.5 bg-accent text-white rounded-lg text-sm font-semibold">Sign in</Link>
       </div>
     </div>
   );
 
   return (
-    <div className="min-h-screen bg-bg text-fg">
-      <div className="max-w-7xl mx-auto px-6 pt-20 pb-20">
+    <div className="page-shell">
+      <div className="page-inner">
 
         {/* Header */}
         <header className="mb-10">
-          <p className="text-xs font-medium text-fg-subtle mb-2 uppercase tracking-widest">Job Tracker</p>
+          <p className="section-label mb-2">Job Tracker</p>
           <div className="flex items-center justify-between flex-wrap gap-4">
             <h1 className="text-3xl md:text-4xl font-semibold tracking-tight">Applications</h1>
             <div className="flex items-center gap-3">
               {/* View toggle */}
-              <div className="flex items-center bg-white border border-border rounded-xl overflow-hidden">
+              <div className="flex items-center bg-surface border border-border rounded-lg overflow-hidden">
                 <button
                   onClick={() => setViewMode("board")}
                   className={`px-3 py-2 text-xs font-medium transition-colors cursor-pointer ${viewMode === "board" ? "bg-accent text-white" : "text-fg-muted hover:text-fg"}`}
@@ -141,14 +141,14 @@ export default function ApplicationsPage() {
                 </button>
               </div>
               {atLimit && !isPro ? (
-                <Link href="/dashboard" className="flex items-center gap-2 px-4 py-2.5 bg-orange hover:bg-[#e8910a] text-white text-sm font-semibold rounded-xl transition-colors">
+                <Link href="/dashboard" className="flex items-center gap-2 px-4 py-2.5 bg-orange hover:bg-[#e8910a] text-white text-sm font-semibold rounded-lg transition-colors">
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
                   Limit reached — Upgrade
                 </Link>
               ) : (
                 <button
                   onClick={() => { setEditApp(null); setShowAdd(true); }}
-                  className="flex items-center gap-2 px-4 py-2.5 bg-accent hover:bg-accent-hover text-white text-sm font-semibold rounded-xl transition-colors cursor-pointer"
+                  className="flex items-center gap-2 px-4 py-2.5 bg-accent hover:bg-accent-hover text-white text-sm font-semibold rounded-lg transition-colors cursor-pointer"
                 >
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
                   Add Application
@@ -161,13 +161,13 @@ export default function ApplicationsPage() {
         {/* Stats strip */}
         <div className="flex gap-3 mb-8 overflow-x-auto pb-1">
           {COLUMNS.map(col => (
-            <div key={col.key} className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border border-border bg-white min-w-fit`}>
+            <div key={col.key} className={`flex items-center gap-2 px-4 py-2.5 rounded-lg border border-border bg-surface min-w-fit`}>
               <span className={`w-2 h-2 rounded-full ${col.dot}`} />
               <span className="text-xs font-medium text-fg-muted">{col.label}</span>
               <span className="text-sm font-semibold text-fg tabular-nums">{countByStatus(col.key)}</span>
             </div>
           ))}
-          <div className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border min-w-fit ${atLimit && !isPro ? "border-[#ff9f0a]/30 bg-orange/[0.06]" : "border-border bg-white"}`}>
+          <div className={`flex items-center gap-2 px-4 py-2.5 rounded-lg border min-w-fit ${atLimit && !isPro ? "border-[#ff9f0a]/30 bg-orange/[0.06]" : "border-border bg-surface"}`}>
             <span className="text-xs font-medium text-fg-muted">Total</span>
             <span className={`text-sm font-semibold tabular-nums ${atLimit && !isPro ? "text-orange" : "text-fg"}`}>
               {apps.length}{!isPro && <span className="text-fg-subtle font-normal text-xs">/{appLimit}</span>}
@@ -176,7 +176,7 @@ export default function ApplicationsPage() {
         </div>
 
         {error && (
-          <div className="mb-6 p-4 rounded-2xl border border-red-200 bg-red-50 text-red-600 text-sm">{error}</div>
+          <div className="alert-error mb-6" role="alert">{error}</div>
         )}
 
         {loading ? (
@@ -188,7 +188,7 @@ export default function ApplicationsPage() {
           </div>
         ) : apps.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-20">
-            <div className="w-16 h-16 rounded-3xl bg-accent/[0.08] border border-border/15 flex items-center justify-center mb-5">
+            <div className="w-16 h-16 rounded-lg bg-surface-2 border border-border/15 flex items-center justify-center mb-5">
               <svg className="w-7 h-7 text-fg" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
               </svg>
@@ -197,7 +197,7 @@ export default function ApplicationsPage() {
             <p className="text-sm text-fg-muted mb-6">Start tracking your job search by adding your first application.</p>
             <button
               onClick={() => { setEditApp(null); setShowAdd(true); }}
-              className="px-5 py-2.5 bg-accent hover:bg-accent-hover text-white text-sm font-semibold rounded-xl transition-colors cursor-pointer"
+              className="px-5 py-2.5 bg-accent hover:bg-accent-hover text-white text-sm font-semibold rounded-lg transition-colors cursor-pointer"
             >
               Add your first application
             </button>
@@ -210,7 +210,7 @@ export default function ApplicationsPage() {
               return (
                 <div key={col.key} className="min-w-[260px] flex-1">
                   {/* Column header */}
-                  <div className={`flex items-center gap-2 px-3 py-2 rounded-xl ${col.bg} mb-3`}>
+                  <div className={`flex items-center gap-2 px-3 py-2 rounded-lg ${col.bg} mb-3`}>
                     <span className={`w-2 h-2 rounded-full ${col.dot}`} />
                     <span className={`text-xs font-semibold ${col.color}`}>{col.label}</span>
                     <span className={`text-xs font-medium ${col.color} opacity-60 ml-auto`}>{colApps.length}</span>
@@ -227,7 +227,7 @@ export default function ApplicationsPage() {
                       />
                     ))}
                     {colApps.length === 0 && (
-                      <div className="rounded-xl border border-dashed border-border p-6 text-center">
+                      <div className="rounded-lg border border-dashed border-border p-6 text-center">
                         <p className="text-xs text-fg-subtle">No {col.label.toLowerCase()} applications</p>
                       </div>
                     )}
@@ -238,7 +238,7 @@ export default function ApplicationsPage() {
           </div>
         ) : (
           /* ── List View ── */
-          <div className="bg-white rounded-2xl border border-border overflow-hidden">
+          <div className="bg-surface rounded-lg border border-border overflow-hidden">
             <div className="grid grid-cols-[1fr_1fr_120px_100px_80px] gap-4 px-5 py-3 border-b border-border text-xs font-medium text-fg-subtle uppercase tracking-wider">
               <span>Company</span>
               <span>Role</span>
@@ -263,7 +263,7 @@ export default function ApplicationsPage() {
                     <button onClick={() => { setEditApp(app); setShowAdd(true); }} className="p-1.5 rounded-lg hover:bg-bg transition-colors cursor-pointer" title="Edit">
                       <svg className="w-3.5 h-3.5 text-fg-subtle" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487z" /></svg>
                     </button>
-                    <button onClick={() => deleteApp(app.id)} className="p-1.5 rounded-lg hover:bg-red-50 transition-colors cursor-pointer" title="Delete">
+                    <button onClick={() => deleteApp(app.id)} className="p-1.5 rounded-lg hover:bg-red-bg transition-colors cursor-pointer" title="Delete">
                       <svg className="w-3.5 h-3.5 text-red" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" /></svg>
                     </button>
                   </div>
@@ -297,7 +297,7 @@ function AppCard({ app, onMove, onEdit, onDelete }: {
   const [menuOpen, setMenuOpen] = useState(false);
 
   return (
-    <div className="bg-white rounded-xl border border-border p-4 hover:shadow-sm transition-all group">
+    <div className="bg-surface rounded-lg border border-border p-4 hover:shadow-sm transition-all group">
       <div className="flex items-start justify-between mb-2">
         <div className="flex-1 min-w-0">
           <h4 className="text-sm font-semibold text-fg truncate">{app.company}</h4>
@@ -315,7 +315,7 @@ function AppCard({ app, onMove, onEdit, onDelete }: {
           {menuOpen && (
             <>
               <div className="fixed inset-0 z-40" onClick={() => setMenuOpen(false)} />
-              <div className="absolute right-0 top-full mt-1 w-40 bg-white border border-border rounded-xl shadow-lg py-1 z-50">
+              <div className="absolute right-0 top-full mt-1 w-40 bg-surface border border-border rounded-lg shadow-lg py-1 z-50">
                 <button onClick={() => { setMenuOpen(false); onEdit(); }} className="w-full text-left px-3 py-2 text-xs text-fg-muted hover:bg-bg hover:text-fg transition-colors cursor-pointer">Edit details</button>
                 <div className="my-1 mx-2 border-t border-border" />
                 <p className="px-3 py-1 text-[10px] text-fg-subtle uppercase tracking-wider">Move to</p>
@@ -327,7 +327,7 @@ function AppCard({ app, onMove, onEdit, onDelete }: {
                   </button>
                 ))}
                 <div className="my-1 mx-2 border-t border-border" />
-                <button onClick={() => { setMenuOpen(false); onDelete(); }} className="w-full text-left px-3 py-2 text-xs text-red hover:bg-red-50 transition-colors cursor-pointer">Delete</button>
+                <button onClick={() => { setMenuOpen(false); onDelete(); }} className="w-full text-left px-3 py-2 text-xs text-red hover:bg-red-bg transition-colors cursor-pointer">Delete</button>
               </div>
             </>
           )}
@@ -408,29 +408,29 @@ function AppModal({ app, userId, onClose, onSaved }: {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onClick={onClose} />
-      <form onSubmit={handleSubmit} className="relative bg-white rounded-3xl border border-border shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto p-7">
+      <form onSubmit={handleSubmit} className="relative bg-surface rounded-lg border border-border shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto p-7">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-lg font-semibold text-fg">{isEdit ? "Edit Application" : "New Application"}</h2>
-          <button type="button" onClick={onClose} className="p-2 rounded-xl hover:bg-bg transition-colors cursor-pointer">
+          <button type="button" onClick={onClose} className="p-2 rounded-lg hover:bg-bg transition-colors cursor-pointer">
             <svg className="w-5 h-5 text-fg-subtle" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
           </button>
         </div>
 
-        {err && <div className="mb-4 p-3 rounded-xl bg-red-50 border border-red-200 text-red-600 text-sm">{err}</div>}
+        {err && <div className="mb-4 p-3 rounded-lg pill-danger text-sm">{err}</div>}
 
         <div className="flex flex-col gap-4">
           {/* Company */}
           <label className="flex flex-col gap-1.5">
             <span className="text-xs font-medium text-fg-muted">Company *</span>
             <input value={company} onChange={e => setCompany(e.target.value)} placeholder="e.g. Google"
-              className="px-4 py-3 rounded-xl border border-border bg-bg text-sm text-fg placeholder:text-fg-subtle focus:outline-none focus:ring-2 focus:ring-fg/15 focus:border-border/40 transition-all" />
+              className="px-4 py-3 rounded-lg border border-border bg-bg text-sm text-fg placeholder:text-fg-subtle focus:outline-none focus:ring-2 focus:ring-fg/15 focus:border-border/40 transition-all" />
           </label>
 
           {/* Role */}
           <label className="flex flex-col gap-1.5">
             <span className="text-xs font-medium text-fg-muted">Role *</span>
             <input value={role} onChange={e => setRole(e.target.value)} placeholder="e.g. Frontend Engineer"
-              className="px-4 py-3 rounded-xl border border-border bg-bg text-sm text-fg placeholder:text-fg-subtle focus:outline-none focus:ring-2 focus:ring-fg/15 focus:border-border/40 transition-all" />
+              className="px-4 py-3 rounded-lg border border-border bg-bg text-sm text-fg placeholder:text-fg-subtle focus:outline-none focus:ring-2 focus:ring-fg/15 focus:border-border/40 transition-all" />
           </label>
 
           {/* Status + Date row */}
@@ -438,14 +438,14 @@ function AppModal({ app, userId, onClose, onSaved }: {
             <label className="flex flex-col gap-1.5">
               <span className="text-xs font-medium text-fg-muted">Status</span>
               <select value={status} onChange={e => setStatus(e.target.value as Status)}
-                className="px-4 py-3 rounded-xl border border-border bg-bg text-sm text-fg focus:outline-none focus:ring-2 focus:ring-fg/15 focus:border-border/40 transition-all cursor-pointer">
+                className="px-4 py-3 rounded-lg border border-border bg-bg text-sm text-fg focus:outline-none focus:ring-2 focus:ring-fg/15 focus:border-border/40 transition-all cursor-pointer">
                 {COLUMNS.map(c => <option key={c.key} value={c.key}>{c.label}</option>)}
               </select>
             </label>
             <label className="flex flex-col gap-1.5">
               <span className="text-xs font-medium text-fg-muted">Applied Date</span>
               <input type="date" value={appliedDate} onChange={e => setAppliedDate(e.target.value)}
-                className="px-4 py-3 rounded-xl border border-border bg-bg text-sm text-fg focus:outline-none focus:ring-2 focus:ring-fg/15 focus:border-border/40 transition-all" />
+                className="px-4 py-3 rounded-lg border border-border bg-bg text-sm text-fg focus:outline-none focus:ring-2 focus:ring-fg/15 focus:border-border/40 transition-all" />
             </label>
           </div>
 
@@ -453,14 +453,14 @@ function AppModal({ app, userId, onClose, onSaved }: {
           <label className="flex flex-col gap-1.5">
             <span className="text-xs font-medium text-fg-muted">Job URL</span>
             <input value={url} onChange={e => setUrl(e.target.value)} placeholder="https://..."
-              className="px-4 py-3 rounded-xl border border-border bg-bg text-sm text-fg placeholder:text-fg-subtle focus:outline-none focus:ring-2 focus:ring-fg/15 focus:border-border/40 transition-all" />
+              className="px-4 py-3 rounded-lg border border-border bg-bg text-sm text-fg placeholder:text-fg-subtle focus:outline-none focus:ring-2 focus:ring-fg/15 focus:border-border/40 transition-all" />
           </label>
 
           {/* Notes */}
           <label className="flex flex-col gap-1.5">
             <span className="text-xs font-medium text-fg-muted">Notes</span>
             <textarea value={notes} onChange={e => setNotes(e.target.value)} rows={2} placeholder="Recruiter name, referral, follow-up dates..."
-              className="px-4 py-3 rounded-xl border border-border bg-bg text-sm text-fg placeholder:text-fg-subtle focus:outline-none focus:ring-2 focus:ring-fg/15 focus:border-border/40 transition-all resize-none" />
+              className="px-4 py-3 rounded-lg border border-border bg-bg text-sm text-fg placeholder:text-fg-subtle focus:outline-none focus:ring-2 focus:ring-fg/15 focus:border-border/40 transition-all resize-none" />
           </label>
 
           {/* Job Description (collapsible) */}
@@ -469,18 +469,18 @@ function AppModal({ app, userId, onClose, onSaved }: {
               {jobDesc ? "Edit job description" : "Add job description (for cover letter / job match)"}
             </summary>
             <textarea value={jobDesc} onChange={e => setJobDesc(e.target.value)} rows={4} placeholder="Paste the full job description here..."
-              className="mt-2 w-full px-4 py-3 rounded-xl border border-border bg-bg text-sm text-fg placeholder:text-fg-subtle focus:outline-none focus:ring-2 focus:ring-fg/15 focus:border-border/40 transition-all resize-none" />
+              className="mt-2 w-full px-4 py-3 rounded-lg border border-border bg-bg text-sm text-fg placeholder:text-fg-subtle focus:outline-none focus:ring-2 focus:ring-fg/15 focus:border-border/40 transition-all resize-none" />
           </details>
         </div>
 
         {/* Actions */}
         <div className="flex items-center justify-end gap-3 mt-7 pt-5 border-t border-border">
           <button type="button" onClick={onClose}
-            className="px-5 py-2.5 rounded-xl border border-border text-sm font-medium text-fg-muted hover:bg-bg transition-colors cursor-pointer">
+            className="px-5 py-2.5 rounded-lg border border-border text-sm font-medium text-fg-muted hover:bg-bg transition-colors cursor-pointer">
             Cancel
           </button>
           <button type="submit" disabled={saving}
-            className="px-5 py-2.5 rounded-xl bg-accent hover:bg-accent-hover text-white text-sm font-semibold transition-colors disabled:opacity-50 cursor-pointer">
+            className="px-5 py-2.5 rounded-lg bg-accent hover:bg-accent-hover text-white text-sm font-semibold transition-colors disabled:opacity-50 cursor-pointer">
             {saving ? "Saving..." : isEdit ? "Update" : "Add Application"}
           </button>
         </div>

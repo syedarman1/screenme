@@ -81,7 +81,7 @@ export default function Conversation() {
   };
 
   return (
-    <div className="max-w-3xl mx-auto p-6 bg-[var(--card-bg)] rounded-xl space-y-6">
+    <div className="max-w-3xl mx-auto p-6 bg-[var(--card-bg)] rounded-lg space-y-6">
       <h2 className="text-2xl font-bold text-[var(--accent)]">Live Mock Interview</h2>
       <VideoFeed />
 

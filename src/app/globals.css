@@ -275,6 +275,123 @@ section { scroll-margin-top: 72px; }
   border-top: 1px solid var(--border);
 }
 
+/* ─── Layout ─────────────────────────────────────────────────── */
+.page-shell {
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--fg);
+  padding-top: 5rem;
+  padding-bottom: 5rem;
+}
+.page-inner {
+  max-width: 72rem;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 1.5rem;
+  padding-right: 1.5rem;
+}
+.page-inner-md {
+  max-width: 48rem;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 1.5rem;
+  padding-right: 1.5rem;
+}
+.page-inner-sm {
+  max-width: 42rem;
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 1.5rem;
+  padding-right: 1.5rem;
+}
+.page-title {
+  font-size: 1.875rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+  color: var(--fg);
+}
+@media (min-width: 768px) {
+  .page-title { font-size: 2.25rem; }
+}
+
+/* ─── Feedback ───────────────────────────────────────────────── */
+.alert-error {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 1rem 1.25rem;
+  border-radius: var(--r-lg);
+  border: 1px solid color-mix(in srgb, var(--red) 25%, var(--border));
+  background: var(--red-bg);
+  color: var(--red);
+  font-size: 0.875rem;
+}
+.alert-success {
+  padding: 1rem 1.25rem;
+  border-radius: var(--r-lg);
+  border: 1px solid color-mix(in srgb, var(--green) 25%, var(--border));
+  background: var(--green-bg);
+  color: var(--green);
+  font-size: 0.875rem;
+}
+.icon-box {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: var(--r-md);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--fg);
+  flex-shrink: 0;
+}
+.textarea {
+  width: 100%;
+  padding: 0.875rem 1rem;
+  font-size: 0.875rem;
+  line-height: 1.6;
+  color: var(--fg);
+  background: var(--bg);
+  border: 1px solid var(--border-2);
+  border-radius: var(--r-lg);
+  resize: vertical;
+  transition: border-color var(--dur-base) var(--ease), box-shadow var(--dur-base) var(--ease);
+}
+.textarea::placeholder { color: var(--fg-3); }
+.textarea:focus {
+  outline: none;
+  border-color: var(--fg-3);
+  box-shadow: 0 0 0 3px var(--accent-dim);
+}
+.modal-panel {
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-lg);
+}
+.pill-success {
+  background: var(--green-bg);
+  color: var(--green);
+  border: 1px solid color-mix(in srgb, var(--green) 22%, var(--border));
+}
+.pill-warning {
+  background: var(--orange-bg);
+  color: var(--orange);
+  border: 1px solid color-mix(in srgb, var(--orange) 22%, var(--border));
+}
+.pill-danger {
+  background: var(--red-bg);
+  color: var(--red);
+  border: 1px solid color-mix(in srgb, var(--red) 22%, var(--border));
+}
+.pill-neutral {
+  background: var(--surface-2);
+  color: var(--fg-muted);
+  border: 1px solid var(--border);
+}
+
 .theme-toggle {
   display: flex;
   align-items: center;

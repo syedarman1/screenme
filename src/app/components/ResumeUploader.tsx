@@ -96,14 +96,14 @@ export default function ResumeUploader({ onResumeSubmit, simple = false }: Resum
     <div className="space-y-4">
       {/* Mode toggle */}
       {!simple && (
-        <div className="flex gap-1 p-1 bg-bg rounded-xl w-fit">
+        <div className="flex gap-1 p-1 bg-bg rounded-lg w-fit">
           {(["upload", "paste"] as const).map((m) => (
             <button
               key={m}
               onClick={() => setMode(m)}
               className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${
                 mode === m
-                  ? "bg-white text-fg shadow-sm"
+                  ? "bg-surface text-fg shadow-sm"
                   : "text-fg-muted hover:text-fg"
               }`}
             >
@@ -122,14 +122,14 @@ export default function ResumeUploader({ onResumeSubmit, simple = false }: Resum
               onDragLeave={() => setDragging(false)}
               onDrop={handleDrop}
               onClick={() => inputRef.current?.click()}
-              className={`relative flex flex-col items-center justify-center gap-3 p-10 rounded-2xl border-2 border-dashed cursor-pointer transition-all ${
+              className={`relative flex flex-col items-center justify-center gap-3 p-10 rounded-lg border-2 border-dashed cursor-pointer transition-all ${
                 dragging
                   ? "border-border bg-surface-2"
                   : "border-border-2 bg-bg hover:border-border hover:bg-surface-2"
               }`}
             >
-              <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-colors ${
-                dragging ? "bg-accent/10" : "bg-white border border-[#e0e0e5]"
+              <div className={`w-12 h-12 rounded-lg flex items-center justify-center transition-colors ${
+                dragging ? "bg-accent/10" : "bg-surface border border-border-2"
               }`}>
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none"
                   className={dragging ? "stroke-fg" : "stroke-fg-muted"} strokeWidth="1.5">
@@ -155,9 +155,9 @@ export default function ResumeUploader({ onResumeSubmit, simple = false }: Resum
               />
             </div>
           ) : (
-            <div className="flex items-center justify-between px-5 py-4 bg-surface-2 border border-border/20 rounded-2xl">
+            <div className="flex items-center justify-between px-5 py-4 bg-surface-2 border border-border/20 rounded-lg">
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 bg-accent/10 rounded-xl flex items-center justify-center flex-shrink-0">
+                <div className="w-9 h-9 bg-accent/10 rounded-lg flex items-center justify-center flex-shrink-0">
                   {loading ? (
                     <div className="w-4 h-4 border-2 border-t-fg border-r-fg/30 border-b-transparent border-l-transparent rounded-full animate-spin" />
                   ) : (
@@ -199,7 +199,7 @@ export default function ResumeUploader({ onResumeSubmit, simple = false }: Resum
             value={pasteText}
             onChange={(e) => handlePaste(e.target.value)}
             placeholder="Paste your full resume text here — include all sections: experience, education, skills, achievements…"
-            className="w-full bg-white text-fg placeholder:text-fg-subtle p-4 rounded-2xl border border-border-2 focus:outline-none focus:border-border focus:ring-2 focus:ring-fg/10 text-sm leading-relaxed resize-none transition-all"
+            className="w-full bg-surface text-fg placeholder:text-fg-subtle p-4 rounded-lg border border-border-2 focus:outline-none focus:border-border focus:ring-2 focus:ring-fg/10 text-sm leading-relaxed resize-none transition-all"
           />
           {pasteText.length > 0 && (
             <div className="flex items-center justify-between mt-2 px-1">
@@ -217,7 +217,7 @@ export default function ResumeUploader({ onResumeSubmit, simple = false }: Resum
 
       {/* Error */}
       {error && (
-        <div className="flex items-start gap-3 p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm" role="alert">
+        <div className="alert-error" role="alert">
           <svg className="w-4 h-4 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
@@ -227,7 +227,7 @@ export default function ResumeUploader({ onResumeSubmit, simple = false }: Resum
 
       {/* Extraction warning */}
       {charCount === 0 && file && !loading && !error && (
-        <div className="flex items-start gap-3 p-4 bg-amber-50 border border-amber-200 rounded-xl text-amber-700 text-sm" role="alert">
+        <div className="flex items-start gap-3 p-4 bg-amber-50 border border-amber-200 rounded-lg text-amber-700 text-sm" role="alert">
           <svg className="w-4 h-4 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
           </svg>

@@ -110,7 +110,7 @@ export default function AuthPage() {
 
           {/* Alerts */}
           {error && (
-            <div role="alert" className="p-3 rounded-xl border border-[#ff3b30]/20 bg-red/[0.06]">
+            <div role="alert" className="p-3 rounded-lg border border-[#ff3b30]/20 bg-red/[0.06]">
               <p className="text-sm text-red">{error}</p>
             </div>
           )}
@@ -127,7 +127,7 @@ export default function AuthPage() {
               <input
                 id="email" type="email" autoComplete="email" required
                 placeholder="you@example.com"
-                className="w-full bg-bg text-fg placeholder:text-fg-subtle px-3.5 py-2.5 rounded-xl
+                className="w-full bg-bg text-fg placeholder:text-fg-subtle px-3.5 py-2.5 rounded-lg
                          border border-border focus:outline-none focus:border-border-2 focus:bg-surface
                          transition-colors text-sm"
                 value={email}
@@ -142,7 +142,7 @@ export default function AuthPage() {
                   id="password" type={showPassword ? "text" : "password"} autoComplete="current-password" required
                   placeholder="••••••"
                   minLength={6}
-                  className="w-full bg-bg text-fg placeholder:text-fg-subtle px-3.5 py-2.5 pr-10 rounded-xl
+                  className="w-full bg-bg text-fg placeholder:text-fg-subtle px-3.5 py-2.5 pr-10 rounded-lg
                            border border-border focus:outline-none focus:border-border-2 focus:bg-surface
                            transition-colors text-sm"
                   value={password}
@@ -184,7 +184,7 @@ export default function AuthPage() {
               <p className="text-xs text-fg-subtle">Enter your email above and we'll send a reset link.</p>
               <button type="button" onClick={handleForgot} disabled={loading}
                 className="w-full bg-bg border border-border text-fg-muted hover:text-fg hover:bg-surface-2
-                          font-medium py-2.5 rounded-xl transition-colors text-sm cursor-pointer disabled:opacity-50">
+                          font-medium py-2.5 rounded-lg transition-colors text-sm cursor-pointer disabled:opacity-50">
                 {loading ? "Sending…" : "Send reset email"}
               </button>
             </div>
@@ -195,7 +195,7 @@ export default function AuthPage() {
               <p className="text-xs text-fg-subtle text-center">Don't have an account?</p>
               <button type="button" onClick={handleCreate} disabled={loading}
                 className="w-full bg-bg border border-border text-fg hover:bg-surface-2
-                          font-medium py-2.5 rounded-xl transition-colors text-sm cursor-pointer disabled:opacity-50">
+                          font-medium py-2.5 rounded-lg transition-colors text-sm cursor-pointer disabled:opacity-50">
                 {loading ? "Creating…" : "Create account"}
               </button>
             </div>

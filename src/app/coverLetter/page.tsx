@@ -7,6 +7,7 @@ import { Document, Packer, Paragraph, TextRun } from "docx";
 import { saveAs } from "file-saver";
 import { motion, AnimatePresence } from "framer-motion";
 import PlanChecker from "../components/PlanChecker";
+import PageHeader from "../components/PageHeader";
 import { supabase } from "../lib/supabaseClient";
 
 const TONES = [
@@ -146,35 +147,24 @@ export default function CoverLetterPage() {
   const canGenerate = !!resumeText && jobTitle.trim().length >= 3 && company.trim().length >= 2;
 
   return (
-    <div className="min-h-screen bg-bg text-fg pt-16 pb-24 px-4">
+    <div className="page-shell">
+      <div className="page-inner-sm">
+        <PageHeader
+          label="Cover Letter"
+          title="Generate a tailored letter"
+          description="Upload your resume, pick a tone, and get an interview-ready cover letter in seconds."
+        />
 
-      {/* Header */}
-      <header className="max-w-2xl mx-auto text-center mb-12">
-        <div className="inline-flex items-center justify-center w-14 h-14 rounded-[18px] bg-accent/[0.08] border border-border/15 mb-6">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="stroke-fg" strokeWidth="1.5">
-            <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
-            <polyline points="22,6 12,13 2,6" />
-          </svg>
-        </div>
-        <h1 className="text-5xl font-semibold tracking-tight text-fg mb-3">
-          Cover Letter Generator
-        </h1>
-        <p className="text-fg-muted text-lg leading-relaxed max-w-lg mx-auto">
-          Upload your resume, pick a tone, and get a tailored, interview-ready cover letter in seconds.
-        </p>
-      </header>
-
-      {/* Form */}
-      <section className="max-w-2xl mx-auto">
+        <section>
         <PlanChecker feature="cover_letter">
-          <div className="bg-white rounded-3xl border border-border shadow-sm p-8 space-y-7">
+          <div className="card p-6 space-y-6">
 
             {/* Resume */}
             <div>
               <div className="flex items-center justify-between mb-4">
                 <h2 className="font-semibold text-fg">Your Resume</h2>
                 {resumeText && (
-                  <span className="text-xs text-emerald-600 font-medium flex items-center gap-1">
+                  <span className="text-xs text-green font-medium flex items-center gap-1">
                     <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                     </svg>
@@ -187,9 +177,9 @@ export default function CoverLetterPage() {
 
             {/* Divider */}
             <div className="relative">
-              <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-[#f0f0f5]" /></div>
+              <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-border" /></div>
               <div className="relative flex justify-center">
-                <span className="px-3 bg-white text-xs text-fg-subtle font-medium">role details</span>
+                <span className="px-3 bg-surface text-xs text-fg-subtle font-medium">role details</span>
               </div>
             </div>
 
@@ -206,13 +196,13 @@ export default function CoverLetterPage() {
                     onChange={e => setJobUrl(e.target.value)}
                     onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); parseUrl(); } }}
                     placeholder="Paste LinkedIn, Indeed, or Greenhouse URL..."
-                    className="w-full bg-bg text-fg placeholder:text-fg-subtle pl-9 pr-3 py-2.5 rounded-xl border border-border-2 focus:outline-none focus:border-border focus:ring-2 focus:ring-fg/10 text-sm transition-all"
+                    className="w-full bg-bg text-fg placeholder:text-fg-subtle pl-9 pr-3 py-2.5 rounded-lg border border-border-2 focus:outline-none focus:border-border focus:ring-2 focus:ring-fg/10 text-sm transition-all"
                   />
                 </div>
                 <button
                   onClick={parseUrl}
                   disabled={urlLoading || !jobUrl.trim()}
-                  className="px-4 py-2.5 rounded-xl bg-accent text-white text-sm font-semibold hover:bg-accent-hover disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center gap-1.5 shrink-0"
+                  className="px-4 py-2.5 rounded-lg bg-accent text-white text-sm font-semibold hover:bg-accent-hover disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center gap-1.5 shrink-0"
                 >
                   {urlLoading ? (
                     <svg className="animate-spin h-3.5 w-3.5" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8h8a8 8 0 01-16 0z" /></svg>
@@ -222,9 +212,9 @@ export default function CoverLetterPage() {
                   {urlLoading ? "Parsing…" : "Import"}
                 </button>
               </div>
-              {urlError && <p className="text-xs text-red-500 mt-1.5">{urlError}</p>}
+              {urlError && <p className="text-xs text-red mt-1.5">{urlError}</p>}
               {!urlError && jobUrl && !urlLoading && jobTitle && (
-                <p className="text-xs text-emerald-600 mt-1.5 flex items-center gap-1">
+                <p className="text-xs text-green mt-1.5 flex items-center gap-1">
                   <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
                   Auto-filled title, company, and description
                 </p>
@@ -239,7 +229,7 @@ export default function CoverLetterPage() {
                 </label>
                 <input
                   id="jobTitle"
-                  className="w-full bg-bg p-3.5 rounded-xl border border-border-2 text-fg placeholder:text-fg-subtle focus:outline-none focus:border-border focus:ring-2 focus:ring-fg/10 text-sm transition-all"
+                  className="w-full bg-bg p-3.5 rounded-lg border border-border-2 text-fg placeholder:text-fg-subtle focus:outline-none focus:border-border focus:ring-2 focus:ring-fg/10 text-sm transition-all"
                   placeholder="e.g., Senior Backend Engineer"
                   value={jobTitle}
                   onChange={(e) => setJobTitle(e.target.value)}
@@ -251,7 +241,7 @@ export default function CoverLetterPage() {
                 </label>
                 <input
                   id="company"
-                  className="w-full bg-bg p-3.5 rounded-xl border border-border-2 text-fg placeholder:text-fg-subtle focus:outline-none focus:border-border focus:ring-2 focus:ring-fg/10 text-sm transition-all"
+                  className="w-full bg-bg p-3.5 rounded-lg border border-border-2 text-fg placeholder:text-fg-subtle focus:outline-none focus:border-border focus:ring-2 focus:ring-fg/10 text-sm transition-all"
                   placeholder="e.g., Stripe"
                   value={company}
                   onChange={(e) => setCompany(e.target.value)}
@@ -267,7 +257,7 @@ export default function CoverLetterPage() {
               </label>
               <textarea
                 id="jobDesc"
-                className="w-full bg-bg p-3.5 rounded-xl border border-border-2 text-fg placeholder:text-fg-subtle focus:outline-none focus:border-border focus:ring-2 focus:ring-fg/10 resize-none text-sm leading-relaxed transition-all"
+                className="w-full bg-bg p-3.5 rounded-lg border border-border-2 text-fg placeholder:text-fg-subtle focus:outline-none focus:border-border focus:ring-2 focus:ring-fg/10 resize-none text-sm leading-relaxed transition-all"
                 rows={4}
                 placeholder="Paste the job description to tailor the letter to this specific role and company…"
                 value={jobDesc}
@@ -277,9 +267,9 @@ export default function CoverLetterPage() {
 
             {/* Divider */}
             <div className="relative">
-              <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-[#f0f0f5]" /></div>
+              <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-border" /></div>
               <div className="relative flex justify-center">
-                <span className="px-3 bg-white text-xs text-fg-subtle font-medium">tone</span>
+                <span className="px-3 bg-surface text-xs text-fg-subtle font-medium">tone</span>
               </div>
             </div>
 
@@ -300,12 +290,12 @@ export default function CoverLetterPage() {
                       type="button"
                       disabled={isLocked}
                       onClick={() => !isLocked && setTone(t.id)}
-                      className={`relative flex flex-col items-start px-4 py-3 rounded-xl border text-left transition-all ${
+                      className={`relative flex flex-col items-start px-4 py-3 rounded-lg border text-left transition-all ${
                         isLocked
-                          ? "bg-bg text-fg-subtle border-[#e8e8ed] cursor-not-allowed"
+                          ? "bg-bg text-fg-subtle border-border cursor-not-allowed"
                           : isSelected
                           ? "bg-accent text-white border-border shadow-sm"
-                          : "bg-white text-fg border-border-2 hover:border-border/50 hover:bg-bg"
+                          : "bg-surface text-fg border-border-2 hover:border-border/50 hover:bg-bg"
                       }`}
                     >
                       <div className="flex items-center justify-between w-full">
@@ -332,7 +322,7 @@ export default function CoverLetterPage() {
             <button
               onClick={() => handleGenerate()}
               disabled={loading || !canGenerate}
-              className="w-full bg-accent hover:bg-accent-hover active:scale-[.98] py-3.5 rounded-2xl text-white font-semibold disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2 text-sm"
+              className="w-full bg-accent hover:bg-accent-hover py-3.5 rounded-lg text-white font-semibold disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2 text-sm"
             >
               {loading ? (
                 <>
@@ -353,9 +343,9 @@ export default function CoverLetterPage() {
         <AnimatePresence mode="wait">
           {loading && (
             <motion.div key="loading" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-              className="p-10 bg-white rounded-3xl border border-border shadow-sm flex flex-col items-center gap-5">
+              className="p-10 bg-surface rounded-lg border border-border shadow-sm flex flex-col items-center gap-5">
               <div className="relative w-14 h-14">
-                <div className="absolute inset-0 rounded-full border-[3px] border-[#e8e8ed]" />
+                <div className="absolute inset-0 rounded-full border-[3px] border-border" />
                 <div className="absolute inset-0 rounded-full border-[3px] border-t-fg border-r-fg/20 border-b-transparent border-l-transparent animate-spin" />
                 <div className="absolute inset-0 flex items-center justify-center">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" className="stroke-fg" strokeWidth="2">
@@ -369,7 +359,7 @@ export default function CoverLetterPage() {
               </div>
               {controller && (
                 <button onClick={() => controller.abort()}
-                  className="px-4 py-2 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl border border-red-200 text-sm font-medium transition-colors">
+                  className="btn btn-secondary text-sm py-2 px-4">
                   Cancel
                 </button>
               )}
@@ -377,7 +367,7 @@ export default function CoverLetterPage() {
           )}
           {error && !loading && (
             <motion.div key="error" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-              className="flex items-start gap-3 p-5 bg-red-50 border border-red-200 text-red-700 rounded-2xl text-sm" role="alert">
+              className="flex items-start gap-3 p-5 pill-danger rounded-lg text-sm" role="alert">
               <svg className="h-5 w-5 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
@@ -397,12 +387,12 @@ export default function CoverLetterPage() {
             animate={{ opacity: 1, y: 0, transition: { duration: 0.4, ease: "easeOut" } }}
             className="max-w-2xl mx-auto mt-6"
           >
-            <div className="bg-white rounded-3xl border border-border shadow-sm overflow-hidden">
+            <div className="bg-surface rounded-lg border border-border shadow-sm overflow-hidden">
 
               {/* Header bar */}
-              <div className="flex items-center justify-between px-6 py-4 border-b border-[#f0f0f5] bg-[#fafafa]">
+              <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-bg">
                 <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-8 h-8 rounded-xl bg-accent/[0.08] border border-border/15 flex items-center justify-center shrink-0">
+                  <div className="w-8 h-8 rounded-lg bg-surface-2 border border-border/15 flex items-center justify-center shrink-0">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" className="stroke-fg" strokeWidth="2">
                       <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
                       <polyline points="22,6 12,13 2,6" />
@@ -420,8 +410,8 @@ export default function CoverLetterPage() {
                       onClick={copyLetter}
                       className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${
                         copied
-                          ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                          : "bg-white text-fg-muted border-border-2 hover:border-border/40 hover:text-fg"
+                          ? "pill-success"
+                          : "bg-surface text-fg-muted border-border-2 hover:border-border/40 hover:text-fg"
                       }`}
                     >
                       {copied ? (
@@ -432,7 +422,7 @@ export default function CoverLetterPage() {
                     </button>
                     <button
                       onClick={downloadDOCX}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-white text-fg-muted border border-border-2 hover:border-border/40 hover:text-fg transition-all"
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-surface text-fg-muted border border-border-2 hover:border-border/40 hover:text-fg transition-all"
                     >
                       <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
@@ -452,7 +442,7 @@ export default function CoverLetterPage() {
                 ) : (
                   <div className="flex items-center gap-2 shrink-0">
                     <button onClick={saveEdit} className="px-3 py-1.5 rounded-lg text-xs font-medium bg-accent text-white hover:bg-accent-hover transition-colors">Save</button>
-                    <button onClick={cancelEdit} className="px-3 py-1.5 rounded-lg text-xs font-medium bg-white text-fg-muted border border-border-2 hover:bg-bg transition-colors">Cancel</button>
+                    <button onClick={cancelEdit} className="px-3 py-1.5 rounded-lg text-xs font-medium bg-surface text-fg-muted border border-border-2 hover:bg-bg transition-colors">Cancel</button>
                   </div>
                 )}
               </div>
@@ -464,7 +454,7 @@ export default function CoverLetterPage() {
                     rows={22}
                     value={editText}
                     onChange={(e) => setEditText(e.target.value)}
-                    className="w-full bg-bg text-fg p-4 rounded-xl border border-border-2 focus:outline-none focus:ring-2 focus:ring-fg/10 focus:border-border resize-none text-sm leading-[1.8] font-sans transition-all"
+                    className="w-full bg-bg text-fg p-4 rounded-lg border border-border-2 focus:outline-none focus:ring-2 focus:ring-fg/10 focus:border-border resize-none text-sm leading-[1.8] font-sans transition-all"
                   />
                 ) : (
                   <div className="text-fg text-[15px] leading-[1.9] whitespace-pre-wrap font-serif tracking-[0.01em]">
@@ -473,7 +463,7 @@ export default function CoverLetterPage() {
                 )}
               </div>
 
-              <div className="border-t border-[#f0f0f5] px-6 py-4 bg-[#fafafa]">
+              <div className="border-t border-border px-6 py-4 bg-bg">
                 <p className="text-xs text-fg-subtle text-center">
                   Personalize the opening with a specific detail about {company || "the company"} — referencing a product, recent news, or their mission — for maximum impact.
                 </p>
@@ -482,6 +472,7 @@ export default function CoverLetterPage() {
           </motion.section>
         )}
       </AnimatePresence>
+      </div>
     </div>
   );
 }
