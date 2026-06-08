@@ -25,7 +25,7 @@ const MIN_LEN = 50;
 function scoreInfo(s: number) {
   if (s >= 80) return { color: "#34c759", label: "Strong Match",   badge: "bg-emerald-50 text-emerald-700 border border-emerald-200" };
   if (s >= 60) return { color: "#ff9f0a", label: "Decent Match",   badge: "bg-amber-50 text-amber-700 border border-amber-200" };
-  if (s >= 40) return { color: "#0071e3", label: "Partial Match",  badge: "bg-[#f0f7ff] text-[#0071e3] border border-[#0071e3]/20" };
+  if (s >= 40) return { color: "#525252", label: "Partial Match",  badge: "bg-surface-2 text-fg border border-border" };
   return        { color: "#ff3b30", label: "Low Match",    badge: "bg-red-50 text-red-700 border border-red-200" };
 }
 
@@ -34,7 +34,7 @@ function CopyButton({ text }: { text: string }) {
   return (
     <button
       onClick={() => { navigator.clipboard.writeText(text); setCopied(true); setTimeout(() => setCopied(false), 2000); }}
-      className={`shrink-0 p-1.5 rounded-lg transition-colors ${copied ? "text-emerald-600" : "text-[#aeaeb2] hover:text-[#0071e3] hover:bg-[#f0f7ff]"}`}
+      className={`shrink-0 p-1.5 rounded-lg transition-colors ${copied ? "text-emerald-600" : "text-fg-subtle hover:text-fg hover:bg-surface-2"}`}
       title="Copy"
     >
       {copied ? (
@@ -123,19 +123,19 @@ export default function JobMatchPage() {
   ] : [];
 
   return (
-    <div className="min-h-screen bg-[#f5f5f7] text-[#1d1d1f] pt-16 pb-24 px-4">
+    <div className="min-h-screen bg-bg text-fg pt-16 pb-24 px-4">
 
       {/* Header */}
       <header className="max-w-2xl mx-auto text-center mb-12">
-        <div className="inline-flex items-center justify-center w-14 h-14 rounded-[18px] bg-[#0071e3]/[0.08] border border-[#0071e3]/15 mb-6">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="stroke-[#0071e3]" strokeWidth="1.5">
+        <div className="inline-flex items-center justify-center w-14 h-14 rounded-[18px] bg-accent/[0.08] border border-border/15 mb-6">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="stroke-fg" strokeWidth="1.5">
             <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
           </svg>
         </div>
-        <h1 className="text-5xl font-semibold tracking-tight text-[#1d1d1f] mb-3">
+        <h1 className="text-5xl font-semibold tracking-tight text-fg mb-3">
           Job Match Analyzer
         </h1>
-        <p className="text-[#6e6e73] text-lg leading-relaxed max-w-lg mx-auto">
+        <p className="text-fg-muted text-lg leading-relaxed max-w-lg mx-auto">
           See exactly how well your resume aligns with a job — and get a specific action plan to close every gap.
         </p>
       </header>
@@ -143,12 +143,12 @@ export default function JobMatchPage() {
       {/* Input form */}
       <section className="max-w-2xl mx-auto">
         <PlanChecker feature="job_match">
-          <div className="bg-white rounded-3xl border border-black/[0.06] shadow-sm p-8 space-y-7">
+          <div className="bg-white rounded-3xl border border-border shadow-sm p-8 space-y-7">
 
             {/* Resume */}
             <div>
               <div className="flex items-center justify-between mb-4">
-                <h2 className="font-semibold text-[#1d1d1f]">Your Resume</h2>
+                <h2 className="font-semibold text-fg">Your Resume</h2>
                 {resumeTxt && (
                   <span className="text-xs text-emerald-600 font-medium flex items-center gap-1">
                     <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
@@ -165,21 +165,21 @@ export default function JobMatchPage() {
             <div className="relative">
               <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-[#f0f0f5]" /></div>
               <div className="relative flex justify-center">
-                <span className="px-3 bg-white text-xs text-[#aeaeb2] font-medium">then</span>
+                <span className="px-3 bg-white text-xs text-fg-subtle font-medium">then</span>
               </div>
             </div>
 
             {/* Job Description */}
             <div>
-              <label htmlFor="jd-input" className="block mb-2 font-semibold text-[#1d1d1f] text-sm">
+              <label htmlFor="jd-input" className="block mb-2 font-semibold text-fg text-sm">
                 Job Description
-                <span className="ml-1.5 text-xs font-normal text-[#86868b]">— paste a URL or the full posting</span>
+                <span className="ml-1.5 text-xs font-normal text-fg-subtle">— paste a URL or the full posting</span>
               </label>
 
               {/* URL parser */}
               <div className="flex items-center gap-2 mb-3">
                 <div className="relative flex-1">
-                  <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#aeaeb2]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-fg-subtle" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244" />
                   </svg>
                   <input
@@ -187,13 +187,13 @@ export default function JobMatchPage() {
                     onChange={e => setJobUrl(e.target.value)}
                     onKeyDown={e => { if (e.key === "Enter") { e.preventDefault(); parseUrl(); } }}
                     placeholder="Paste LinkedIn, Indeed, or Greenhouse URL..."
-                    className="w-full bg-[#f9f9fb] text-[#1d1d1f] placeholder-[#b0b0b8] pl-9 pr-3 py-2.5 rounded-xl border border-[#d2d2d7] focus:outline-none focus:border-[#0071e3] focus:ring-2 focus:ring-[#0071e3]/10 text-sm transition-all"
+                    className="w-full bg-bg text-fg placeholder:text-fg-subtle pl-9 pr-3 py-2.5 rounded-xl border border-border-2 focus:outline-none focus:border-border focus:ring-2 focus:ring-fg/10 text-sm transition-all"
                   />
                 </div>
                 <button
                   onClick={parseUrl}
                   disabled={urlLoading || !jobUrl.trim()}
-                  className="px-4 py-2.5 rounded-xl bg-[#0071e3] text-white text-sm font-semibold hover:bg-[#0077ed] disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center gap-1.5 shrink-0"
+                  className="px-4 py-2.5 rounded-xl bg-accent text-white text-sm font-semibold hover:bg-accent-hover disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center gap-1.5 shrink-0"
                 >
                   {urlLoading ? (
                     <svg className="animate-spin h-3.5 w-3.5" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8h8a8 8 0 01-16 0z" /></svg>
@@ -213,10 +213,10 @@ export default function JobMatchPage() {
                 onChange={(e) => setJdTxt(e.target.value)}
                 rows={7}
                 placeholder="Or paste the full job description here — include responsibilities, requirements, and qualifications…"
-                className="w-full bg-[#f9f9fb] text-[#1d1d1f] placeholder-[#b0b0b8] p-4 rounded-2xl border border-[#d2d2d7] focus:outline-none focus:border-[#0071e3] focus:ring-2 focus:ring-[#0071e3]/10 resize-none text-sm leading-relaxed transition-all"
+                className="w-full bg-bg text-fg placeholder:text-fg-subtle p-4 rounded-2xl border border-border-2 focus:outline-none focus:border-border focus:ring-2 focus:ring-fg/10 resize-none text-sm leading-relaxed transition-all"
               />
               {jdTxt.length > 0 && (
-                <p className="text-right text-xs text-[#aeaeb2] mt-1">{jdTxt.length} characters</p>
+                <p className="text-right text-xs text-fg-subtle mt-1">{jdTxt.length} characters</p>
               )}
             </div>
 
@@ -225,7 +225,7 @@ export default function JobMatchPage() {
               <button
                 disabled={loading || !resumeTxt || jdTxt.trim().length < MIN_LEN}
                 onClick={submit}
-                className="flex-1 py-3.5 rounded-2xl text-white bg-[#0071e3] font-semibold disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#0077ed] active:scale-[.98] transition-all flex items-center justify-center gap-2 text-sm"
+                className="flex-1 py-3.5 rounded-2xl text-white bg-accent font-semibold disabled:opacity-40 disabled:cursor-not-allowed hover:bg-accent-hover active:scale-[.98] transition-all flex items-center justify-center gap-2 text-sm"
               >
                 {loading ? (
                   <>
@@ -241,7 +241,7 @@ export default function JobMatchPage() {
                 <button
                   onClick={reset}
                   disabled={loading}
-                  className="px-5 py-3.5 rounded-2xl bg-[#f5f5f7] text-[#6e6e73] font-semibold border border-[#e0e0e5] hover:bg-[#ebebf0] transition-colors disabled:opacity-40 text-sm"
+                  className="px-5 py-3.5 rounded-2xl bg-bg text-fg-muted font-semibold border border-[#e0e0e5] hover:bg-surface-2 transition-colors disabled:opacity-40 text-sm"
                 >
                   Clear
                 </button>
@@ -256,19 +256,19 @@ export default function JobMatchPage() {
         <AnimatePresence mode="wait">
           {loading && (
             <motion.div key="loading" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -12 }}
-              className="p-10 bg-white rounded-3xl border border-black/[0.06] shadow-sm flex flex-col items-center gap-5">
+              className="p-10 bg-white rounded-3xl border border-border shadow-sm flex flex-col items-center gap-5">
               <div className="relative w-14 h-14">
                 <div className="absolute inset-0 rounded-full border-[3px] border-[#e8e8ed]" />
-                <div className="absolute inset-0 rounded-full border-[3px] border-t-[#0071e3] border-r-[#0071e3]/20 border-b-transparent border-l-transparent animate-spin" />
+                <div className="absolute inset-0 rounded-full border-[3px] border-t-fg border-r-fg/20 border-b-transparent border-l-transparent animate-spin" />
                 <div className="absolute inset-0 flex items-center justify-center">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" className="stroke-[#0071e3]" strokeWidth="1.5">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" className="stroke-fg" strokeWidth="1.5">
                     <circle cx="11" cy="11" r="7" /><line x1="19" y1="19" x2="15" y2="15" />
                   </svg>
                 </div>
               </div>
               <div className="text-center">
-                <p className="font-semibold text-[#1d1d1f]">Analyzing your match…</p>
-                <p className="text-[#86868b] text-sm mt-1">Comparing skills, experience, and requirements</p>
+                <p className="font-semibold text-fg">Analyzing your match…</p>
+                <p className="text-fg-subtle text-sm mt-1">Comparing skills, experience, and requirements</p>
               </div>
             </motion.div>
           )}
@@ -296,7 +296,7 @@ export default function JobMatchPage() {
           >
 
             {/* Score card */}
-            <div className="bg-white rounded-3xl border border-black/[0.06] shadow-sm p-8">
+            <div className="bg-white rounded-3xl border border-border shadow-sm p-8">
               <div className="flex flex-col sm:flex-row items-center sm:items-start gap-7">
 
                 {/* Score ring */}
@@ -308,7 +308,7 @@ export default function JobMatchPage() {
                       styles={buildStyles({
                         textSize: "22px",
                         pathColor: info.color,
-                        textColor: "#1d1d1f",
+                        textColor: "#171717",
                         trailColor: "#f0f0f5",
                         pathTransitionDuration: 1,
                       })}
@@ -323,8 +323,8 @@ export default function JobMatchPage() {
 
                 {/* Details */}
                 <div className="flex-1 text-center sm:text-left">
-                  <h2 className="text-2xl font-bold text-[#1d1d1f] mb-2">Match Score</h2>
-                  <p className="text-[#6e6e73] text-sm leading-relaxed mb-5">
+                  <h2 className="text-2xl font-bold text-fg mb-2">Match Score</h2>
+                  <p className="text-fg-muted text-sm leading-relaxed mb-5">
                     {result.summary || (
                       result.matchScore >= 80 ? "Excellent alignment. Your resume is well-matched — focus on refining your top talking points before applying." :
                       result.matchScore >= 60 ? "Good foundation. A few targeted updates could significantly strengthen your application." :
@@ -342,8 +342,8 @@ export default function JobMatchPage() {
                       <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
                       {result.missingSkills.length} missing
                     </span>
-                    <span className="flex items-center gap-1.5 px-3 py-1 bg-[#f0f7ff] border border-[#0071e3]/20 rounded-full text-xs font-medium text-[#0071e3]">
-                      <span className="w-1.5 h-1.5 rounded-full bg-[#0071e3]" />
+                    <span className="flex items-center gap-1.5 px-3 py-1 bg-surface-2 border border-border/20 rounded-full text-xs font-medium text-fg">
+                      <span className="w-1.5 h-1.5 rounded-full bg-accent" />
                       {result.actions.length} actions
                     </span>
                   </div>
@@ -352,7 +352,7 @@ export default function JobMatchPage() {
             </div>
 
             {/* Analysis card */}
-            <div className="bg-white rounded-3xl border border-black/[0.06] shadow-sm overflow-hidden">
+            <div className="bg-white rounded-3xl border border-border shadow-sm overflow-hidden">
 
               {/* Tabs */}
               <div className="flex border-b border-[#f0f0f5] px-2">
@@ -362,13 +362,13 @@ export default function JobMatchPage() {
                     onClick={() => setActiveTab(tab.id)}
                     className={`flex items-center gap-2 px-5 py-4 text-sm font-semibold transition-colors relative whitespace-nowrap ${
                       activeTab === tab.id
-                        ? "text-[#0071e3] after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-full after:h-[2px] after:bg-[#0071e3]"
-                        : "text-[#86868b] hover:text-[#1d1d1f]"
+                        ? "text-fg after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-full after:h-[2px] after:bg-accent"
+                        : "text-fg-subtle hover:text-fg"
                     }`}
                   >
                     {tab.label}
                     <span className={`px-1.5 py-0.5 rounded-full text-xs font-semibold leading-none ${
-                      activeTab === tab.id ? "bg-[#0071e3]/10 text-[#0071e3]" : "bg-[#f0f0f5] text-[#86868b]"
+                      activeTab === tab.id ? "bg-accent/10 text-fg" : "bg-[#f0f0f5] text-fg-subtle"
                     }`}>
                       {tab.count}
                     </span>
@@ -382,11 +382,11 @@ export default function JobMatchPage() {
                 {activeTab === "matched" && (
                   result.matchedSkills.length === 0 ? (
                     <div className="py-10 text-center">
-                      <p className="text-[#86868b]">No matching skills detected. Try expanding your resume with more relevant experience.</p>
+                      <p className="text-fg-subtle">No matching skills detected. Try expanding your resume with more relevant experience.</p>
                     </div>
                   ) : (
                     <>
-                      <p className="text-sm text-[#6e6e73] mb-4">Skills and qualifications present in both your resume and the job description.</p>
+                      <p className="text-sm text-fg-muted mb-4">Skills and qualifications present in both your resume and the job description.</p>
                       <div className="flex flex-wrap gap-2">
                         {result.matchedSkills.map((skill, i) => (
                           <span key={i} className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-full text-sm font-medium">
@@ -405,11 +405,11 @@ export default function JobMatchPage() {
                 {activeTab === "missing" && (
                   result.missingSkills.length === 0 ? (
                     <div className="py-10 text-center">
-                      <p className="text-[#86868b]">No missing skills detected — great coverage!</p>
+                      <p className="text-fg-subtle">No missing skills detected — great coverage!</p>
                     </div>
                   ) : (
                     <>
-                      <p className="text-sm text-[#6e6e73] mb-4">Skills required by the job description that aren&apos;t visible in your resume. Add them if you have the experience.</p>
+                      <p className="text-sm text-fg-muted mb-4">Skills required by the job description that aren&apos;t visible in your resume. Add them if you have the experience.</p>
                       <div className="flex flex-wrap gap-2">
                         {result.missingSkills.map((skill, i) => (
                           <span key={i} className="flex items-center gap-1.5 px-3 py-1.5 bg-red-50 text-red-700 border border-red-200 rounded-full text-sm font-medium">
@@ -428,18 +428,18 @@ export default function JobMatchPage() {
                 {activeTab === "gaps" && (
                   result.gaps.length === 0 ? (
                     <div className="py-10 text-center">
-                      <p className="text-[#86868b]">No significant gaps — strong alignment with this role!</p>
+                      <p className="text-fg-subtle">No significant gaps — strong alignment with this role!</p>
                     </div>
                   ) : (
                     <>
-                      <p className="text-sm text-[#6e6e73] mb-4">Specific differences between what the role requires and what your resume shows.</p>
+                      <p className="text-sm text-fg-muted mb-4">Specific differences between what the role requires and what your resume shows.</p>
                       <ul className="space-y-3">
                         {result.gaps.map((gap, i) => (
                           <li key={i} className="flex items-start gap-3 p-4 bg-[#fafafa] border border-[#e8e8ed] rounded-2xl">
-                            <div className="w-6 h-6 rounded-full bg-[#0071e3]/10 border border-[#0071e3]/20 flex items-center justify-center shrink-0 mt-0.5">
-                              <span className="text-[#0071e3] text-xs font-bold">{i + 1}</span>
+                            <div className="w-6 h-6 rounded-full bg-accent/10 border border-border/20 flex items-center justify-center shrink-0 mt-0.5">
+                              <span className="text-fg text-xs font-bold">{i + 1}</span>
                             </div>
-                            <p className="text-[#1d1d1f] text-sm leading-relaxed">{gap}</p>
+                            <p className="text-fg text-sm leading-relaxed">{gap}</p>
                           </li>
                         ))}
                       </ul>
@@ -451,20 +451,20 @@ export default function JobMatchPage() {
                 {activeTab === "actions" && (
                   result.actions.length === 0 ? (
                     <div className="py-10 text-center">
-                      <p className="text-[#86868b]">No actions needed — you&apos;re already a strong match!</p>
+                      <p className="text-fg-subtle">No actions needed — you&apos;re already a strong match!</p>
                     </div>
                   ) : (
                     <>
-                      <p className="text-sm text-[#6e6e73] mb-4">Specific resume edits to make before you apply. Copy any item to keep as a to-do.</p>
+                      <p className="text-sm text-fg-muted mb-4">Specific resume edits to make before you apply. Copy any item to keep as a to-do.</p>
                       <ul className="space-y-2">
                         {result.actions.map((action, i) => (
-                          <li key={i} className="flex items-start gap-3 p-4 bg-[#fafafa] border border-[#e8e8ed] rounded-2xl hover:border-[#0071e3]/30 hover:bg-[#f0f7ff] transition-colors group">
-                            <div className="w-5 h-5 rounded border-2 border-[#d2d2d7] group-hover:border-[#0071e3] shrink-0 mt-0.5 flex items-center justify-center transition-colors">
-                              <svg className="w-3 h-3 text-[#0071e3] opacity-0 group-hover:opacity-100 transition-opacity" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                          <li key={i} className="flex items-start gap-3 p-4 bg-[#fafafa] border border-[#e8e8ed] rounded-2xl hover:border-border/30 hover:bg-surface-2 transition-colors group">
+                            <div className="w-5 h-5 rounded border-2 border-border-2 group-hover:border-border shrink-0 mt-0.5 flex items-center justify-center transition-colors">
+                              <svg className="w-3 h-3 text-fg opacity-0 group-hover:opacity-100 transition-opacity" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                               </svg>
                             </div>
-                            <p className="text-[#1d1d1f] text-sm leading-relaxed flex-1">{action}</p>
+                            <p className="text-fg text-sm leading-relaxed flex-1">{action}</p>
                             <CopyButton text={action} />
                           </li>
                         ))}
@@ -475,7 +475,7 @@ export default function JobMatchPage() {
               </div>
 
               <div className="border-t border-[#f0f0f5] px-6 py-4 bg-[#fafafa]">
-                <p className="text-xs text-[#aeaeb2] text-center">
+                <p className="text-xs text-fg-subtle text-center">
                   Tailor your resume to each application. Even a 10-point score improvement can double your callback rate.
                 </p>
               </div>

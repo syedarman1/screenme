@@ -124,7 +124,7 @@ const ContactPage = () => {
                         value={formData.name}
                         onChange={handleInputChange}
                         required
-                        className="w-full px-4 py-4 bg-surface border border-border rounded-xl text-fg placeholder-[#aeaeb2] focus:outline-none focus:border-border-2 transition-colors"
+                        className="w-full px-4 py-4 bg-surface border border-border rounded-xl text-fg placeholder:text-fg-subtle focus:outline-none focus:border-border-2 transition-colors"
                         placeholder="Your name"
                       />
                     </div>
@@ -135,7 +135,7 @@ const ContactPage = () => {
                         value={formData.email}
                         onChange={handleInputChange}
                         required
-                        className="w-full px-4 py-4 bg-surface border border-border rounded-xl text-fg placeholder-[#aeaeb2] focus:outline-none focus:border-border-2 transition-colors"
+                        className="w-full px-4 py-4 bg-surface border border-border rounded-xl text-fg placeholder:text-fg-subtle focus:outline-none focus:border-border-2 transition-colors"
                         placeholder="Email address"
                       />
                     </div>
@@ -167,7 +167,7 @@ const ContactPage = () => {
                       required
                       rows={5}
                       maxLength={2000}
-                      className="w-full px-4 py-4 bg-surface border border-border rounded-xl text-fg placeholder-[#aeaeb2] focus:outline-none focus:border-border-2 transition-colors resize-none"
+                      className="w-full px-4 py-4 bg-surface border border-border rounded-xl text-fg placeholder:text-fg-subtle focus:outline-none focus:border-border-2 transition-colors resize-none"
                       placeholder="Tell us how we can help you... (minimum 10 characters)"
                     />
                     <div className="flex justify-between items-center mt-2">

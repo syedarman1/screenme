@@ -103,15 +103,15 @@ export default function AuthPage() {
           </button>
 
           <div className="flex items-center gap-3">
-            <div className="flex-1 h-px bg-black/[0.06]" />
+            <div className="flex-1 h-px bg-surface-2" />
             <span className="text-xs text-fg-subtle">or</span>
-            <div className="flex-1 h-px bg-black/[0.06]" />
+            <div className="flex-1 h-px bg-surface-2" />
           </div>
 
           {/* Alerts */}
           {error && (
-            <div role="alert" className="p-3 rounded-xl border border-[#ff3b30]/20 bg-[#ff3b30]/[0.06]">
-              <p className="text-sm text-[#ff3b30]">{error}</p>
+            <div role="alert" className="p-3 rounded-xl border border-[#ff3b30]/20 bg-red/[0.06]">
+              <p className="text-sm text-red">{error}</p>
             </div>
           )}
           {message && (
@@ -127,7 +127,7 @@ export default function AuthPage() {
               <input
                 id="email" type="email" autoComplete="email" required
                 placeholder="you@example.com"
-                className="w-full bg-bg text-fg placeholder-[#aeaeb2] px-3.5 py-2.5 rounded-xl
+                className="w-full bg-bg text-fg placeholder:text-fg-subtle px-3.5 py-2.5 rounded-xl
                          border border-border focus:outline-none focus:border-border-2 focus:bg-surface
                          transition-colors text-sm"
                 value={email}
@@ -142,7 +142,7 @@ export default function AuthPage() {
                   id="password" type={showPassword ? "text" : "password"} autoComplete="current-password" required
                   placeholder="••••••"
                   minLength={6}
-                  className="w-full bg-bg text-fg placeholder-[#aeaeb2] px-3.5 py-2.5 pr-10 rounded-xl
+                  className="w-full bg-bg text-fg placeholder:text-fg-subtle px-3.5 py-2.5 pr-10 rounded-xl
                            border border-border focus:outline-none focus:border-border-2 focus:bg-surface
                            transition-colors text-sm"
                   value={password}
@@ -183,7 +183,7 @@ export default function AuthPage() {
             <div className="pt-3 border-t border-border flex flex-col gap-2">
               <p className="text-xs text-fg-subtle">Enter your email above and we'll send a reset link.</p>
               <button type="button" onClick={handleForgot} disabled={loading}
-                className="w-full bg-bg border border-border text-fg-muted hover:text-fg hover:bg-[#ebebf0]
+                className="w-full bg-bg border border-border text-fg-muted hover:text-fg hover:bg-surface-2
                           font-medium py-2.5 rounded-xl transition-colors text-sm cursor-pointer disabled:opacity-50">
                 {loading ? "Sending…" : "Send reset email"}
               </button>
@@ -194,7 +194,7 @@ export default function AuthPage() {
             <div className="pt-3 border-t border-border flex flex-col gap-2">
               <p className="text-xs text-fg-subtle text-center">Don't have an account?</p>
               <button type="button" onClick={handleCreate} disabled={loading}
-                className="w-full bg-bg border border-border text-fg hover:bg-[#ebebf0]
+                className="w-full bg-bg border border-border text-fg hover:bg-surface-2
                           font-medium py-2.5 rounded-xl transition-colors text-sm cursor-pointer disabled:opacity-50">
                 {loading ? "Creating…" : "Create account"}
               </button>

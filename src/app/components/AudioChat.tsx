@@ -229,7 +229,7 @@ export default function AudioChat({ jobContext }: AudioChatProps) {
 
   /* ── Render ───────────────────────────────────────────── */
   return (
-    <div className="bg-white border border-black/[0.06] rounded-3xl overflow-hidden shadow-sm">
+    <div className="bg-white border border-border rounded-3xl overflow-hidden shadow-sm">
 
       {/* Transcript */}
       <div
@@ -238,14 +238,14 @@ export default function AudioChat({ jobContext }: AudioChatProps) {
       >
         {msgs.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center gap-2 text-center">
-            <div className="w-10 h-10 rounded-2xl bg-[#0071e3]/[0.08] border border-[#0071e3]/15 flex items-center justify-center">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" className="stroke-[#0071e3]" strokeWidth="1.5">
+            <div className="w-10 h-10 rounded-2xl bg-accent/[0.08] border border-border/15 flex items-center justify-center">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" className="stroke-fg" strokeWidth="1.5">
                 <path d="M12 1a3 3 0 00-3 3v7a3 3 0 006 0V4a3 3 0 00-3-3z" />
                 <path d="M19 10v2a7 7 0 01-14 0v-2" />
                 <path d="M12 19v4M8 23h8" />
               </svg>
             </div>
-            <p className="text-[#86868b] text-sm">
+            <p className="text-fg-subtle text-sm">
               {isActive ? "Recording started — tap the mic button to speak." : 'Click "Start Interview" to begin your mock session.'}
             </p>
           </div>
@@ -256,20 +256,20 @@ export default function AudioChat({ jobContext }: AudioChatProps) {
               className={`flex gap-3 ${m.who === "user" ? "justify-end" : "justify-start"}`}
             >
               {m.who === "ai" && (
-                <div className="w-7 h-7 rounded-full bg-[#0071e3]/10 border border-[#0071e3]/20 flex items-center justify-center shrink-0 mt-0.5">
-                  <span className="text-[#0071e3] text-[10px] font-bold">AI</span>
+                <div className="w-7 h-7 rounded-full bg-accent/10 border border-border/20 flex items-center justify-center shrink-0 mt-0.5">
+                  <span className="text-fg text-[10px] font-bold">AI</span>
                 </div>
               )}
               <div className={`max-w-[80%] px-4 py-2.5 rounded-2xl text-sm leading-relaxed ${
                 m.who === "user"
-                  ? "bg-[#0071e3] text-white rounded-br-sm"
-                  : "bg-white border border-[#e8e8ed] text-[#1d1d1f] rounded-bl-sm"
+                  ? "bg-accent text-white rounded-br-sm"
+                  : "bg-white border border-[#e8e8ed] text-fg rounded-bl-sm"
               }`}>
                 {m.text}
               </div>
               {m.who === "user" && (
                 <div className="w-7 h-7 rounded-full bg-[#f0f0f5] border border-[#e0e0e5] flex items-center justify-center shrink-0 mt-0.5">
-                  <span className="text-[#6e6e73] text-[10px] font-bold">You</span>
+                  <span className="text-fg-muted text-[10px] font-bold">You</span>
                 </div>
               )}
             </div>
@@ -279,13 +279,13 @@ export default function AudioChat({ jobContext }: AudioChatProps) {
         {/* Processing indicator */}
         {isProcessing && (
           <div className="flex gap-3 justify-start">
-            <div className="w-7 h-7 rounded-full bg-[#0071e3]/10 border border-[#0071e3]/20 flex items-center justify-center shrink-0">
-              <span className="text-[#0071e3] text-[10px] font-bold">AI</span>
+            <div className="w-7 h-7 rounded-full bg-accent/10 border border-border/20 flex items-center justify-center shrink-0">
+              <span className="text-fg text-[10px] font-bold">AI</span>
             </div>
             <div className="px-4 py-2.5 bg-white border border-[#e8e8ed] rounded-2xl rounded-bl-sm">
               <div className="flex gap-1 items-center h-4">
                 {[0, 1, 2].map((i) => (
-                  <span key={i} className="w-1.5 h-1.5 rounded-full bg-[#0071e3] animate-bounce" style={{ animationDelay: `${i * 0.15}s` }} />
+                  <span key={i} className="w-1.5 h-1.5 rounded-full bg-accent animate-bounce" style={{ animationDelay: `${i * 0.15}s` }} />
                 ))}
               </div>
             </div>
@@ -299,7 +299,7 @@ export default function AudioChat({ jobContext }: AudioChatProps) {
           <div className="flex items-center gap-3">
             <button
               onClick={handleStart}
-              className="flex items-center gap-2 px-5 py-2.5 bg-[#0071e3] hover:bg-[#0077ed] text-white rounded-xl font-semibold text-sm transition-colors active:scale-[.98]"
+              className="flex items-center gap-2 px-5 py-2.5 bg-accent hover:bg-accent-hover text-white rounded-xl font-semibold text-sm transition-colors active:scale-[.98]"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
                 <polygon points="5 3 19 12 5 21 5 3" />
@@ -307,7 +307,7 @@ export default function AudioChat({ jobContext }: AudioChatProps) {
               Start Interview
             </button>
             {!hasPermission && (
-              <p className="text-xs text-[#86868b] flex items-center gap-1.5">
+              <p className="text-xs text-fg-subtle flex items-center gap-1.5">
                 <svg className="w-3.5 h-3.5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
                 </svg>
@@ -322,7 +322,7 @@ export default function AudioChat({ jobContext }: AudioChatProps) {
               <button
                 onClick={startRecording}
                 disabled={isProcessing}
-                className="flex items-center gap-2 px-4 py-2.5 bg-[#f0f7ff] hover:bg-[#e0efff] text-[#0071e3] border border-[#0071e3]/20 rounded-xl font-semibold text-sm transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                className="flex items-center gap-2 px-4 py-2.5 bg-surface-2 hover:bg-[#e0efff] text-fg border border-border/20 rounded-xl font-semibold text-sm transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 1a3 3 0 00-3 3v7a3 3 0 006 0V4a3 3 0 00-3-3zM19 10v2a7 7 0 01-14 0v-2M12 19v4M8 23h8" />
@@ -355,7 +355,7 @@ export default function AudioChat({ jobContext }: AudioChatProps) {
             {/* End interview */}
             <button
               onClick={handleStop}
-              className="ml-auto flex items-center gap-2 px-4 py-2.5 bg-[#f5f5f7] text-[#6e6e73] border border-[#e0e0e5] rounded-xl text-sm font-medium hover:bg-[#ebebf0] transition-colors"
+              className="ml-auto flex items-center gap-2 px-4 py-2.5 bg-bg text-fg-muted border border-[#e0e0e5] rounded-xl text-sm font-medium hover:bg-surface-2 transition-colors"
             >
               End Interview
             </button>
