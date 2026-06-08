@@ -8,6 +8,7 @@ import AudioChat from "../components/AudioChat";
 import PlanChecker from "../components/PlanChecker";
 import PageHeader from "../components/PageHeader";
 import { supabase } from "../lib/supabaseClient";
+import { authFetch } from "../lib/authFetch";
 
 type QuestionType = "Behavioral" | "Technical" | "Situational" | "Problem-Solving" | "Motivation" | "Role-Specific";
 type Difficulty   = "Easy" | "Medium" | "Hard";
@@ -97,13 +98,12 @@ export default function InterviewPrepPage() {
         resumeText.trim() ? `Resume:\n${resumeText.trim()}` : null,
       ].filter(Boolean).join("\n\n");
 
-      const res = await fetch("/api/interviewPrep", {
+      const res = await authFetch("/api/interviewPrep", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           job: jobDesc,
           context: context || undefined,
-          userId: user?.id,
         }),
         signal: ac.signal,
       });
