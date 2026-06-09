@@ -3,6 +3,7 @@
 
 import { useState, useRef } from "react";
 import VideoFeed from "../components/VideoFeed";
+import { authFetch } from "../lib/authFetch";
 
 type ChatMsg = { who: "user" | "ai"; text: string };
 
@@ -34,7 +35,7 @@ export default function Conversation() {
       form.append("history", JSON.stringify(msgs));
 
       try {
-        const res = await fetch("/api/interviewConversation", {
+        const res = await authFetch("/api/interviewConversation", {
           method: "POST",
           body: form,
         });

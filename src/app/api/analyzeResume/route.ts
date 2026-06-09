@@ -4,6 +4,7 @@ import { z } from "zod";
 import { rateLimit } from "../../lib/rate-limit";
 import { checkUsageLimit, incrementUsage } from "../../lib/usageTracker";
 import { ErrorTypes, handleAPIError, validateRequest, validateContentLength } from "../../lib/errorHandler";
+import { getAuthenticatedUser, unauthorized } from "../../lib/auth";
 
 // Extended sections to cover more resume types
 const Section = z.enum([
@@ -483,8 +484,12 @@ export async function POST(req: Request) {
       );
     }
 
+    const user = await getAuthenticatedUser(req);
+    if (!user) return unauthorized();
+    const userId = user.id;
+
     const body = await req.json().catch(() => ({}));
-    const { resume, options, userId, format } = body;
+    const { resume, options, format } = body;
 
     // Validate required fields
     const validationError = validateRequest(body, ['resume']);
@@ -503,33 +508,31 @@ export async function POST(req: Request) {
       return handleAPIError(contentError);
     }
 
-    if (userId) {
-      try {
-        const usageCheck = await checkUsageLimit(userId, 'resume_scan');
+    try {
+      const usageCheck = await checkUsageLimit(userId, 'resume_scan');
 
-        if (!usageCheck.allowed) {
-          const usageError = ErrorTypes.USAGE_LIMIT_REACHED('resume scans', usageCheck.plan);
-          return NextResponse.json(
-            {
-              error: usageError.message,
-              details: {
-                message: usageError.message,
-                code: usageError.code,
-                action: usageError.action,
-                limit: usageCheck.limit,
-                remaining: usageCheck.remaining,
-                plan: usageCheck.plan
-              },
-              timestamp: new Date().toISOString()
+      if (!usageCheck.allowed) {
+        const usageError = ErrorTypes.USAGE_LIMIT_REACHED('resume scans', usageCheck.plan);
+        return NextResponse.json(
+          {
+            error: usageError.message,
+            details: {
+              message: usageError.message,
+              code: usageError.code,
+              action: usageError.action,
+              limit: usageCheck.limit,
+              remaining: usageCheck.remaining,
+              plan: usageCheck.plan
             },
-            { status: usageError.status }
-          );
-        }
-      } catch (error) {
-        console.error('Exception in usage checking:', error);
-        const trackingError = ErrorTypes.USAGE_TRACKING_ERROR();
-        return handleAPIError(trackingError);
+            timestamp: new Date().toISOString()
+          },
+          { status: usageError.status }
+        );
       }
+    } catch (error) {
+      console.error('Exception in usage checking:', error);
+      const trackingError = ErrorTypes.USAGE_TRACKING_ERROR();
+      return handleAPIError(trackingError);
     }
 
     // Pre-process the resume
@@ -917,15 +920,13 @@ export async function POST(req: Request) {
       }
     };
 
-    if (userId) {
-      try {
-        const incrementSuccess = await incrementUsage(userId, 'resume_scan');
-        if (!incrementSuccess) {
-          console.error('Failed to increment usage for user:', userId);
-        }
-      } catch (error) {
-        console.error('Exception incrementing usage:', error);
+    try {
+      const incrementSuccess = await incrementUsage(userId, 'resume_scan');
+      if (!incrementSuccess) {
+        console.error('Failed to increment usage for user:', userId);
       }
+    } catch (error) {
+      console.error('Exception incrementing usage:', error);
     }
 
     return NextResponse.json(audit, {

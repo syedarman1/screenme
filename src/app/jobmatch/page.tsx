@@ -9,6 +9,7 @@ import "react-circular-progressbar/dist/styles.css";
 import PlanChecker from "../components/PlanChecker";
 import PageHeader from "../components/PageHeader";
 import { supabase } from "../lib/supabaseClient";
+import { authFetch } from "../lib/authFetch";
 
 type ActiveTab = "matched" | "missing" | "gaps" | "actions";
 
@@ -95,10 +96,10 @@ export default function JobMatchPage() {
       if (!supabase) throw new Error("Authentication service not available");
       const { data: { user } } = await supabase.auth.getUser();
 
-      const r = await fetch("/api/jobMatch", {
+      const r = await authFetch("/api/jobMatch", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ resume: resumeTxt, job: jdTxt, userId: user?.id }),
+        body: JSON.stringify({ resume: resumeTxt, job: jdTxt }),
       });
 
       const data = await r.json();
