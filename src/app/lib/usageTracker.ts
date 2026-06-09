@@ -25,10 +25,11 @@ interface UserPlanData {
 
 export async function checkUsageLimit(userId: string, feature: FeatureType): Promise<UsageCheckResult> {
   try {
-    // Check if Supabase client is available
+    // Fail closed: if we can't reach the datastore we can't verify limits,
+    // so deny rather than hand out unlimited access.
     if (!supabase) {
-      console.warn('Supabase client not available, allowing access');
-      return { allowed: true, limit: -1, remaining: -1, plan: 'free' };
+      console.error('Supabase client not available, denying access (fail closed)');
+      return { allowed: false, limit: 0, remaining: 0, plan: 'free' };
     }
 
     // Query user plan and usage directly from database
@@ -113,8 +114,8 @@ export async function checkUsageLimit(userId: string, feature: FeatureType): Pro
 export async function incrementUsage(userId: string, feature: FeatureType): Promise<boolean> {
   try {
     if (!supabase) {
-      console.warn('Supabase client not available, skipping usage increment');
-      return true;
+      console.error('Supabase client not available, cannot record usage');
+      return false;
     }
 
     const fieldName = getUsageFieldName(feature);
@@ -192,6 +193,7 @@ export async function initializeUserData(userId: string): Promise<boolean> {
         cover_letters: 0,
         job_matches: 0,
         interview_preps: 0,
+        resume_tailors: 0,
         last_reset: new Date().toISOString()
       }, { onConflict: 'user_id' });
 

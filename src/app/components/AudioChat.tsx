@@ -3,6 +3,7 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import { supabase } from "../lib/supabaseClient";
+import { authFetch } from "../lib/authFetch";
 
 export type ChatMsg = { id: number; who: "user" | "ai"; text: string };
 
@@ -185,10 +186,9 @@ export default function AudioChat({ jobContext }: AudioChatProps) {
       formData.append("audio", audioBlob, "audio.webm");
       formData.append("history", JSON.stringify(msgs));
       if (jobContext) formData.append("jobContext", jobContext.slice(0, 600));
-      if (currentUser?.id) formData.append("userId", currentUser.id);
 
       try {
-        const res = await fetch("/api/interviewPrep", { method: "POST", body: formData });
+        const res = await authFetch("/api/interviewPrep", { method: "POST", body: formData });
 
         if (!res.ok) {
           const d = await res.json().catch(() => ({}));

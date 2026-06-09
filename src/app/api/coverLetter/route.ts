@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import OpenAI from "openai";
 import { checkUsageLimit, incrementUsage } from "../../lib/usageTracker";
 import { ErrorTypes, handleAPIError, validateRequest, validateContentLength } from "../../lib/errorHandler";
+import { getAuthenticatedUser, unauthorized } from "../../lib/auth";
 
 /* ── Tone instructions ────────────────────────────────────── */
 const toneInstructions: Record<string, { instruction: string; temp: number; wordTarget: string }> = {
@@ -68,8 +69,12 @@ const VALID_TONES = Object.keys(toneInstructions);
 /* ── POST ─────────────────────────────────────────────────── */
 export async function POST(request: Request) {
   try {
+    const user = await getAuthenticatedUser(request);
+    if (!user) return unauthorized();
+    const userId = user.id;
+
     const body = await request.json().catch(() => ({}));
-    const { resume, jobTitle, company, jobDesc, tone, userId } = body;
+    const { resume, jobTitle, company, jobDesc, tone } = body;
 
     const validationError = validateRequest(body, ["resume", "jobTitle", "company", "tone"]);
     if (validationError) return handleAPIError(validationError);
@@ -87,20 +92,18 @@ export async function POST(request: Request) {
 
     const validTone = VALID_TONES.includes(tone) ? tone : "Professional";
 
-    // Free users get Professional only
-    const isPro = userId ? true : false; // usage tracker handles plan enforcement — tone enforcement is on the client
-    const effectiveTone = isPro ? validTone : "Professional";
-
-    if (userId) {
-      const usageCheck = await checkUsageLimit(userId, "cover_letter");
-      if (!usageCheck.allowed) {
-        const usageError = ErrorTypes.USAGE_LIMIT_REACHED("cover letters", usageCheck.plan);
-        return NextResponse.json(
-          { error: usageError.message, details: { message: usageError.message, code: usageError.code, action: usageError.action, limit: usageCheck.limit, remaining: usageCheck.remaining, plan: usageCheck.plan }, timestamp: new Date().toISOString() },
-          { status: usageError.status }
-        );
-      }
+    const usageCheck = await checkUsageLimit(userId, "cover_letter");
+    if (!usageCheck.allowed) {
+      const usageError = ErrorTypes.USAGE_LIMIT_REACHED("cover letters", usageCheck.plan);
+      return NextResponse.json(
+        { error: usageError.message, details: { message: usageError.message, code: usageError.code, action: usageError.action, limit: usageCheck.limit, remaining: usageCheck.remaining, plan: usageCheck.plan }, timestamp: new Date().toISOString() },
+        { status: usageError.status }
+      );
     }
+
+    // Free users get Professional only — premium tones are Pro-gated server-side
+    const isPro = usageCheck.plan === "pro";
+    const effectiveTone = isPro ? validTone : "Professional";
 
     if (!openai) {
       return NextResponse.json(
@@ -153,10 +156,8 @@ ${jobDesc?.trim() ? `\nJOB DESCRIPTION:\n${String(jobDesc).trim()}` : ""}
       return handleAPIError(ErrorTypes.OPENAI_SERVICE_ERROR());
     }
 
-    if (userId) {
-      const ok = await incrementUsage(userId, "cover_letter");
-      if (!ok) console.warn("Failed to increment usage for user:", userId);
-    }
+    const ok = await incrementUsage(userId, "cover_letter");
+    if (!ok) console.warn("Failed to increment usage for user:", userId);
 
     const wordCount = coverLetter.split(/\s+/).filter(Boolean).length;
 

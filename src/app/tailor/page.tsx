@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import PlanChecker from "../components/PlanChecker";
 import PageHeader from "../components/PageHeader";
 import { supabase } from "../lib/supabaseClient";
+import { authFetch } from "../lib/authFetch";
 
 export default function TailorPage() {
   const [resumeTxt, setResumeTxt]         = useState("");
@@ -65,10 +66,10 @@ export default function TailorPage() {
     setShowSaveInput(false);
 
     try {
-      const res = await fetch("/api/tailorResume", {
+      const res = await authFetch("/api/tailorResume", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ resume: resumeTxt, job: jdTxt, userId }),
+        body: JSON.stringify({ resume: resumeTxt, job: jdTxt }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to tailor resume.");
@@ -93,9 +94,9 @@ export default function TailorPage() {
     const name = saveName.trim() || "Tailored Resume";
     setSaving(true);
     try {
-      const res = await fetch("/api/resumes", {
+      const res = await authFetch("/api/resumes", {
         method: "POST",
-        headers: { "Content-Type": "application/json", "x-user-id": userId },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name, content: tailored }),
       });
       const data = await res.json();

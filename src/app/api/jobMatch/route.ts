@@ -4,6 +4,7 @@ import OpenAI from 'openai';
 import { z } from 'zod';
 import { checkUsageLimit, incrementUsage } from '../../lib/usageTracker';
 import { ErrorTypes, handleAPIError, validateRequest, validateContentLength } from '../../lib/errorHandler';
+import { getAuthenticatedUser, unauthorized } from '../../lib/auth';
 
 /* ── Schema ───────────────────────────────────────────────── */
 const MatchSchema = z.object({
@@ -65,8 +66,12 @@ const openai = process.env.OPENAI_API_KEY
 /* ── POST ─────────────────────────────────────────────────── */
 export async function POST(req: Request) {
   try {
+    const user = await getAuthenticatedUser(req);
+    if (!user) return unauthorized();
+    const userId = user.id;
+
     const body = await req.json().catch(() => ({}));
-    const { resume, job, userId } = body as { resume?: string; job?: string; userId?: string };
+    const { resume, job } = body as { resume?: string; job?: string };
 
     const validationError = validateRequest(body, ['resume', 'job']);
     if (validationError) return handleAPIError(validationError);
@@ -79,15 +84,13 @@ export async function POST(req: Request) {
       'Paste the complete job posting including requirements, responsibilities, and qualifications.');
     if (jobError) return handleAPIError(jobError);
 
-    if (userId) {
-      const usageCheck = await checkUsageLimit(userId, 'job_match');
-      if (!usageCheck.allowed) {
-        const usageError = ErrorTypes.USAGE_LIMIT_REACHED('job match analyses', usageCheck.plan);
-        return NextResponse.json(
-          { error: usageError.message, details: { message: usageError.message, code: usageError.code, action: usageError.action, limit: usageCheck.limit, remaining: usageCheck.remaining, plan: usageCheck.plan }, timestamp: new Date().toISOString() },
-          { status: usageError.status }
-        );
-      }
+    const usageCheck = await checkUsageLimit(userId, 'job_match');
+    if (!usageCheck.allowed) {
+      const usageError = ErrorTypes.USAGE_LIMIT_REACHED('job match analyses', usageCheck.plan);
+      return NextResponse.json(
+        { error: usageError.message, details: { message: usageError.message, code: usageError.code, action: usageError.action, limit: usageCheck.limit, remaining: usageCheck.remaining, plan: usageCheck.plan }, timestamp: new Date().toISOString() },
+        { status: usageError.status }
+      );
     }
 
     if (!openai) {
@@ -179,10 +182,8 @@ export async function POST(req: Request) {
     }
 
     /* ── Increment usage + respond ────────────────────────── */
-    if (userId) {
-      const ok = await incrementUsage(userId, 'job_match');
-      if (!ok) console.warn('Failed to increment usage for user:', userId);
-    }
+    const ok = await incrementUsage(userId, 'job_match');
+    if (!ok) console.warn('Failed to increment usage for user:', userId);
 
     const data: MatchResult = validation.data;
     return NextResponse.json({ ...data, success: true }, {
