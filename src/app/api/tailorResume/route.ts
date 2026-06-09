@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
 import { checkUsageLimit, incrementUsage } from "../../lib/usageTracker";
 import { ErrorTypes, handleAPIError } from "../../lib/errorHandler";
+import { getAuthenticatedUser, unauthorized } from "../../lib/auth";
 
 const openai = process.env.OPENAI_API_KEY
   ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY, timeout: 45000 })
@@ -11,8 +12,12 @@ const openai = process.env.OPENAI_API_KEY
 export async function POST(req: NextRequest) {
   if (!openai) return NextResponse.json({ error: "AI service not configured." }, { status: 503 });
 
+  const user = await getAuthenticatedUser(req);
+  if (!user) return unauthorized();
+  const userId = user.id;
+
   const body = await req.json().catch(() => ({}));
-  const { resume, job, userId } = body as { resume?: string; job?: string; userId?: string };
+  const { resume, job } = body as { resume?: string; job?: string };
 
   if (!resume || typeof resume !== "string" || resume.trim().length < 50)
     return NextResponse.json({ error: "Resume must be at least 50 characters." }, { status: 400 });
@@ -20,15 +25,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Job description must be at least 30 characters." }, { status: 400 });
 
   /* ── Usage limit check ── */
-  if (userId) {
-    const usageCheck = await checkUsageLimit(userId, "resume_tailor");
-    if (!usageCheck.allowed) {
-      const usageError = ErrorTypes.USAGE_LIMIT_REACHED("resume tailors", usageCheck.plan);
-      return NextResponse.json(
-        { error: usageError.message, details: { code: usageError.code, action: usageError.action, limit: usageCheck.limit, remaining: usageCheck.remaining, plan: usageCheck.plan } },
-        { status: usageError.status }
-      );
-    }
+  const usageCheck = await checkUsageLimit(userId, "resume_tailor");
+  if (!usageCheck.allowed) {
+    const usageError = ErrorTypes.USAGE_LIMIT_REACHED("resume tailors", usageCheck.plan);
+    return NextResponse.json(
+      { error: usageError.message, details: { code: usageError.code, action: usageError.action, limit: usageCheck.limit, remaining: usageCheck.remaining, plan: usageCheck.plan } },
+      { status: usageError.status }
+    );
   }
 
   const systemPrompt = `You are an expert resume writer and ATS optimization specialist.
@@ -64,10 +67,8 @@ The output should be ready to paste directly into a resume template.`;
     }
 
     /* ── Increment usage ── */
-    if (userId) {
-      const ok = await incrementUsage(userId, "resume_tailor");
-      if (!ok) console.warn("Failed to increment usage for user:", userId);
-    }
+    const ok = await incrementUsage(userId, "resume_tailor");
+    if (!ok) console.warn("Failed to increment usage for user:", userId);
 
     return NextResponse.json({
       tailoredResume: tailored,

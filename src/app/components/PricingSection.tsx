@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "../lib/supabaseClient";
+import { authFetch } from "../lib/authFetch";
 
 const TIERS = [
   {
@@ -86,10 +87,10 @@ export default function PricingSection() {
     setBusy(true);
     try {
       const { data: { user } } = await supabase!.auth.getUser();
-      const res = await fetch("/api/stripe", {
+      const res = await authFetch("/api/stripe", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO, userId: user?.id }),
+        body: JSON.stringify({ priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO }),
       });
       const { url } = await res.json();
       if (url) window.location.href = url;

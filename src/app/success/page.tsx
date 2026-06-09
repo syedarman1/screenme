@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import confetti from "canvas-confetti";
 import { supabase } from "../lib/supabaseClient";
+import { authFetch } from "../lib/authFetch";
 
 type SuccessState =
   | "loading"
@@ -99,7 +100,7 @@ function SuccessPageContent() {
     userId: string
   ): Promise<PaymentVerification> => {
     try {
-      const response = await fetch("/api/stripe", {
+      const response = await authFetch("/api/stripe", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -107,7 +108,6 @@ function SuccessPageContent() {
         body: JSON.stringify({
           action: "verify",
           sessionId,
-          userId,
         }),
       });
 

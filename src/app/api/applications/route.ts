@@ -1,6 +1,7 @@
 // src/app/api/applications/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { getAuthenticatedUser } from "../../lib/auth";
 
 function serverSupabase() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -12,13 +13,14 @@ function serverSupabase() {
 const VALID_STATUSES = ["saved", "applied", "interview", "offer", "rejected"] as const;
 type Status = typeof VALID_STATUSES[number];
 
-function getUserId(req: NextRequest): string | null {
-  return req.headers.get("x-user-id");
+async function getUserId(req: NextRequest): Promise<string | null> {
+  const user = await getAuthenticatedUser(req);
+  return user?.id ?? null;
 }
 
 /* ── GET — list all applications ───────────────────────── */
 export async function GET(req: NextRequest) {
-  const userId = getUserId(req);
+  const userId = await getUserId(req);
   if (!userId) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
 
   const sb = serverSupabase();
@@ -40,7 +42,7 @@ export async function GET(req: NextRequest) {
 
 /* ── POST — create application ──────────────────────────── */
 export async function POST(req: NextRequest) {
-  const userId = getUserId(req);
+  const userId = await getUserId(req);
   if (!userId) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
 
   const sb = serverSupabase();
@@ -95,7 +97,7 @@ export async function POST(req: NextRequest) {
 
 /* ── PATCH — update application ─────────────────────────── */
 export async function PATCH(req: NextRequest) {
-  const userId = getUserId(req);
+  const userId = await getUserId(req);
   if (!userId) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
 
   const sb = serverSupabase();
@@ -139,7 +141,7 @@ export async function PATCH(req: NextRequest) {
 
 /* ── DELETE — remove application ────────────────────────── */
 export async function DELETE(req: NextRequest) {
-  const userId = getUserId(req);
+  const userId = await getUserId(req);
   if (!userId) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
 
   const sb = serverSupabase();

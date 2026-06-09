@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState, useCallback } from "react";
 import { supabase } from "../lib/supabaseClient";
+import { authFetch } from "../lib/authFetch";
 import Link from "next/link";
 
 /* ── Types ──────────────────────────────────────────────── */
@@ -59,9 +60,7 @@ export default function ApplicationsPage() {
   const fetchApps = useCallback(async () => {
     if (!userId) return;
     try {
-      const res = await fetch("/api/applications", {
-        headers: { "x-user-id": userId },
-      });
+      const res = await authFetch("/api/applications");
       const data = await res.json();
       if (data.applications) setApps(data.applications);
     } catch {
@@ -78,9 +77,9 @@ export default function ApplicationsPage() {
     // Optimistic update
     setApps(prev => prev.map(a => a.id === id ? { ...a, status: newStatus } : a));
     try {
-      await fetch("/api/applications", {
+      await authFetch("/api/applications", {
         method: "PATCH",
-        headers: { "Content-Type": "application/json", "x-user-id": userId! },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id, status: newStatus }),
       });
     } catch {
@@ -92,9 +91,9 @@ export default function ApplicationsPage() {
   const deleteApp = async (id: string) => {
     setApps(prev => prev.filter(a => a.id !== id));
     try {
-      await fetch("/api/applications", {
+      await authFetch("/api/applications", {
         method: "DELETE",
-        headers: { "Content-Type": "application/json", "x-user-id": userId! },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id }),
       });
     } catch {
@@ -381,9 +380,9 @@ function AppModal({ app, userId, onClose, onSaved }: {
     setErr("");
 
     try {
-      const res = await fetch("/api/applications", {
+      const res = await authFetch("/api/applications", {
         method: isEdit ? "PATCH" : "POST",
-        headers: { "Content-Type": "application/json", "x-user-id": userId },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...(isEdit ? { id: app!.id } : {}),
           company: company.trim(),

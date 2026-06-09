@@ -9,6 +9,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import PlanChecker from "../components/PlanChecker";
 import PageHeader from "../components/PageHeader";
 import { supabase } from "../lib/supabaseClient";
+import { authFetch } from "../lib/authFetch";
 
 const TONES = [
   { id: "Professional", label: "Professional", desc: "Formal, achievement-focused",        free: true  },
@@ -89,7 +90,7 @@ export default function CoverLetterPage() {
       if (!supabase) throw new Error("Authentication service not available");
       const { data: { user } } = await supabase.auth.getUser();
 
-      const res = await fetch("/api/coverLetter", {
+      const res = await authFetch("/api/coverLetter", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -98,7 +99,6 @@ export default function CoverLetterPage() {
           company,
           jobDesc,
           tone: isPro ? activeTone : "Professional",
-          userId: user?.id,
         }),
         signal: ac.signal,
       });

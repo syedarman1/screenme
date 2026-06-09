@@ -8,6 +8,7 @@ import "react-circular-progressbar/dist/styles.css";
 import PlanChecker from "../components/PlanChecker";
 import PageHeader from "../components/PageHeader";
 import { supabase } from "../lib/supabaseClient";
+import { authFetch } from "../lib/authFetch";
 
 export type Severity = "low" | "medium" | "high";
 
@@ -178,13 +179,12 @@ export default function ResumeScreen() {
       if (!supabase) throw new Error("Authentication service not available");
       const { data: { user } } = await supabase.auth.getUser();
 
-      const res = await fetch("/api/analyzeResume", {
+      const res = await authFetch("/api/analyzeResume", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           resume,
           options: { model: "gpt-4o-mini", temperature: 0.2 },
-          userId: user?.id,
         }),
         signal: ac.signal,
       });

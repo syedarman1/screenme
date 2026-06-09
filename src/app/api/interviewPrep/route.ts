@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
 import { checkUsageLimit, incrementUsage } from "../../lib/usageTracker";
 import { ErrorTypes, handleAPIError } from "../../lib/errorHandler";
+import { getAuthenticatedUser, unauthorized } from "../../lib/auth";
 
 type ChatMsg = { id: number; who: "user" | "ai"; text: string };
 
@@ -13,9 +14,12 @@ const openai = process.env.OPENAI_API_KEY
 /* ── Router ───────────────────────────────────────────────── */
 export async function POST(req: NextRequest) {
   try {
+    const user = await getAuthenticatedUser(req);
+    if (!user) return unauthorized();
+
     const contentType = req.headers.get("content-type") || "";
-    if (contentType.includes("application/json"))   return handleQAGeneration(req);
-    if (contentType.includes("multipart/form-data")) return handleAudioChat(req);
+    if (contentType.includes("application/json"))   return handleQAGeneration(req, user.id);
+    if (contentType.includes("multipart/form-data")) return handleAudioChat(req, user.id);
     return NextResponse.json({ error: "Unsupported content type." }, { status: 400 });
   } catch (e: any) {
     return handleAPIError(e);
@@ -25,11 +29,11 @@ export async function POST(req: NextRequest) {
 /* ══════════════════════════════════════════════════════════
    Q&A GENERATION
    ══════════════════════════════════════════════════════════ */
-async function handleQAGeneration(req: NextRequest) {
+async function handleQAGeneration(req: NextRequest, userId: string) {
   if (!openai) return NextResponse.json({ error: "AI service not configured." }, { status: 503 });
 
   const body = await req.json().catch(() => ({}));
-  const { job, context, userId } = body as { job?: string; context?: string; userId?: string };
+  const { job, context } = body as { job?: string; context?: string };
 
   /* ── Validate input ─────────────────────────────────────── */
   if (!job || typeof job !== "string" || job.trim().length < 20) {
@@ -40,15 +44,13 @@ async function handleQAGeneration(req: NextRequest) {
   }
 
   /* ── Usage limit check ──────────────────────────────────── */
-  if (userId) {
-    const usageCheck = await checkUsageLimit(userId, "interview_prep");
-    if (!usageCheck.allowed) {
-      const usageError = ErrorTypes.USAGE_LIMIT_REACHED("interview prep sessions", usageCheck.plan);
-      return NextResponse.json(
-        { error: usageError.message, details: { message: usageError.message, code: usageError.code, action: usageError.action, limit: usageCheck.limit, remaining: usageCheck.remaining, plan: usageCheck.plan } },
-        { status: usageError.status }
-      );
-    }
+  const usageCheck = await checkUsageLimit(userId, "interview_prep");
+  if (!usageCheck.allowed) {
+    const usageError = ErrorTypes.USAGE_LIMIT_REACHED("interview prep sessions", usageCheck.plan);
+    return NextResponse.json(
+      { error: usageError.message, details: { message: usageError.message, code: usageError.code, action: usageError.action, limit: usageCheck.limit, remaining: usageCheck.remaining, plan: usageCheck.plan } },
+      { status: usageError.status }
+    );
   }
 
   /* ── System prompt ──────────────────────────────────────── */
@@ -148,10 +150,8 @@ Rules:
   }
 
   /* ── Increment usage ────────────────────────────────────── */
-  if (userId) {
-    const ok = await incrementUsage(userId, "interview_prep");
-    if (!ok) console.warn("Failed to increment usage for user:", userId);
-  }
+  const ok = await incrementUsage(userId, "interview_prep");
+  if (!ok) console.warn("Failed to increment usage for user:", userId);
 
   return NextResponse.json({ questions }, {
     headers: { "Cache-Control": "private, max-age=1800" },
@@ -161,8 +161,18 @@ Rules:
 /* ══════════════════════════════════════════════════════════
    AUDIO CHAT (Live Mock Interview)
    ══════════════════════════════════════════════════════════ */
-async function handleAudioChat(req: NextRequest) {
+async function handleAudioChat(req: NextRequest, userId: string) {
   if (!openai) return NextResponse.json({ error: "AI service not configured." }, { status: 503 });
+
+  // Live mock interview is a Pro feature — gate on interview_prep entitlement.
+  const usageCheck = await checkUsageLimit(userId, "interview_prep");
+  if (!usageCheck.allowed) {
+    const usageError = ErrorTypes.USAGE_LIMIT_REACHED("live interview sessions", usageCheck.plan);
+    return NextResponse.json(
+      { error: usageError.message, details: { message: usageError.message, code: usageError.code, action: usageError.action, limit: usageCheck.limit, remaining: usageCheck.remaining, plan: usageCheck.plan } },
+      { status: usageError.status }
+    );
+  }
 
   const form = await req.formData();
   const audioEntry = form.get("audio");

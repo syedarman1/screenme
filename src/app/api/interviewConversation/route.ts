@@ -2,6 +2,8 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
+import { checkUsageLimit } from "../../lib/usageTracker";
+import { getAuthenticatedUser, unauthorized } from "../../lib/auth";
 // Remove Readable import if trying direct file upload later
 // import { Readable } from "stream";
 
@@ -25,6 +27,24 @@ export async function POST(req: NextRequest) {
                     timestamp: new Date().toISOString()
                 },
                 { status: 500 }
+            );
+        }
+
+        // Require an authenticated user — this endpoint spends OpenAI credits.
+        const user = await getAuthenticatedUser(req);
+        if (!user) return unauthorized();
+
+        // Live mock interview is a Pro feature.
+        const usageCheck = await checkUsageLimit(user.id, "interview_prep");
+        if (!usageCheck.allowed) {
+            return NextResponse.json(
+                {
+                    error: usageCheck.plan === "pro"
+                        ? "Usage limit reached."
+                        : "Live mock interview is a Pro feature. Upgrade to continue.",
+                    plan: usageCheck.plan,
+                },
+                { status: 403 }
             );
         }
 

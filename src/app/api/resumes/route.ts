@@ -1,6 +1,7 @@
 // src/app/api/resumes/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { getAuthenticatedUser } from "../../lib/auth";
 
 function serverSupabase() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -9,13 +10,14 @@ function serverSupabase() {
   return createClient(url, key, { auth: { persistSession: false } });
 }
 
-function getUserId(req: NextRequest): string | null {
-  return req.headers.get("x-user-id");
+async function getUserId(req: NextRequest): Promise<string | null> {
+  const user = await getAuthenticatedUser(req);
+  return user?.id ?? null;
 }
 
 /* ── GET — list resume versions ───────────────────────── */
 export async function GET(req: NextRequest) {
-  const userId = getUserId(req);
+  const userId = await getUserId(req);
   if (!userId) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
 
   const sb = serverSupabase();
@@ -37,7 +39,7 @@ export async function GET(req: NextRequest) {
 
 /* ── POST — save a new resume version ──────────────────── */
 export async function POST(req: NextRequest) {
-  const userId = getUserId(req);
+  const userId = await getUserId(req);
   if (!userId) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
 
   const sb = serverSupabase();
@@ -83,7 +85,7 @@ export async function POST(req: NextRequest) {
 
 /* ── PATCH — update resume version ──────────────────────── */
 export async function PATCH(req: NextRequest) {
-  const userId = getUserId(req);
+  const userId = await getUserId(req);
   if (!userId) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
 
   const sb = serverSupabase();
@@ -121,7 +123,7 @@ export async function PATCH(req: NextRequest) {
 
 /* ── DELETE — remove resume version ─────────────────────── */
 export async function DELETE(req: NextRequest) {
-  const userId = getUserId(req);
+  const userId = await getUserId(req);
   if (!userId) return NextResponse.json({ error: "Unauthorized." }, { status: 401 });
 
   const sb = serverSupabase();

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { supabase } from '../../lib/supabaseClient';
+import { getAuthenticatedUser, unauthorized } from '../../lib/auth';
 
 // Only create Stripe client if secret key is available
 const stripe = process.env.STRIPE_SECRET_KEY
@@ -21,15 +22,19 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Identity comes from the verified session, never the request body.
+    const user = await getAuthenticatedUser(req);
+    if (!user) return unauthorized();
+
     const body = await req.json();
 
     // Check if this is a verification request
     if (body.action === 'verify' && body.sessionId) {
-      return await verifySession(body.sessionId, body.userId);
+      return await verifySession(body.sessionId, user.id);
     }
 
     // Otherwise, create checkout session
-    return await createCheckoutSession(body.priceId, body.userId);
+    return await createCheckoutSession(body.priceId, user.id);
   } catch (error: any) {
     console.error('Error in Stripe API:', error);
     return NextResponse.json(

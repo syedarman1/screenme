@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState, useCallback } from "react";
 import { supabase } from "../lib/supabaseClient";
+import { authFetch } from "../lib/authFetch";
 import Link from "next/link";
 
 /* ── Types ──────────────────────────────────────────────── */
@@ -75,9 +76,7 @@ export default function ResumesPage() {
   const fetchResumes = useCallback(async () => {
     if (!userId) return;
     try {
-      const res = await fetch("/api/resumes", {
-        headers: { "x-user-id": userId },
-      });
+      const res = await authFetch("/api/resumes");
       const data = await res.json();
       if (data.resumes) setResumes(data.resumes);
     } catch {
@@ -93,9 +92,9 @@ export default function ResumesPage() {
   const deleteResume = async (id: string) => {
     setResumes(prev => prev.filter(r => r.id !== id));
     try {
-      await fetch("/api/resumes", {
+      await authFetch("/api/resumes", {
         method: "DELETE",
-        headers: { "Content-Type": "application/json", "x-user-id": userId! },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id }),
       });
     } catch {
@@ -109,9 +108,9 @@ export default function ResumesPage() {
     setResumes(prev => prev.map(r => r.id === renameId ? { ...r, name: renameName.trim() } : r));
     setRenameId(null);
     try {
-      await fetch("/api/resumes", {
+      await authFetch("/api/resumes", {
         method: "PATCH",
-        headers: { "Content-Type": "application/json", "x-user-id": userId! },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id: renameId, name: renameName.trim() }),
       });
     } catch {
@@ -326,9 +325,9 @@ function SaveResumeModal({ userId, onClose, onSaved }: {
     setErr("");
 
     try {
-      const res = await fetch("/api/resumes", {
+      const res = await authFetch("/api/resumes", {
         method: "POST",
-        headers: { "Content-Type": "application/json", "x-user-id": userId },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: name.trim() || "Untitled Resume",
           content: content.trim(),
