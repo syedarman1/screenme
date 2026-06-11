@@ -1,5 +1,5 @@
 
-import { supabase } from './supabaseClient';
+import { supabaseAdmin as supabase } from './supabaseAdmin';
 
 export type FeatureType = 'resume_scan' | 'cover_letter' | 'job_match' | 'interview_prep' | 'resume_tailor';
 
