@@ -112,7 +112,7 @@ export default function ApplicationsPage() {
     <div className="min-h-screen bg-bg flex items-center justify-center p-6">
       <div className="text-center">
         <p className="text-sm text-fg-muted mb-4">Please sign in to track your applications.</p>
-        <Link href="/login" className="px-6 py-2.5 bg-accent text-white rounded-lg text-sm font-semibold">Sign in</Link>
+        <Link href="/login" className="px-6 py-2.5 bg-accent text-accent-fg rounded-lg text-sm font-semibold">Sign in</Link>
       </div>
     </div>
   );
@@ -131,26 +131,26 @@ export default function ApplicationsPage() {
               <div className="flex items-center bg-surface border border-border rounded-lg overflow-hidden">
                 <button
                   onClick={() => setViewMode("board")}
-                  className={`px-3 py-2 text-xs font-medium transition-colors cursor-pointer ${viewMode === "board" ? "bg-accent text-white" : "text-fg-muted hover:text-fg"}`}
+                  className={`px-3 py-2 text-xs font-medium transition-colors cursor-pointer ${viewMode === "board" ? "bg-accent text-accent-fg" : "text-fg-muted hover:text-fg"}`}
                 >
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9 4.5v15m6-15v15m-10.875 0h15.75c.621 0 1.125-.504 1.125-1.125V5.625c0-.621-.504-1.125-1.125-1.125H4.125C3.504 4.5 3 5.004 3 5.625v12.75c0 .621.504 1.125 1.125 1.125z" /></svg>
                 </button>
                 <button
                   onClick={() => setViewMode("list")}
-                  className={`px-3 py-2 text-xs font-medium transition-colors cursor-pointer ${viewMode === "list" ? "bg-accent text-white" : "text-fg-muted hover:text-fg"}`}
+                  className={`px-3 py-2 text-xs font-medium transition-colors cursor-pointer ${viewMode === "list" ? "bg-accent text-accent-fg" : "text-fg-muted hover:text-fg"}`}
                 >
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M3.75 12h16.5m-16.5 3.75h16.5M3.75 19.5h16.5M5.625 4.5h12.75a1.125 1.125 0 010 2.25H5.625a1.125 1.125 0 010-2.25z" /></svg>
                 </button>
               </div>
               {atLimit && !isPro ? (
-                <Link href="/dashboard" className="flex items-center gap-2 px-4 py-2.5 bg-orange hover:bg-[#e8910a] text-white text-sm font-semibold rounded-lg transition-colors">
+                <Link href="/dashboard" className="flex items-center gap-2 px-4 py-2.5 bg-orange hover:opacity-90 text-bg text-sm font-semibold rounded-lg transition-colors">
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
                   Limit reached — Upgrade
                 </Link>
               ) : (
                 <button
                   onClick={() => { setEditApp(null); setShowAdd(true); }}
-                  className="flex items-center gap-2 px-4 py-2.5 bg-accent hover:bg-accent-hover text-white text-sm font-semibold rounded-lg transition-colors cursor-pointer"
+                  className="flex items-center gap-2 px-4 py-2.5 bg-accent hover:bg-accent-hover text-accent-fg text-sm font-semibold rounded-lg transition-colors cursor-pointer"
                 >
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
                   Add Application
@@ -199,7 +199,7 @@ export default function ApplicationsPage() {
             <p className="text-sm text-fg-muted mb-6">Start tracking your job search by adding your first application.</p>
             <button
               onClick={() => { setEditApp(null); setShowAdd(true); }}
-              className="px-5 py-2.5 bg-accent hover:bg-accent-hover text-white text-sm font-semibold rounded-lg transition-colors cursor-pointer"
+              className="px-5 py-2.5 bg-accent hover:bg-accent-hover text-accent-fg text-sm font-semibold rounded-lg transition-colors cursor-pointer"
             >
               Add your first application
             </button>
@@ -498,7 +498,7 @@ function AppModal({ app, userId, onClose, onSaved }: {
             Cancel
           </button>
           <button type="submit" disabled={saving}
-            className="px-5 py-2.5 rounded-lg bg-accent hover:bg-accent-hover text-white text-sm font-semibold transition-colors disabled:opacity-50 cursor-pointer">
+            className="px-5 py-2.5 rounded-lg bg-accent hover:bg-accent-hover text-accent-fg text-sm font-semibold transition-colors disabled:opacity-50 cursor-pointer">
             {saving ? "Saving..." : isEdit ? "Update" : "Add Application"}
           </button>
         </div>

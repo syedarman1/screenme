@@ -207,7 +207,7 @@ export default function CoverLetterPage() {
                 <button
                   onClick={parseUrl}
                   disabled={urlLoading || !jobUrl.trim()}
-                  className="px-4 py-2.5 rounded-lg bg-accent text-white text-sm font-semibold hover:bg-accent-hover disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center gap-1.5 shrink-0"
+                  className="px-4 py-2.5 rounded-lg bg-accent text-accent-fg text-sm font-semibold hover:bg-accent-hover disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center gap-1.5 shrink-0"
                 >
                   {urlLoading ? (
                     <svg className="animate-spin h-3.5 w-3.5" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8h8a8 8 0 01-16 0z" /></svg>
@@ -307,12 +307,12 @@ export default function CoverLetterPage() {
                         isLocked
                           ? "bg-bg text-fg-subtle border-border cursor-not-allowed"
                           : isSelected
-                          ? "bg-accent text-white border-border shadow-sm"
+                          ? "bg-accent text-accent-fg border-border shadow-sm"
                           : "bg-surface text-fg border-border-2 hover:border-border/50 hover:bg-bg"
                       }`}
                     >
                       <div className="flex items-center justify-between w-full">
-                        <span className={`text-sm font-semibold ${isLocked ? "text-fg-subtle" : isSelected ? "text-white" : "text-fg"}`}>
+                        <span className={`text-sm font-semibold ${isLocked ? "text-fg-subtle" : isSelected ? "text-accent-fg" : "text-fg"}`}>
                           {t.label}
                         </span>
                         {isLocked && (
@@ -322,7 +322,7 @@ export default function CoverLetterPage() {
                           </svg>
                         )}
                       </div>
-                      <span className={`text-xs mt-0.5 ${isLocked ? "text-[#c8c8cc]" : isSelected ? "text-white/70" : "text-fg-subtle"}`}>
+                      <span className={`text-xs mt-0.5 ${isLocked ? "text-fg-subtle" : isSelected ? "text-accent-fg/70" : "text-fg-subtle"}`}>
                         {t.desc}
                       </span>
                     </button>
@@ -335,7 +335,7 @@ export default function CoverLetterPage() {
             <button
               onClick={() => handleGenerate()}
               disabled={loading || !canGenerate}
-              className="w-full bg-accent hover:bg-accent-hover py-3.5 rounded-lg text-white font-semibold disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2 text-sm"
+              className="w-full bg-accent hover:bg-accent-hover py-3.5 rounded-lg text-accent-fg font-semibold disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2 text-sm"
             >
               {loading ? (
                 <>
@@ -448,7 +448,7 @@ export default function CoverLetterPage() {
                     </button>
                     <button
                       onClick={() => { setEditText(coverLetter); setIsEditing(true); }}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-accent text-white hover:bg-accent-hover transition-colors"
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-accent text-accent-fg hover:bg-accent-hover transition-colors"
                     >
                       <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                         <path strokeLinecap="round" strokeLinejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -458,7 +458,7 @@ export default function CoverLetterPage() {
                   </div>
                 ) : (
                   <div className="flex items-center gap-2 shrink-0">
-                    <button onClick={saveEdit} className="px-3 py-1.5 rounded-lg text-xs font-medium bg-accent text-white hover:bg-accent-hover transition-colors">Save</button>
+                    <button onClick={saveEdit} className="px-3 py-1.5 rounded-lg text-xs font-medium bg-accent text-accent-fg hover:bg-accent-hover transition-colors">Save</button>
                     <button onClick={cancelEdit} className="px-3 py-1.5 rounded-lg text-xs font-medium bg-surface text-fg-muted border border-border-2 hover:bg-bg transition-colors">Cancel</button>
                   </div>
                 )}

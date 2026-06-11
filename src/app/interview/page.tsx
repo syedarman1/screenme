@@ -152,7 +152,7 @@ export default function InterviewPrepPage() {
                 onClick={() => setActiveSection(s)}
                 className={`px-6 py-2.5 rounded-lg text-sm font-semibold transition-all ${
                   activeSection === s
-                    ? "bg-accent text-white shadow-sm"
+                    ? "bg-accent text-accent-fg shadow-sm"
                     : "text-fg-muted hover:text-fg"
                 }`}
               >
@@ -249,7 +249,7 @@ export default function InterviewPrepPage() {
                   <button
                     type="submit"
                     disabled={loading || jobDesc.trim().length < 20}
-                    className="flex-1 py-3.5 rounded-lg text-white bg-accent font-semibold disabled:opacity-40 disabled:cursor-not-allowed hover:bg-accent-hover transition-all flex items-center justify-center gap-2 text-sm"
+                    className="flex-1 py-3.5 rounded-lg text-accent-fg bg-accent font-semibold disabled:opacity-40 disabled:cursor-not-allowed hover:bg-accent-hover transition-all flex items-center justify-center gap-2 text-sm"
                   >
                     {loading ? (
                       <>

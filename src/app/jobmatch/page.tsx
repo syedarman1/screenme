@@ -191,7 +191,7 @@ export default function JobMatchPage() {
                 <button
                   onClick={parseUrl}
                   disabled={urlLoading || !jobUrl.trim()}
-                  className="px-4 py-2.5 rounded-lg bg-accent text-white text-sm font-semibold hover:bg-accent-hover disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center gap-1.5 shrink-0"
+                  className="px-4 py-2.5 rounded-lg bg-accent text-accent-fg text-sm font-semibold hover:bg-accent-hover disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center gap-1.5 shrink-0"
                 >
                   {urlLoading ? (
                     <svg className="animate-spin h-3.5 w-3.5" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8h8a8 8 0 01-16 0z" /></svg>
@@ -228,7 +228,7 @@ export default function JobMatchPage() {
               <button
                 disabled={loading || resumeTxt.trim().length < MIN_LEN || jdTxt.trim().length < MIN_LEN}
                 onClick={submit}
-                className="flex-1 py-3.5 rounded-lg text-white bg-accent font-semibold disabled:opacity-40 disabled:cursor-not-allowed hover:bg-accent-hover transition-all flex items-center justify-center gap-2 text-sm"
+                className="flex-1 py-3.5 rounded-lg text-accent-fg bg-accent font-semibold disabled:opacity-40 disabled:cursor-not-allowed hover:bg-accent-hover transition-all flex items-center justify-center gap-2 text-sm"
               >
                 {loading ? (
                   <>

@@ -262,7 +262,7 @@ export default function AudioChat({ jobContext }: AudioChatProps) {
               )}
               <div className={`max-w-[80%] px-4 py-2.5 rounded-lg text-sm leading-relaxed ${
                 m.who === "user"
-                  ? "bg-accent text-white rounded-br-sm"
+                  ? "bg-accent text-accent-fg rounded-br-sm"
                   : "bg-surface border border-border text-fg rounded-bl-sm"
               }`}>
                 {m.text}
@@ -299,7 +299,7 @@ export default function AudioChat({ jobContext }: AudioChatProps) {
           <div className="flex items-center gap-3">
             <button
               onClick={handleStart}
-              className="flex items-center gap-2 px-5 py-2.5 bg-accent hover:bg-accent-hover text-white rounded-lg font-semibold text-sm transition-colors active:scale-[.98]"
+              className="flex items-center gap-2 px-5 py-2.5 bg-accent hover:bg-accent-hover text-accent-fg rounded-lg font-semibold text-sm transition-colors active:scale-[.98]"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
                 <polygon points="5 3 19 12 5 21 5 3" />
