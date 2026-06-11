@@ -118,6 +118,12 @@ export default function ResumeUploader({ onResumeSubmit, simple = false }: Resum
         <>
           {!file ? (
             <div
+              role="button"
+              tabIndex={loading ? -1 : 0}
+              aria-label="Upload your resume — PDF or TXT, max 10MB"
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") { e.preventDefault(); inputRef.current?.click(); }
+              }}
               onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
               onDragLeave={() => setDragging(false)}
               onDrop={handleDrop}
@@ -148,6 +154,7 @@ export default function ResumeUploader({ onResumeSubmit, simple = false }: Resum
                 ref={inputRef}
                 id="file-input"
                 type="file"
+                aria-label="Resume file"
                 accept=".pdf,.txt"
                 className="hidden"
                 disabled={loading}
@@ -196,6 +203,7 @@ export default function ResumeUploader({ onResumeSubmit, simple = false }: Resum
         <div className="relative">
           <textarea
             rows={8}
+            aria-label="Paste your resume text"
             value={pasteText}
             onChange={(e) => handlePaste(e.target.value)}
             placeholder="Paste your full resume text here — include all sections: experience, education, skills, achievements…"

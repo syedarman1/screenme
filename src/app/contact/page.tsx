@@ -98,27 +98,40 @@ const ContactPage = () => {
 
               <form onSubmit={handleSubmit} className="space-y-5">
                 <div className="grid md:grid-cols-2 gap-5">
-                  <input
-                    type="text"
-                    name="name"
-                    value={formData.name}
-                    onChange={handleInputChange}
-                    required
-                    className="input"
-                    placeholder="Your name"
-                  />
-                  <input
-                    type="email"
-                    name="email"
-                    value={formData.email}
-                    onChange={handleInputChange}
-                    required
-                    className="input"
-                    placeholder="Email address"
-                  />
+                  <div>
+                    <label htmlFor="contact-name" className="block text-xs font-medium text-fg-muted mb-1.5">Name</label>
+                    <input
+                      id="contact-name"
+                      type="text"
+                      name="name"
+                      autoComplete="name"
+                      value={formData.name}
+                      onChange={handleInputChange}
+                      required
+                      className="input"
+                      placeholder="Your name"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="contact-email" className="block text-xs font-medium text-fg-muted mb-1.5">Email</label>
+                    <input
+                      id="contact-email"
+                      type="email"
+                      name="email"
+                      autoComplete="email"
+                      value={formData.email}
+                      onChange={handleInputChange}
+                      required
+                      className="input"
+                      placeholder="Email address"
+                    />
+                  </div>
                 </div>
 
+                <div>
+                <label htmlFor="contact-subject" className="block text-xs font-medium text-fg-muted mb-1.5">Topic</label>
                 <select
+                  id="contact-subject"
                   name="subject"
                   value={formData.subject}
                   onChange={handleInputChange}
@@ -133,9 +146,12 @@ const ContactPage = () => {
                   <option value="partnership">Partnership</option>
                   <option value="other">Other</option>
                 </select>
+                </div>
 
                 <div>
+                  <label htmlFor="contact-message" className="block text-xs font-medium text-fg-muted mb-1.5">Message</label>
                   <textarea
+                    id="contact-message"
                     name="message"
                     value={formData.message}
                     onChange={handleInputChange}
