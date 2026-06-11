@@ -42,6 +42,16 @@ export default function ResumeUploader({ onResumeSubmit, simple = false }: Resum
 
   const handleFile = async (f: File | null) => {
     if (!f) return;
+    const isPdf = f.type === "application/pdf";
+    const isTxt = f.type === "text/plain" || f.name.toLowerCase().endsWith(".txt");
+    if (!isPdf && !isTxt) {
+      setError("Please upload a PDF or TXT file.");
+      return;
+    }
+    if (f.size > 10 * 1024 * 1024) {
+      setError("File is too large — max 10MB.");
+      return;
+    }
     setFile(f);
     setLoading(true);
     setError(null);
@@ -74,12 +84,7 @@ export default function ResumeUploader({ onResumeSubmit, simple = false }: Resum
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setDragging(false);
-    const f = e.dataTransfer.files?.[0];
-    if (f && (f.type === "application/pdf" || f.type === "text/plain")) {
-      handleFile(f);
-    } else {
-      setError("Please drop a PDF or TXT file.");
-    }
+    handleFile(e.dataTransfer.files?.[0] ?? null);
   };
 
   const handlePaste = (val: string) => {
