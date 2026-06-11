@@ -28,7 +28,7 @@ const TYPE_STYLES: Record<QuestionType, { bg: string; text: string; border: stri
   Situational:         { bg: "bg-amber-50",       text: "text-amber-700",   border: "border-amber-200",   dot: "bg-amber-400"    },
   "Problem-Solving":   { bg: "bg-teal-50",        text: "text-teal-700",    border: "border-teal-200",    dot: "bg-teal-400"     },
   Motivation:          { bg: "bg-rose-50",        text: "text-rose-700",    border: "border-rose-200",    dot: "bg-rose-400"     },
-  "Role-Specific":     { bg: "bg-surface-2",      text: "text-fg",   border: "border-border/20", dot: "bg-accent"   },
+  "Role-Specific":     { bg: "bg-indigo-50",      text: "text-indigo-700",   border: "border-indigo-200", dot: "bg-indigo-400"   },
 };
 
 const DIFF_STYLES: Record<Difficulty, string> = {

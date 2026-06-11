@@ -4,6 +4,7 @@ import React, { useEffect, useState, useCallback } from "react";
 import { supabase } from "../lib/supabaseClient";
 import { authFetch } from "../lib/authFetch";
 import { useModalA11y } from "../hooks/useModalA11y";
+import ConfirmDialog from "../components/ConfirmDialog";
 import Link from "next/link";
 
 /* ── Types ──────────────────────────────────────────────── */
@@ -18,11 +19,11 @@ interface ResumeVersion {
 
 /* ── Helpers ────────────────────────────────────────────── */
 function scoreColor(s: number | null): string {
-  if (s === null) return "#A3A3A3";
-  if (s >= 80) return "#3D7C52";
-  if (s >= 60) return "#525252";
-  if (s >= 40) return "#B45309";
-  return "#C44B42";
+  if (s === null) return "var(--fg-3)";
+  if (s >= 80) return "var(--score-excellent)";
+  if (s >= 60) return "var(--score-good)";
+  if (s >= 40) return "var(--score-average)";
+  return "var(--score-needs-work)";
 }
 function scoreLabel(s: number | null): string {
   if (s === null) return "Not scanned";
@@ -52,6 +53,7 @@ export default function ResumesPage() {
   const [loading, setLoading]       = useState(true);
   const [userId, setUserId]         = useState<string | null>(null);
   const [showSave, setShowSave]     = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState<ResumeVersion | null>(null);
   const [renameId, setRenameId]     = useState<string | null>(null);
   const [renameName, setRenameName] = useState("");
   const [error, setError]           = useState<string | null>(null);
@@ -158,7 +160,7 @@ export default function ResumesPage() {
         {/* Stats */}
         {resumes.length > 0 && (
           <div className="flex gap-3 mb-8 overflow-x-auto pb-1">
-            <div className={`flex items-center gap-2 px-4 py-2.5 rounded-lg border min-w-fit ${atLimit ? "border-[#ff9f0a]/30 bg-orange/[0.06]" : "border-border bg-surface"}`}>
+            <div className={`flex items-center gap-2 px-4 py-2.5 rounded-lg border min-w-fit ${atLimit ? "border-orange/30 bg-orange/[0.06]" : "border-border bg-surface"}`}>
               <span className="text-xs font-medium text-fg-muted">Saved</span>
               <span className={`text-sm font-semibold tabular-nums ${atLimit ? "text-orange" : "text-fg"}`}>{resumes.length}</span>
               <span className="text-xs text-fg-subtle">/ {resumeLimit}</span>
@@ -215,7 +217,7 @@ export default function ResumesPage() {
                     {/* Score ring */}
                     <div className="relative w-12 h-12 shrink-0">
                       <svg className="w-12 h-12 -rotate-90" viewBox="0 0 48 48">
-                        <circle cx="24" cy="24" r="20" fill="none" stroke="#e8e8ed" strokeWidth="3" />
+                        <circle cx="24" cy="24" r="20" fill="none" stroke="var(--trail-color)" strokeWidth="3" />
                         {resume.score !== null && (
                           <circle cx="24" cy="24" r="20" fill="none" stroke={scoreColor(resume.score)} strokeWidth="3"
                             strokeDasharray={`${(resume.score / 100) * 125.66} 125.66`}
@@ -252,7 +254,7 @@ export default function ResumesPage() {
                   </div>
 
                   {/* Actions */}
-                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="flex items-center gap-1 opacity-70 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
                     <button
                       onClick={() => { setRenameId(resume.id); setRenameName(resume.name); }}
                       className="p-2 rounded-lg hover:bg-bg transition-colors cursor-pointer" title="Rename"
@@ -270,7 +272,7 @@ export default function ResumesPage() {
                       </svg>
                     </Link>
                     <button
-                      onClick={() => deleteResume(resume.id)}
+                      onClick={() => setConfirmDelete(resume)}
                       className="p-2 rounded-lg hover:bg-red-bg transition-colors cursor-pointer" title="Delete"
                     >
                       <svg className="w-4 h-4 text-red" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
@@ -286,6 +288,14 @@ export default function ResumesPage() {
       </div>
 
       {/* ── Save Modal ── */}
+      {confirmDelete && (
+        <ConfirmDialog
+          title="Delete resume?"
+          message={`"${confirmDelete.name}" will be permanently deleted. This can't be undone.`}
+          onConfirm={() => { deleteResume(confirmDelete.id); setConfirmDelete(null); }}
+          onCancel={() => setConfirmDelete(null)}
+        />
+      )}
       {showSave && userId && (
         <SaveResumeModal
           userId={userId}
