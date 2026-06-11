@@ -125,16 +125,13 @@
   --radius-xl: var(--r-xl);
 }
 
-html[data-theme] *,
-html[data-theme] *::before,
-html[data-theme] *::after {
+/* Theme-switch fade — only while .theme-transition is on <html>, so the
+   universal transition never taxes normal interaction or paint. */
+html.theme-transition *,
+html.theme-transition *::before,
+html.theme-transition *::after {
   transition: background-color var(--dur-slow) ease, color var(--dur-slow) ease,
               border-color var(--dur-slow) ease, box-shadow var(--dur-slow) ease;
-}
-html.no-theme-transition *,
-html.no-theme-transition *::before,
-html.no-theme-transition *::after {
-  transition: none !important;
 }
 
 @media (prefers-reduced-motion: reduce) {

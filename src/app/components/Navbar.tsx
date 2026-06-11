@@ -154,7 +154,7 @@ export default function DynamicNavbar() {
           <div className="md:hidden flex items-center gap-2">
             <ThemeToggle />
             <button
-              className="flex flex-col justify-center items-center w-9 h-9 gap-[5px] cursor-pointer"
+              className="flex flex-col justify-center items-center w-11 h-11 gap-[5px] cursor-pointer"
               onClick={() => setMobileOpen((v) => !v)}
               aria-label={mobileOpen ? "Close menu" : "Open menu"}
               aria-expanded={mobileOpen}
@@ -197,7 +197,7 @@ export default function DynamicNavbar() {
               <Link
                 key={label}
                 href={href}
-                className={`px-3 py-2.5 rounded-md text-sm font-medium transition-colors ${
+                className={`px-3 py-3 rounded-md text-sm font-medium transition-colors ${
                   pathname === href
                     ? "text-fg bg-surface-2"
                     : "text-fg-muted hover:text-fg hover:bg-surface-2"
@@ -211,17 +211,17 @@ export default function DynamicNavbar() {
                 <div className="flex-1" />
                 <button
                   onClick={handleSignOut}
-                  className="text-left text-red hover:bg-surface-2 px-3 py-2.5 rounded-md text-sm font-medium transition-colors cursor-pointer"
+                  className="text-left text-red hover:bg-surface-2 px-3 py-3 rounded-md text-sm font-medium transition-colors cursor-pointer"
                 >
                   Sign out
                 </button>
               </>
             ) : (
               <div className="mt-6 flex flex-col gap-2">
-                <Link href="/login" className="btn btn-secondary w-full py-2.5">
+                <Link href="/login" className="btn btn-secondary w-full py-3">
                   Sign in
                 </Link>
-                <Link href="/login" className="btn btn-primary w-full py-2.5">
+                <Link href="/login" className="btn btn-primary w-full py-3">
                   Get started
                 </Link>
               </div>
