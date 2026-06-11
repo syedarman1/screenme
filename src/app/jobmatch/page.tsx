@@ -152,6 +152,11 @@ export default function JobMatchPage() {
                 )}
               </div>
               <ResumeUploader onResumeSubmit={setResumeTxt} />
+              {resumeTxt.trim().length > 0 && resumeTxt.trim().length < MIN_LEN && (
+                <p className="mt-2 text-xs text-fg-muted" aria-live="polite">
+                  Resume needs at least {MIN_LEN} characters — {MIN_LEN - resumeTxt.trim().length} to go.
+                </p>
+              )}
             </div>
 
             {/* Divider */}
@@ -205,18 +210,23 @@ export default function JobMatchPage() {
                 value={jdTxt}
                 onChange={(e) => setJdTxt(e.target.value)}
                 rows={7}
+                aria-describedby="jd-hint"
                 placeholder="Or paste the full job description here — include responsibilities, requirements, and qualifications…"
                 className="w-full bg-bg text-fg placeholder:text-fg-subtle p-4 rounded-lg border border-border-2 focus:outline-none focus:border-border focus:ring-2 focus:ring-fg/10 resize-none text-sm leading-relaxed transition-all"
               />
               {jdTxt.length > 0 && (
-                <p className="text-right text-xs text-fg-subtle mt-1">{jdTxt.length} characters</p>
+                <p id="jd-hint" className={`text-right text-xs mt-1 ${jdTxt.trim().length < MIN_LEN ? "text-fg-muted" : "text-fg-subtle"}`} aria-live="polite">
+                  {jdTxt.trim().length < MIN_LEN
+                    ? `Needs at least ${MIN_LEN} characters — ${MIN_LEN - jdTxt.trim().length} to go.`
+                    : `${jdTxt.length} characters`}
+                </p>
               )}
             </div>
 
             {/* Actions */}
             <div className="flex gap-3">
               <button
-                disabled={loading || !resumeTxt || jdTxt.trim().length < MIN_LEN}
+                disabled={loading || resumeTxt.trim().length < MIN_LEN || jdTxt.trim().length < MIN_LEN}
                 onClick={submit}
                 className="flex-1 py-3.5 rounded-lg text-white bg-accent font-semibold disabled:opacity-40 disabled:cursor-not-allowed hover:bg-accent-hover transition-all flex items-center justify-center gap-2 text-sm"
               >
@@ -271,7 +281,10 @@ export default function JobMatchPage() {
               <svg className="h-5 w-5 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-              {error}
+              <span className="flex-1">{error}</span>
+              <button onClick={submit} className="shrink-0 text-sm font-semibold underline hover:no-underline cursor-pointer">
+                Try again
+              </button>
             </motion.div>
           )}
         </AnimatePresence>
