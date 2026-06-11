@@ -126,7 +126,7 @@ export default function ResumesPage() {
     <div className="min-h-screen bg-bg flex items-center justify-center p-6">
       <div className="text-center">
         <p className="text-sm text-fg-muted mb-4">Please sign in to manage your resumes.</p>
-        <Link href="/login" className="px-6 py-2.5 bg-accent text-white rounded-lg text-sm font-semibold">Sign in</Link>
+        <Link href="/login" className="px-6 py-2.5 bg-accent text-accent-fg rounded-lg text-sm font-semibold">Sign in</Link>
       </div>
     </div>
   );
@@ -141,14 +141,14 @@ export default function ResumesPage() {
           <div className="flex items-center justify-between flex-wrap gap-4">
             <h1 className="text-3xl md:text-4xl font-semibold tracking-tight">My Resumes</h1>
             {atLimit ? (
-              <Link href="/dashboard" className="flex items-center gap-2 px-4 py-2.5 bg-orange hover:bg-[#e8910a] text-white text-sm font-semibold rounded-lg transition-colors">
+              <Link href="/dashboard" className="flex items-center gap-2 px-4 py-2.5 bg-orange hover:opacity-90 text-bg text-sm font-semibold rounded-lg transition-colors">
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
                 {isPro ? "Max reached" : "Limit reached — Upgrade"}
               </Link>
             ) : (
               <button
                 onClick={() => setShowSave(true)}
-                className="flex items-center gap-2 px-4 py-2.5 bg-accent hover:bg-accent-hover text-white text-sm font-semibold rounded-lg transition-colors cursor-pointer"
+                className="flex items-center gap-2 px-4 py-2.5 bg-accent hover:bg-accent-hover text-accent-fg text-sm font-semibold rounded-lg transition-colors cursor-pointer"
               >
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
                 Save New Resume
@@ -203,7 +203,7 @@ export default function ResumesPage() {
             </p>
             <button
               onClick={() => setShowSave(true)}
-              className="mt-4 px-5 py-2.5 bg-accent hover:bg-accent-hover text-white text-sm font-semibold rounded-lg transition-colors cursor-pointer"
+              className="mt-4 px-5 py-2.5 bg-accent hover:bg-accent-hover text-accent-fg text-sm font-semibold rounded-lg transition-colors cursor-pointer"
             >
               Save your first resume
             </button>
@@ -380,11 +380,11 @@ function SaveResumeModal({ userId, onClose, onSaved }: {
           {/* Mode toggle */}
           <div className="flex items-center gap-2">
             <button type="button" onClick={() => setMode("paste")}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${mode === "paste" ? "bg-accent text-white" : "bg-bg text-fg-muted"}`}>
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${mode === "paste" ? "bg-accent text-accent-fg" : "bg-bg text-fg-muted"}`}>
               Paste Text
             </button>
             <button type="button" onClick={() => setMode("upload")}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${mode === "upload" ? "bg-accent text-white" : "bg-bg text-fg-muted"}`}>
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${mode === "upload" ? "bg-accent text-accent-fg" : "bg-bg text-fg-muted"}`}>
               Upload .txt
             </button>
           </div>
@@ -416,7 +416,7 @@ function SaveResumeModal({ userId, onClose, onSaved }: {
             Cancel
           </button>
           <button type="submit" disabled={saving}
-            className="px-5 py-2.5 rounded-lg bg-accent hover:bg-accent-hover text-white text-sm font-semibold transition-colors disabled:opacity-50 cursor-pointer">
+            className="px-5 py-2.5 rounded-lg bg-accent hover:bg-accent-hover text-accent-fg text-sm font-semibold transition-colors disabled:opacity-50 cursor-pointer">
             {saving ? "Saving..." : "Save Resume"}
           </button>
         </div>
