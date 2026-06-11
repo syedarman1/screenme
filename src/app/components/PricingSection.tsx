@@ -67,6 +67,7 @@ export default function PricingSection() {
   const router = useRouter();
   const [authed, setAuthed] = useState<boolean | null>(null);
   const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
 
   useEffect(() => {
     if (!supabase) return;
@@ -83,8 +84,12 @@ export default function PricingSection() {
       router.push("/login");
       return;
     }
-    if (!process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO) return;
+    if (!process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO) {
+      setErr("Checkout isn't configured yet — please contact support.");
+      return;
+    }
     setBusy(true);
+    setErr(null);
     try {
       const { data: { user } } = await supabase!.auth.getUser();
       const res = await authFetch("/api/stripe", {
@@ -94,6 +99,9 @@ export default function PricingSection() {
       });
       const { url } = await res.json();
       if (url) window.location.href = url;
+      else setErr("Couldn't start checkout. Please try again.");
+    } catch {
+      setErr("Couldn't start checkout. Please try again.");
     } finally { setBusy(false); }
   };
 
@@ -149,6 +157,9 @@ export default function PricingSection() {
               >
                 {busy && tier.id === "pro" ? "Loading…" : tier.cta}
               </button>
+              {err && tier.id === "pro" && (
+                <p className="mt-2 text-xs text-red text-center" role="alert">{err}</p>
+              )}
             </div>
           ))}
         </div>

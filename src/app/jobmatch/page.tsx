@@ -25,10 +25,10 @@ type MatchResult = {
 const MIN_LEN = 50;
 
 function scoreInfo(s: number) {
-  if (s >= 80) return { color: "#34c759", label: "Strong Match",   badge: "pill-success border border-emerald-200" };
-  if (s >= 60) return { color: "#ff9f0a", label: "Decent Match",   badge: "bg-amber-50 text-amber-700 border border-amber-200" };
-  if (s >= 40) return { color: "#525252", label: "Partial Match",  badge: "bg-surface-2 text-fg border border-border" };
-  return        { color: "#ff3b30", label: "Low Match",    badge: "pill-danger" };
+  if (s >= 80) return { color: "var(--score-excellent)", label: "Strong Match",   badge: "pill-success border border-emerald-200" };
+  if (s >= 60) return { color: "var(--score-average)", label: "Decent Match",   badge: "bg-amber-50 text-amber-700 border border-amber-200" };
+  if (s >= 40) return { color: "var(--score-good)", label: "Partial Match",  badge: "bg-surface-2 text-fg border border-border" };
+  return        { color: "var(--score-needs-work)", label: "Low Match",    badge: "pill-danger" };
 }
 
 function CopyButton({ text }: { text: string }) {
@@ -36,7 +36,8 @@ function CopyButton({ text }: { text: string }) {
   return (
     <button
       onClick={() => { navigator.clipboard.writeText(text); setCopied(true); setTimeout(() => setCopied(false), 2000); }}
-      className={`shrink-0 p-1.5 rounded-lg transition-colors ${copied ? "text-green" : "text-fg-subtle hover:text-fg hover:bg-surface-2"}`}
+      className={`relative shrink-0 p-2 rounded-lg transition-colors after:absolute after:-inset-1.5 after:content-[''] ${copied ? "text-green" : "text-fg-subtle hover:text-fg hover:bg-surface-2"}`}
+      aria-label={copied ? "Copied" : "Copy"}
       title="Copy"
     >
       {copied ? (
@@ -300,8 +301,8 @@ export default function JobMatchPage() {
                       styles={buildStyles({
                         textSize: "22px",
                         pathColor: info.color,
-                        textColor: "#171717",
-                        trailColor: "#f0f0f5",
+                        textColor: "var(--fg)",
+                        trailColor: "var(--trail-color)",
                         pathTransitionDuration: 1,
                       })}
                     />
@@ -360,7 +361,7 @@ export default function JobMatchPage() {
                   >
                     {tab.label}
                     <span className={`px-1.5 py-0.5 rounded-full text-xs font-semibold leading-none ${
-                      activeTab === tab.id ? "bg-accent/10 text-fg" : "bg-[#f0f0f5] text-fg-subtle"
+                      activeTab === tab.id ? "bg-accent/10 text-fg" : "bg-surface-2 text-fg-subtle"
                     }`}>
                       {tab.count}
                     </span>

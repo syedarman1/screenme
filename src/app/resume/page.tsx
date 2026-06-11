@@ -64,10 +64,10 @@ type ActiveTab = "issues" | "strengths" | "keywords";
 
 /* ── helpers ─────────────────────────────────────────────── */
 function scoreColor(s: number) {
-  if (s >= 85) return "#3D7C52";
-  if (s >= 70) return "#525252";
-  if (s >= 50) return "#B45309";
-  return "#C44B42";
+  if (s >= 85) return "var(--score-excellent)";
+  if (s >= 70) return "var(--score-good)";
+  if (s >= 50) return "var(--score-average)";
+  return "var(--score-needs-work)";
 }
 function scoreLabel(s: number) {
   if (s >= 85) return "Excellent";
@@ -159,6 +159,7 @@ function SubScoreBar({ label, value }: { label: string; value: number }) {
 /* ── Main component ───────────────────────────────────────── */
 export default function ResumeScreen() {
   const [audit, setAudit]     = useState<Audit | null>(null);
+  const [resumeText, setResumeText] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError]     = useState<string | null>(null);
   const [controller, setController] = useState<AbortController | null>(null);
@@ -242,7 +243,21 @@ export default function ResumeScreen() {
                 </button>
               )}
             </div>
-            <ResumeUploader onResumeSubmit={sendToApi} />
+            <ResumeUploader onResumeSubmit={(txt) => { setResumeText(txt); setError(null); }} />
+            <div className="mt-5 flex flex-col sm:flex-row sm:items-center gap-3">
+              <button
+                onClick={() => sendToApi(resumeText)}
+                disabled={loading || resumeText.trim().length < 200}
+                className="btn btn-primary disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                {loading ? "Analyzing…" : "Analyze Resume"}
+              </button>
+              {resumeText.trim().length > 0 && resumeText.trim().length < 200 && (
+                <p className="text-xs text-fg-muted">
+                  At least 200 characters needed — {200 - resumeText.trim().length} to go.
+                </p>
+              )}
+            </div>
           </div>
         </PlanChecker>
       </section>
@@ -287,8 +302,8 @@ export default function ResumeScreen() {
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0 }}
-              className="alert-error"
-              role="alert"
+              className={error === "Analysis cancelled." ? "flex items-start gap-3 p-4 rounded-lg bg-surface-2 border border-border text-fg-muted text-sm" : "alert-error"}
+              role={error === "Analysis cancelled." ? "status" : "alert"}
             >
               <svg className="w-5 h-5 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -324,8 +339,8 @@ export default function ResumeScreen() {
                         styles={buildStyles({
                           textSize: "26px",
                           pathColor: scoreColor(audit.score),
-                          textColor: "#171717",
-                          trailColor: "#f0f0f5",
+                          textColor: "var(--fg)",
+                          trailColor: "var(--trail-color)",
                           pathTransitionDuration: 1,
                         })}
                       />
@@ -410,7 +425,7 @@ export default function ResumeScreen() {
                       <span className={`px-1.5 py-0.5 rounded-full text-xs leading-none font-semibold ${
                         activeTab === tab.id
                           ? "bg-accent/10 text-fg"
-                          : "bg-[#f0f0f5] text-fg-subtle"
+                          : "bg-surface-2 text-fg-subtle"
                       }`}>
                         {tab.badge}
                       </span>

@@ -4,6 +4,7 @@ import React, { useEffect, useState, useCallback } from "react";
 import { supabase } from "../lib/supabaseClient";
 import { authFetch } from "../lib/authFetch";
 import { useModalA11y } from "../hooks/useModalA11y";
+import ConfirmDialog from "../components/ConfirmDialog";
 import Link from "next/link";
 
 /* ── Types ──────────────────────────────────────────────── */
@@ -37,6 +38,7 @@ export default function ApplicationsPage() {
   const [userId, setUserId]     = useState<string | null>(null);
   const [showAdd, setShowAdd]   = useState(false);
   const [editApp, setEditApp]   = useState<Application | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<Application | null>(null);
   const [error, setError]       = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<"board" | "list">("board");
   const [userPlan, setUserPlan] = useState<string>("free");
@@ -204,6 +206,7 @@ export default function ApplicationsPage() {
           </div>
         ) : viewMode === "board" ? (
           /* ── Kanban Board ── */
+          <div className="relative">
           <div className="flex gap-4 overflow-x-auto pb-4 -mx-2 px-2">
             {COLUMNS.map(col => {
               const colApps = apps.filter(a => a.status === col.key);
@@ -223,7 +226,7 @@ export default function ApplicationsPage() {
                         app={app}
                         onMove={moveApp}
                         onEdit={() => { setEditApp(app); setShowAdd(true); }}
-                        onDelete={() => deleteApp(app.id)}
+                        onDelete={() => setConfirmDelete(app)}
                       />
                     ))}
                     {colApps.length === 0 && (
@@ -235,6 +238,8 @@ export default function ApplicationsPage() {
                 </div>
               );
             })}
+          </div>
+          <div className="pointer-events-none absolute inset-y-0 -right-1 w-12 bg-gradient-to-l from-bg to-transparent" aria-hidden="true" />
           </div>
         ) : (
           /* ── List View ── */
@@ -263,7 +268,7 @@ export default function ApplicationsPage() {
                     <button onClick={() => { setEditApp(app); setShowAdd(true); }} className="p-1.5 rounded-lg hover:bg-bg transition-colors cursor-pointer" title="Edit">
                       <svg className="w-3.5 h-3.5 text-fg-subtle" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487z" /></svg>
                     </button>
-                    <button onClick={() => deleteApp(app.id)} className="p-1.5 rounded-lg hover:bg-red-bg transition-colors cursor-pointer" title="Delete">
+                    <button onClick={() => setConfirmDelete(app)} aria-label="Delete application" className="p-1.5 rounded-lg hover:bg-red-bg transition-colors cursor-pointer" title="Delete">
                       <svg className="w-3.5 h-3.5 text-red" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" /></svg>
                     </button>
                   </div>
@@ -273,6 +278,15 @@ export default function ApplicationsPage() {
           </div>
         )}
       </div>
+
+      {confirmDelete && (
+        <ConfirmDialog
+          title="Delete application?"
+          message={`${confirmDelete.company} — ${confirmDelete.role} will be permanently deleted. This can't be undone.`}
+          onConfirm={() => { deleteApp(confirmDelete.id); setConfirmDelete(null); }}
+          onCancel={() => setConfirmDelete(null)}
+        />
+      )}
 
       {/* ── Add/Edit Modal ── */}
       {showAdd && (
@@ -306,7 +320,9 @@ function AppCard({ app, onMove, onEdit, onDelete }: {
         <div className="relative">
           <button
             onClick={() => setMenuOpen(o => !o)}
-            className="p-1 rounded-lg hover:bg-bg transition-colors opacity-0 group-hover:opacity-100 cursor-pointer"
+            aria-label="Application actions"
+            aria-haspopup="menu"
+            className="p-2 rounded-lg hover:bg-bg transition-colors opacity-70 group-hover:opacity-100 focus-visible:opacity-100 cursor-pointer"
           >
             <svg className="w-4 h-4 text-fg-subtle" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.75a.75.75 0 110-1.5.75.75 0 010 1.5zM12 12.75a.75.75 0 110-1.5.75.75 0 010 1.5zM12 18.75a.75.75 0 110-1.5.75.75 0 010 1.5z" />

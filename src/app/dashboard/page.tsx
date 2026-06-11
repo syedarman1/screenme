@@ -23,6 +23,7 @@ export default function DashboardPage() {
   const [plan, setPlan] = useState<string | null>(null);
   const [usage, setUsage] = useState<any>(null);
   const [busy, setBusy] = useState(false);
+  const [upgradeErr, setUpgradeErr] = useState<string | null>(null);
 
   useEffect(() => {
     let channel: RealtimeChannel | null = null;
@@ -61,8 +62,12 @@ export default function DashboardPage() {
   }, [router]);
 
   const handleUpgrade = async () => {
-    if (!process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO) return;
+    if (!process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO) {
+      setUpgradeErr("Checkout isn't configured yet — please contact support.");
+      return;
+    }
     setBusy(true);
+    setUpgradeErr(null);
     try {
       const res = await authFetch("/api/stripe", {
         method: "POST",
@@ -71,6 +76,9 @@ export default function DashboardPage() {
       });
       const { url } = await res.json();
       if (url) window.location.href = url;
+      else setUpgradeErr("Couldn't start checkout. Please try again.");
+    } catch {
+      setUpgradeErr("Couldn't start checkout. Please try again.");
     } finally { setBusy(false); }
   };
 
@@ -174,9 +182,12 @@ export default function DashboardPage() {
                 </p>
               </div>
               {!isPro && (
-                <button onClick={handleUpgrade} disabled={busy} className="btn btn-primary disabled:opacity-50">
-                  {busy ? "Loading…" : "Upgrade — $15/mo"}
-                </button>
+                <div className="flex flex-col items-end gap-2">
+                  <button onClick={handleUpgrade} disabled={busy} className="btn btn-primary disabled:opacity-50">
+                    {busy ? "Loading…" : "Upgrade — $15/mo"}
+                  </button>
+                  {upgradeErr && <p className="text-xs text-red" role="alert">{upgradeErr}</p>}
+                </div>
               )}
             </div>
 
@@ -199,7 +210,7 @@ export default function DashboardPage() {
                           {remaining}<span className="text-fg-subtle font-normal text-xs">/{limit}</span>
                         </p>
                       </div>
-                      <div className="h-1 w-full rounded-full bg-surface-2 overflow-hidden">
+                      <div className="h-1.5 w-full rounded-full bg-surface-3 overflow-hidden">
                         <div className={`h-full rounded-full transition-all duration-300 ${depleted ? "bg-red" : "bg-fg"}`}
                           style={{ width: `${pct}%` }} />
                       </div>
