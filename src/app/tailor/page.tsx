@@ -142,6 +142,11 @@ export default function TailorPage() {
               )}
             </div>
             <ResumeUploader onResumeSubmit={setResumeTxt} />
+            {resumeTxt.trim().length > 0 && resumeTxt.trim().length < 50 && (
+              <p className="mt-2 text-xs text-fg-muted" aria-live="polite">
+                Resume needs at least 50 characters — {50 - resumeTxt.trim().length} to go.
+              </p>
+            )}
           </div>
 
           {/* Divider */}
@@ -195,16 +200,21 @@ export default function TailorPage() {
               rows={7}
               placeholder="Or paste the full job description here — include responsibilities, requirements, and qualifications…"
               className="textarea"
+              aria-describedby="jd-hint"
             />
             {jdTxt.length > 0 && (
-              <p className="text-right text-xs text-fg-subtle mt-1">{jdTxt.length} characters</p>
+              <p id="jd-hint" className={`text-right text-xs mt-1 ${jdTxt.trim().length < 30 ? "text-fg-muted" : "text-fg-subtle"}`} aria-live="polite">
+                {jdTxt.trim().length < 30
+                  ? `Needs at least 30 characters — ${30 - jdTxt.trim().length} to go.`
+                  : `${jdTxt.length} characters`}
+              </p>
             )}
           </div>
 
           {/* Actions */}
           <div className="flex gap-3">
             <button
-              disabled={loading || !resumeTxt || jdTxt.trim().length < 30}
+              disabled={loading || resumeTxt.trim().length < 50 || jdTxt.trim().length < 30}
               onClick={handleTailor}
               className="btn btn-primary flex-1 py-3 disabled:opacity-40"
             >
@@ -259,7 +269,10 @@ export default function TailorPage() {
               <svg className="h-5 w-5 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-              {error}
+              <span className="flex-1">{error}</span>
+              <button onClick={handleTailor} className="shrink-0 text-sm font-semibold underline hover:no-underline cursor-pointer">
+                Try again
+              </button>
             </motion.div>
           )}
         </AnimatePresence>

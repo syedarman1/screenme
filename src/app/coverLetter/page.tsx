@@ -144,7 +144,7 @@ export default function CoverLetterPage() {
     saveAs(blob, `CoverLetter_${company.replace(/\s+/g, "_")}.docx`);
   };
 
-  const canGenerate = !!resumeText && jobTitle.trim().length >= 3 && company.trim().length >= 2;
+  const canGenerate = resumeText.trim().length >= 100 && jobTitle.trim().length >= 3 && company.trim().length >= 2;
 
   return (
     <div className="page-shell">
@@ -173,6 +173,11 @@ export default function CoverLetterPage() {
                 )}
               </div>
               <ResumeUploader onResumeSubmit={setResumeText} />
+              {resumeText.trim().length > 0 && resumeText.trim().length < 100 && (
+                <p className="mt-2 text-xs text-fg-muted" aria-live="polite">
+                  Resume needs at least 100 characters — {100 - resumeText.trim().length} to go.
+                </p>
+              )}
             </div>
 
             {/* Divider */}
@@ -233,7 +238,11 @@ export default function CoverLetterPage() {
                   placeholder="e.g., Senior Backend Engineer"
                   value={jobTitle}
                   onChange={(e) => setJobTitle(e.target.value)}
+                  aria-describedby="jobTitle-hint"
                 />
+                {jobTitle.trim().length > 0 && jobTitle.trim().length < 3 && (
+                  <p id="jobTitle-hint" className="mt-1.5 text-xs text-fg-muted">Enter the full job title (at least 3 characters).</p>
+                )}
               </div>
               <div>
                 <label htmlFor="company" className="block mb-1.5 text-sm font-semibold text-fg">
@@ -245,7 +254,11 @@ export default function CoverLetterPage() {
                   placeholder="e.g., Stripe"
                   value={company}
                   onChange={(e) => setCompany(e.target.value)}
+                  aria-describedby="company-hint"
                 />
+                {company.trim().length > 0 && company.trim().length < 2 && (
+                  <p id="company-hint" className="mt-1.5 text-xs text-fg-muted">Enter the company name.</p>
+                )}
               </div>
             </div>
 
@@ -367,11 +380,15 @@ export default function CoverLetterPage() {
           )}
           {error && !loading && (
             <motion.div key="error" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-              className="flex items-start gap-3 p-5 pill-danger rounded-lg text-sm" role="alert">
+              className={`flex items-start gap-3 p-5 rounded-lg text-sm ${error === "Generation cancelled." ? "bg-surface-2 border border-border text-fg-muted" : "pill-danger"}`}
+              role={error === "Generation cancelled." ? "status" : "alert"}>
               <svg className="h-5 w-5 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-              {error}
+              <span className="flex-1">{error}</span>
+              <button onClick={() => handleGenerate()} className="shrink-0 text-sm font-semibold underline hover:no-underline cursor-pointer">
+                Try again
+              </button>
             </motion.div>
           )}
         </AnimatePresence>

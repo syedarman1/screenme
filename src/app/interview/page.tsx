@@ -201,7 +201,13 @@ export default function InterviewPrepPage() {
                     onChange={(e) => setJobDesc(e.target.value)}
                     placeholder="Paste the full job description here — the more detail, the more targeted your questions will be…"
                     className="w-full bg-bg text-fg placeholder:text-fg-subtle p-4 rounded-lg border border-border-2 focus:outline-none focus:border-border focus:ring-2 focus:ring-fg/10 resize-none text-sm leading-relaxed transition-all"
+                    aria-describedby="jobDesc-hint"
                   />
+                  {jobDesc.trim().length > 0 && jobDesc.trim().length < 20 && (
+                    <p id="jobDesc-hint" className="mt-1.5 text-xs text-fg-muted" aria-live="polite">
+                      Needs at least 20 characters — {20 - jobDesc.trim().length} to go.
+                    </p>
+                  )}
                 </div>
 
                 {/* Role + company (optional) */}
@@ -242,7 +248,7 @@ export default function InterviewPrepPage() {
                 <div className="flex gap-3">
                   <button
                     type="submit"
-                    disabled={loading || !jobDesc.trim()}
+                    disabled={loading || jobDesc.trim().length < 20}
                     className="flex-1 py-3.5 rounded-lg text-white bg-accent font-semibold disabled:opacity-40 disabled:cursor-not-allowed hover:bg-accent-hover transition-all flex items-center justify-center gap-2 text-sm"
                   >
                     {loading ? (
@@ -298,7 +304,10 @@ export default function InterviewPrepPage() {
                     <svg className="h-5 w-5 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
-                    {error}
+                    <span className="flex-1">{error}</span>
+                    <button type="button" onClick={(e) => handleSubmit(e as unknown as React.FormEvent)} className="shrink-0 text-sm font-semibold underline hover:no-underline cursor-pointer">
+                      Try again
+                    </button>
                   </motion.div>
                 )}
               </AnimatePresence>
