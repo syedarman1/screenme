@@ -1,0 +1,50 @@
+name: Supabase keepalive
+
+# Supabase free-tier projects are paused automatically after 7 days with no
+# requests. This workflow sends a lightweight request to the project on a
+# schedule so the inactivity timer never reaches that limit.
+#
+# Required repository secrets (Settings -> Secrets and variables -> Actions):
+#   SUPABASE_URL       e.g. https://eqgmogtnibarwvmiywcv.supabase.co
+#   SUPABASE_ANON_KEY  the project's anon / publishable API key (safe to use in CI)
+
+on:
+  schedule:
+    # Every 2 days at 07:17 UTC. Well under the 7-day pause window, so a single
+    # skipped/delayed run still leaves plenty of margin.
+    - cron: '17 7 */2 * *'
+  workflow_dispatch: {}  # allow manual runs from the Actions tab
+
+# Avoid overlapping runs.
+concurrency:
+  group: supabase-keepalive
+  cancel-in-progress: false
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Ping Supabase REST API
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          set -euo pipefail
+          if [ -z "${SUPABASE_URL:-}" ] || [ -z "${SUPABASE_ANON_KEY:-}" ]; then
+            echo "::error::Missing SUPABASE_URL or SUPABASE_ANON_KEY repository secret."
+            exit 1
+          fi
+          code=$(curl -sS --retry 3 --retry-delay 5 \
+            -o /tmp/keepalive.json -w '%{http_code}' \
+            "${SUPABASE_URL}/rest/v1/keepalive?select=id&limit=1" \
+            -H "apikey: ${SUPABASE_ANON_KEY}" \
+            -H "Authorization: Bearer ${SUPABASE_ANON_KEY}")
+          echo "HTTP ${code}"
+          cat /tmp/keepalive.json || true
+          echo
+          if [ "${code}" != "200" ]; then
+            echo "::error::Keepalive ping failed (HTTP ${code})."
+            exit 1
+          fi
+          echo "Supabase project pinged successfully — inactivity timer reset."
