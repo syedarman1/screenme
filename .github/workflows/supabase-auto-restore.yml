@@ -1,0 +1,76 @@
+name: Supabase auto-restore
+
+# Free-tier Supabase projects are paused after ~7 days of inactivity. A REST
+# "keepalive" ping does NOT reliably reset that timer (verified empirically:
+# five successful pings did not prevent a pause). So rather than try to PREVENT
+# the pause, this workflow DETECTS it and un-pauses the project automatically
+# via the Supabase Management API. Worst-case downtime is roughly the cron
+# interval below plus the few minutes a restore takes.
+#
+# Required repository secret (Settings -> Secrets and variables -> Actions):
+#   SUPABASE_ACCESS_TOKEN  a Supabase personal access token (starts with "sbp_"),
+#                          created at https://supabase.com/dashboard/account/tokens
+#
+# The project ref below is not secret (it is part of the public project URL).
+
+on:
+  schedule:
+    - cron: '0 * * * *'   # hourly — keeps any pause window short
+  workflow_dispatch: {}
+
+concurrency:
+  group: supabase-auto-restore
+  cancel-in-progress: false
+
+env:
+  PROJECT_REF: eqgmogtnibarwvmiywcv
+  API: https://api.supabase.com
+
+jobs:
+  restore-if-paused:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Restore the project if it is paused
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ -z "${SUPABASE_ACCESS_TOKEN:-}" ]; then
+            echo "::error::Missing SUPABASE_ACCESS_TOKEN repository secret."
+            exit 1
+          fi
+
+          status=$(curl -sS --retry 3 --retry-delay 5 \
+            -H "Authorization: Bearer ${SUPABASE_ACCESS_TOKEN}" \
+            "${API}/v1/projects/${PROJECT_REF}" | jq -r '.status // empty')
+          echo "Current status: ${status:-<unknown>}"
+
+          case "${status}" in
+            ACTIVE_HEALTHY|COMING_UP|RESTORING|UPGRADING|INIT_READ_REPLICA)
+              echo "Project is active or already transitioning — nothing to do."
+              ;;
+            INACTIVE|PAUSING|PAUSED|GOING_DOWN)
+              echo "Project is paused (${status}) — requesting restore..."
+              code=$(curl -sS -o /tmp/restore.json -w '%{http_code}' \
+                -X POST \
+                -H "Authorization: Bearer ${SUPABASE_ACCESS_TOKEN}" \
+                -H "Content-Type: application/json" \
+                "${API}/v1/projects/${PROJECT_REF}/restore" -d '{}')
+              echo "Restore HTTP ${code}"
+              cat /tmp/restore.json 2>/dev/null || true; echo
+              if [ "${code}" -ge 200 ] && [ "${code}" -lt 300 ]; then
+                echo "Restore requested successfully — project will be back online shortly."
+              else
+                echo "::error::Restore request failed (HTTP ${code})."
+                exit 1
+              fi
+              ;;
+            "")
+              echo "::error::Could not read project status (check the access token has access to this project)."
+              exit 1
+              ;;
+            *)
+              echo "::warning::Unrecognized status '${status}'. Taking no action this run."
+              ;;
+          esac
