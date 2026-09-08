@@ -82,3 +82,9 @@ Contact submissions save to the private `contact_messages` table. A success resp
 5. Check homepage, signup, recovery, authenticated usage, unauthenticated API rejection, and webhook signature rejection. In Stripe test mode, complete a checkout and cancellation before relying on a live purchase test. Check inbox access separately.
 
 For an application regression, promote the previous known-good Vercel deployment. The new tables and columns can remain. Legacy functions remain available to the service role. Do not roll back the database by deleting receipt or usage records. Restoring old code also restores its known bugs, so follow up promptly. The private `screenme-ops` restore workflow is maintained separately and should not be replaced by a public keepalive workflow.
+
+### Verified September 8, 2026 release
+
+PR #20 was merged and released to `https://www.screenme.dev`. The four timestamped migration filenames match their production migration-history versions. An authenticated synthetic account passed staging checks for usage snapshots/refunds, Free restrictions, invalid prices, missing billing accounts, and save/list/delete flows for resumes and applications; it was removed afterward. No live charge or AI generation was performed.
+
+Open operator actions: configure and verify custom SMTP before enabling public email signup/reset delivery; confirm the support address and operating business details; reconcile the legacy Pro account whose subscription reference is absent from both configured Stripe modes. Its entitlement has been preserved. The private restore workflow remains separate. Old main-checkout keepalive commits are retained locally on `archive/screenme-before-repair-2026-09-08`.
