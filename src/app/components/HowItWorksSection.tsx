@@ -3,8 +3,8 @@
 import React from "react";
 
 const STEPS = [
-  { n: "01", title: "Upload your resume", desc: "Paste text or upload a PDF. We extract and parse it automatically in seconds." },
-  { n: "02", title: "Run AI analysis", desc: "Our models scan for ATS issues, keyword gaps, and job compatibility — instantly." },
+  { n: "01", title: "Upload your resume", desc: "Paste text or upload a PDF. We extract and parse it into editable text." },
+  { n: "02", title: "Run AI analysis", desc: "Our models scan for ATS issues, keyword gaps, and job compatibility and suggest improvements." },
   { n: "03", title: "Get your results", desc: "Receive a scored report with specific rewrites, missing keywords, and clear next steps." },
 ];
 
@@ -16,10 +16,10 @@ export default function HowItWorksSection() {
           <div>
             <p className="section-label mb-3">How it works</p>
             <h2 className="text-3xl md:text-4xl font-semibold tracking-tight text-fg mb-4">
-              Three steps to your next offer.
+              Three steps to a stronger resume.
             </h2>
             <p className="text-fg-muted text-base leading-relaxed mb-10">
-              No learning curve. Paste your resume, get actionable feedback in under 30 seconds.
+              Upload or paste your resume, review the feedback, and decide which changes fit your experience.
             </p>
 
             <div className="flex flex-col gap-6">
@@ -40,7 +40,7 @@ export default function HowItWorksSection() {
           <div className="card p-6 flex flex-col gap-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs text-fg-subtle mb-1">Resume Score</p>
+                <p className="text-xs text-fg-subtle mb-1">Example AI resume score</p>
                 <p className="text-3xl font-semibold text-fg tabular-nums">
                   84<span className="text-base text-fg-subtle">/100</span>
                 </p>
@@ -52,7 +52,7 @@ export default function HowItWorksSection() {
             {[
               { label: "Keywords", pct: 78 },
               { label: "Formatting", pct: 92 },
-              { label: "ATS Pass", pct: 85 },
+              { label: "ATS readability", pct: 85 },
               { label: "Impact", pct: 70 },
             ].map(({ label, pct }) => (
               <div key={label}>

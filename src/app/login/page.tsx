@@ -16,53 +16,57 @@ export default function AuthPage() {
   const [showCreate,   setShowCreate]   = useState(false);
   const [showForgot,   setShowForgot]   = useState(false);
   const router = useRouter();
+  const emailDeliveryEnabled = process.env.NEXT_PUBLIC_EMAIL_DELIVERY_ENABLED !== "false";
 
   const clear = () => { setError(null); setMessage(null); };
 
   const handleForgot = async () => {
+    if (!emailDeliveryEnabled) { setError("Password reset emails are temporarily unavailable. Please contact support."); return; }
     if (!email) { setError("Enter your email address above first."); return; }
-    if (!supabase) return;
+    if (!supabase) { setError("Account service is unavailable. Please try again later."); return; }
     setLoading(true); clear();
     try {
       const { error: e } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/dashboard`,
+        redirectTo: `${window.location.origin}/reset-password`,
       });
       if (e) setError(e.message);
       else { setMessage("Reset link sent — check your inbox."); setShowForgot(false); }
-    } catch (err: any) { setError(err.message); }
+    } catch (err: unknown) { setError(err instanceof Error ? err.message : "Account request failed. Please retry."); }
     finally { setLoading(false); }
   };
 
   const handleCreate = async () => {
+    if (!emailDeliveryEnabled) { setError("Email signup is temporarily unavailable. Continue with Google to create your account."); return; }
     if (!email || !password) { setError("Please enter email and password."); return; }
-    if (!supabase) return;
+    if (!supabase) { setError("Account service is unavailable. Please try again later."); return; }
     setLoading(true); clear();
     try {
-      const { error: e } = await supabase.auth.signUp({ email, password });
+      if (password.length < 12) { setError("Use at least 12 characters for your password."); return; }
+      const { error: e } = await supabase.auth.signUp({ email, password, options: { emailRedirectTo: `${window.location.origin}/dashboard` } });
       if (e) setError(e.message);
       else { setMessage("Account created! Check your email to verify."); setShowCreate(false); }
-    } catch (err: any) { setError(err.message); }
+    } catch (err: unknown) { setError(err instanceof Error ? err.message : "Account request failed. Please retry."); }
     finally { setLoading(false); }
   };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password) { setError("Please enter email and password."); return; }
-    if (!supabase) return;
+    if (!supabase) { setError("Account service is unavailable. Please try again later."); return; }
     setLoading(true); clear(); setShowCreate(false);
     try {
       const { error: e } = await supabase.auth.signInWithPassword({ email, password });
       if (e) {
         if (e.message.includes("Email not confirmed")) setError("Verify your email before signing in.");
-        else if (e.message.includes("Invalid login credentials")) { setError("Invalid email or password."); setShowCreate(true); }
+        else if (e.message.includes("Invalid login credentials")) { setError("Invalid email or password."); }
         else setError(e.message);
       } else router.push("/dashboard");
-    } catch (err: any) { setError(err.message); }
+    } catch (err: unknown) { setError(err instanceof Error ? err.message : "Account request failed. Please retry."); }
     finally { setLoading(false); }
   };
 
   const handleGoogle = async () => {
-    if (!supabase) return;
+    if (!supabase) { setError("Account service is unavailable. Please try again later."); return; }
     setLoading(true); clear();
     try {
       const { error: e } = await supabase.auth.signInWithOAuth({
@@ -70,7 +74,7 @@ export default function AuthPage() {
         options: { redirectTo: `${window.location.origin}/dashboard` },
       });
       if (e) setError(e.message);
-    } catch (err: any) { setError(err.message); }
+    } catch (err: unknown) { setError(err instanceof Error ? err.message : "Account request failed. Please retry."); }
     finally { setLoading(false); }
   };
 
@@ -82,8 +86,8 @@ export default function AuthPage() {
           <Link href="/" className="inline-flex justify-center">
             <Logo className="text-base" />
           </Link>
-          <h1 className="text-2xl font-semibold text-fg mt-5 mb-1 tracking-tight">Welcome back</h1>
-          <p className="text-sm text-fg-subtle">Sign in to your account</p>
+          <h1 className="text-2xl font-semibold text-fg mt-5 mb-1 tracking-tight">{showCreate ? "Create your account" : "Welcome back"}</h1>
+          <p className="text-sm text-fg-subtle">{showCreate ? "Start with a free account" : "Sign in to your account"}</p>
         </div>
 
         <div className="card p-6 flex flex-col gap-4">
@@ -108,6 +112,8 @@ export default function AuthPage() {
             <div className="flex-1 h-px bg-surface-2" />
           </div>
 
+          {!emailDeliveryEnabled && <p role="status" className="text-sm text-fg-muted">Email signup and password reset emails are temporarily unavailable. Continue with Google, or sign in below with an existing password. <Link href="/contact" className="underline">Contact support</Link> if you need help.</p>}
+
           {/* Alerts */}
           {error && (
             <div role="alert" className="p-3 rounded-lg border border-[#ff3b30]/20 bg-red/[0.06]">
@@ -121,7 +127,7 @@ export default function AuthPage() {
           )}
 
           {/* Form */}
-          <form onSubmit={handleLogin} className="flex flex-col gap-3" noValidate>
+          <form onSubmit={event => { if (showCreate) { event.preventDefault(); void handleCreate(); } else { void handleLogin(event); } }} className="flex flex-col gap-3" noValidate>
             <div>
               <label htmlFor="email" className="block text-xs font-medium text-fg-muted mb-1.5">Email</label>
               <input
@@ -131,7 +137,7 @@ export default function AuthPage() {
                          border border-border focus:outline-none focus:border-border-2 focus:bg-surface
                          transition-colors text-sm"
                 value={email}
-                onChange={e => { setEmail(e.target.value); clear(); setShowCreate(false); }}
+                onChange={e => { setEmail(e.target.value); clear(); }}
               />
             </div>
 
@@ -139,14 +145,14 @@ export default function AuthPage() {
               <label htmlFor="password" className="block text-xs font-medium text-fg-muted mb-1.5">Password</label>
               <div className="relative">
                 <input
-                  id="password" type={showPassword ? "text" : "password"} autoComplete="current-password" required
+                  id="password" type={showPassword ? "text" : "password"} autoComplete={showCreate ? "new-password" : "current-password"} required
                   placeholder="••••••"
-                  minLength={6}
+                  minLength={showCreate ? 12 : 6}
                   className="w-full bg-bg text-fg placeholder:text-fg-subtle px-3.5 py-2.5 pr-10 rounded-lg
                            border border-border focus:outline-none focus:border-border-2 focus:bg-surface
                            transition-colors text-sm"
                   value={password}
-                  onChange={e => { setPassword(e.target.value); clear(); setShowCreate(false); }}
+                  onChange={e => { setPassword(e.target.value); clear(); }}
                 />
                 <button
                   type="button"
@@ -163,11 +169,11 @@ export default function AuthPage() {
             </div>
 
             <button
-              type="submit" disabled={loading}
+              type="submit" disabled={loading || (showCreate && !emailDeliveryEnabled)}
               className="btn btn-primary w-full py-2.5 disabled:opacity-50 mt-1"
             >
               {loading && <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>}
-              {loading ? "Signing in…" : "Continue"}
+              {loading ? "Please wait…" : showCreate ? "Create account" : "Sign in"}
             </button>
           </form>
 
@@ -181,8 +187,8 @@ export default function AuthPage() {
 
           {showForgot && (
             <div className="pt-3 border-t border-border flex flex-col gap-2">
-              <p className="text-xs text-fg-subtle">Enter your email above and we'll send a reset link.</p>
-              <button type="button" onClick={handleForgot} disabled={loading}
+              <p className="text-xs text-fg-subtle">Enter your email above and we&apos;ll send a reset link.</p>
+              <button type="button" onClick={handleForgot} disabled={loading || !emailDeliveryEnabled}
                 className="w-full bg-bg border border-border text-fg-muted hover:text-fg hover:bg-surface-2
                           font-medium py-2.5 rounded-lg transition-colors text-sm cursor-pointer disabled:opacity-50">
                 {loading ? "Sending…" : "Send reset email"}
@@ -190,21 +196,16 @@ export default function AuthPage() {
             </div>
           )}
 
-          {showCreate && (
-            <div className="pt-3 border-t border-border flex flex-col gap-2">
-              <p className="text-xs text-fg-subtle text-center">Don't have an account?</p>
-              <button type="button" onClick={handleCreate} disabled={loading}
-                className="w-full bg-bg border border-border text-fg hover:bg-surface-2
-                          font-medium py-2.5 rounded-lg transition-colors text-sm cursor-pointer disabled:opacity-50">
-                {loading ? "Creating…" : "Create account"}
-              </button>
-            </div>
-          )}
+          <button type="button" onClick={() => { clear(); setShowCreate(value => !value); setShowForgot(false); }} className="text-sm underline" disabled={loading}>
+            {showCreate ? "Back to sign in" : "Create an account"}
+          </button>
+          {showCreate && <p className="text-xs text-fg-muted">Use at least 12 characters for your password. We will send an email to confirm your account.</p>}
+
         </div>
 
         <p className="text-center text-fg-subtle text-xs mt-5">
           By continuing you agree to our{" "}
-          <Link href="/contact" className="hover:text-fg-muted transition-colors">Terms of Service</Link>
+          <Link href="/terms" className="hover:text-fg-muted transition-colors">Terms of Service</Link>{" and "}<Link href="/privacy" className="hover:text-fg-muted transition-colors">Privacy Notice</Link>
         </p>
       </div>
     </div>

@@ -1,5 +1,7 @@
 "use client";
 
+import { toError } from "../lib/value";
+
 import React, { useEffect, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
 import { authFetch } from "../lib/authFetch";
@@ -21,7 +23,7 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [plan, setPlan] = useState<string | null>(null);
-  const [usage, setUsage] = useState<any>(null);
+  const [usage, setUsage] = useState<Record<string, number> | null>(null);
   const [busy, setBusy] = useState(false);
   const [upgradeErr, setUpgradeErr] = useState<string | null>(null);
 
@@ -34,14 +36,10 @@ export default function DashboardPage() {
         if (e || !data?.user) { setError("Please sign in to access your dashboard."); return; }
         setUser(data.user);
 
-        const { data: pd, error: pe } = await supabase.from("user_plans").select("plan").eq("user_id", data.user.id).single();
-        // No client-side writes to user_plans — a signup trigger seeds the row
-        // and the server creates it on first use. Default to free until then.
-        if (pe && pe.code !== "PGRST116") throw pe;
-        setPlan(pd?.plan || "free");
-
-        const { data: ud } = await supabase.from("user_usage").select("*").eq("user_id", data.user.id).single();
-        setUsage(ud);
+        const usageResponse = await authFetch("/api/usage", { method: "POST" });
+        if (!usageResponse.ok) throw new Error("Could not load your plan. Please retry.");
+        const currentUsage = await usageResponse.json();
+        setPlan(currentUsage.plan); setUsage(currentUsage);
 
         // Live plan updates — isolated so a realtime hiccup never gates the dashboard.
         try {
@@ -52,7 +50,8 @@ export default function DashboardPage() {
         } catch (subErr) {
           console.warn("plan_watch realtime subscription failed:", subErr);
         }
-      } catch (err: any) {
+      } catch (caught: unknown) {
+      const err = toError(caught);
         setError(err.message || "Something went wrong.");
       } finally {
         setLoading(false);
@@ -80,6 +79,17 @@ export default function DashboardPage() {
     } catch {
       setUpgradeErr("Couldn't start checkout. Please try again.");
     } finally { setBusy(false); }
+  };
+
+  const handleBilling = async () => {
+    setBusy(true); setUpgradeErr(null);
+    try {
+      const res = await authFetch("/api/stripe/portal", { method: "POST" });
+      const data = await res.json();
+      if (!res.ok || !data.url) throw new Error(data.error || "Billing is unavailable.");
+      window.location.assign(data.url);
+    } catch (error) { setUpgradeErr(error instanceof Error ? error.message : "Billing is unavailable."); }
+    finally { setBusy(false); }
   };
 
   const isPro = plan === "pro";
@@ -181,6 +191,8 @@ export default function DashboardPage() {
                   {isPro ? "Unlimited access to all features." : "3 scans · 2 cover letters · 2 job matches · 2 tailors per month."}
                 </p>
               </div>
+              <button onClick={handleBilling} disabled={busy} className="btn btn-secondary disabled:opacity-50">Manage billing</button>
+              {isPro && upgradeErr && <p className="text-xs text-red" role="alert">{upgradeErr}</p>}
               {!isPro && (
                 <div className="flex flex-col items-end gap-2">
                   <button onClick={handleUpgrade} disabled={busy} className="btn btn-primary disabled:opacity-50">

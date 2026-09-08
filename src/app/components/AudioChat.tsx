@@ -1,8 +1,9 @@
 // src/app/components/AudioChat.tsx
 "use client";
 
+import { toError } from "../lib/value";
+
 import { useState, useRef, useEffect, useCallback } from "react";
-import { supabase } from "../lib/supabaseClient";
 import { authFetch } from "../lib/authFetch";
 
 export type ChatMsg = { id: number; who: "user" | "ai"; text: string };
@@ -18,7 +19,6 @@ export default function AudioChat({ jobContext }: AudioChatProps) {
   const [hasPermission, setHasPermission] = useState(false);
   const [isSpeaking, setIsSpeaking]       = useState(false);
   const [isActive, setIsActive]           = useState(false);
-  const [currentUser, setCurrentUser]     = useState<any>(null);
 
   const mediaRef    = useRef<MediaRecorder | null>(null);
   const chunksRef   = useRef<Blob[]>([]);
@@ -33,17 +33,9 @@ export default function AudioChat({ jobContext }: AudioChatProps) {
     return () => {
       mountedRef.current = false;
       synthRef.current?.cancel();
-      mediaRef.current?.state === "recording" && mediaRef.current.stop();
+      if (mediaRef.current?.state === "recording") mediaRef.current.stop();
       streamRef.current?.getTracks().forEach((t) => t.stop());
     };
-  }, []);
-
-  // Get current user
-  useEffect(() => {
-    if (!supabase) return;
-    supabase.auth.getUser().then(({ data }) => {
-      if (mountedRef.current) setCurrentUser(data?.user ?? null);
-    });
   }, []);
 
   // Init speech synthesis
@@ -206,7 +198,8 @@ export default function AudioChat({ jobContext }: AudioChatProps) {
           setMsgs((prev) => [...prev, { id: Date.now() + 1, who: "ai", text: reply || "(no reply)" }]);
           speak(reply || "");
         }, 20);
-      } catch (e: any) {
+      } catch (caught: unknown) {
+      const e = toError(caught);
         if (!mountedRef.current) return;
         setMsgs((prev) =>
           prev.map((m) => m.id === placeholderId ? { ...m, text: `Error: ${e.message}` } : m)

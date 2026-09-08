@@ -1,8 +1,12 @@
+import { record } from "../../lib/value";
+
+import { toError } from "../../lib/value";
+import { withUsage } from "../../lib/aiRequest";
 // app/api/jobMatch/route.ts
 import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { z } from 'zod';
-import { checkUsageLimit, incrementUsage } from '../../lib/usageTracker';
+import { checkUsageLimit } from '../../lib/usageTracker';
 import { ErrorTypes, handleAPIError, validateRequest, validateContentLength } from '../../lib/errorHandler';
 import { getAuthenticatedUser, unauthorized } from '../../lib/auth';
 
@@ -64,7 +68,7 @@ const openai = process.env.OPENAI_API_KEY
   : null;
 
 /* ── POST ─────────────────────────────────────────────────── */
-export async function POST(req: Request) {
+async function handleRequest(req: Request) {
   try {
     const user = await getAuthenticatedUser(req);
     if (!user) return unauthorized();
@@ -116,7 +120,8 @@ export async function POST(req: Request) {
       });
       raw = completion.choices[0]?.message?.content ?? '';
       if (!raw) throw ErrorTypes.OPENAI_SERVICE_ERROR();
-    } catch (err: any) {
+    } catch (caught: unknown) {
+      const err = toError(caught);
       console.error('OpenAI error:', err);
       if (err.message?.includes('rate limit') || err.message?.includes('quota')) {
         return NextResponse.json(
@@ -132,40 +137,40 @@ export async function POST(req: Request) {
     try {
       parsed = JSON.parse(raw);
     } catch {
-      console.error('GPT returned non-JSON:', raw.substring(0, 500));
+      console.error("AI returned an invalid JSON response");
       return handleAPIError(ErrorTypes.INVALID_RESPONSE_FORMAT());
     }
 
     /* ── Sanitize before validation ───────────────────────── */
-    const safe = parsed as any;
-    const clampStr = (s: any, max = 200) => typeof s === 'string' ? s.slice(0, max) : String(s ?? '').slice(0, max);
+    const safe = record(parsed);
+    const clampStr = (s: unknown, max = 200) => typeof s === 'string' ? s.slice(0, max) : String(s ?? '').slice(0, max);
 
     if (Array.isArray(safe?.matchedSkills)) {
       safe.matchedSkills = safe.matchedSkills
-        .filter((s: any) => s != null)
+        .filter((s: unknown) => s != null)
         .slice(0, 20)
-        .map((s: any) => clampStr(s, 160));
+        .map((s: unknown) => clampStr(s, 160));
     } else { safe.matchedSkills = []; }
 
     if (Array.isArray(safe?.missingSkills)) {
       safe.missingSkills = safe.missingSkills
-        .filter((s: any) => s != null)
+        .filter((s: unknown) => s != null)
         .slice(0, 20)
-        .map((s: any) => clampStr(s, 160));
+        .map((s: unknown) => clampStr(s, 160));
     } else { safe.missingSkills = []; }
 
     if (Array.isArray(safe?.gaps)) {
       safe.gaps = safe.gaps
-        .filter((s: any) => s != null)
+        .filter((s: unknown) => s != null)
         .slice(0, 10)
-        .map((s: any) => clampStr(s, 200));
+        .map((s: unknown) => clampStr(s, 200));
     } else { safe.gaps = []; }
 
     if (Array.isArray(safe?.actions)) {
       safe.actions = safe.actions
-        .filter((s: any) => s != null)
+        .filter((s: unknown) => s != null)
         .slice(0, 15)
-        .map((s: any) => clampStr(s, 200));
+        .map((s: unknown) => clampStr(s, 200));
     } else { safe.actions = []; }
 
     if (typeof safe?.summary === 'string') {
@@ -182,15 +187,14 @@ export async function POST(req: Request) {
     }
 
     /* ── Increment usage + respond ────────────────────────── */
-    const ok = await incrementUsage(userId, 'job_match');
-    if (!ok) console.warn('Failed to increment usage for user:', userId);
 
     const data: MatchResult = validation.data;
     return NextResponse.json({ ...data, success: true }, {
       headers: { 'Cache-Control': 'private, max-age=1800' },
     });
 
-  } catch (error: any) {
+  } catch (caught: unknown) {
+      const error = toError(caught);
     console.error('Error processing job match:', error);
     return handleAPIError(error);
   }
@@ -205,4 +209,8 @@ export async function OPTIONS() {
       'Access-Control-Allow-Headers': 'Content-Type, Authorization',
     },
   });
+}
+
+export async function POST(req: Request): Promise<Response> {
+  return withUsage(req, "job_match", handleRequest);
 }

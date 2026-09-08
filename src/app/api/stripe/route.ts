@@ -1,242 +1,57 @@
-import { NextRequest, NextResponse } from 'next/server';
-import Stripe from 'stripe';
-import { supabase } from '../../lib/supabaseClient';
-import { getAuthenticatedUser, unauthorized } from '../../lib/auth';
+import { rateLimit } from "../../lib/rate-limit";
+import { boundedRequest } from "../../lib/aiRequest";
+import { NextRequest, NextResponse } from "next/server";
+import { getAuthenticatedUser, unauthorized } from "../../lib/auth";
+import { supabaseAdmin as db } from "../../lib/supabaseAdmin";
+import { stripe, appUrl, proPriceId, fulfillCheckout } from "../../lib/billing";
 
-// Only create Stripe client if secret key is available
-const stripe = process.env.STRIPE_SECRET_KEY
-  ? new Stripe(process.env.STRIPE_SECRET_KEY, {
-    apiVersion: '2025-04-30.basil',
-  })
-  : null;
-
-// POST /api/stripe - Create checkout session
 export async function POST(req: NextRequest) {
+  const user = await getAuthenticatedUser(req);
+  if (!user) return unauthorized();
+  if (!stripe || !db) return NextResponse.json({ error: "Billing is unavailable." }, { status: 503 });
   try {
-    // Check if Supabase client is available
-    if (!supabase) {
-      console.error('Supabase client not available - missing environment variables');
-      return NextResponse.json(
-        { error: 'Database service not available' },
-        { status: 500 }
-      );
+    const rate = await rateLimit(`billing:${user.id}`);
+    if (!rate.success) return NextResponse.json({ error: "Please wait before trying billing again." }, { status: 429, headers: { "Retry-After": String(rate.retryAfter) } });
+    const body = await (await boundedRequest(req, 4096)).json().catch(() => ({}));
+    if (body.action === "verify") {
+      if (typeof body.sessionId !== "string" || !body.sessionId.startsWith("cs_")) return NextResponse.json({ error: "Invalid checkout session." }, { status: 400 });
+      const active = await fulfillCheckout(body.sessionId, user.id);
+      return NextResponse.json({ success: active, planUpdated: active, message: active ? "Your Pro plan is ready." : "This subscription is no longer active." });
     }
-
-    // Identity comes from the verified session, never the request body.
-    const user = await getAuthenticatedUser(req);
-    if (!user) return unauthorized();
-
-    const body = await req.json();
-
-    // Check if this is a verification request
-    if (body.action === 'verify' && body.sessionId) {
-      return await verifySession(body.sessionId, user.id);
+    const priceId = proPriceId();
+    if (body.priceId && body.priceId !== priceId) return NextResponse.json({ error: "Invalid price." }, { status: 400 });
+    const { data: plan, error } = await db.from("user_plans").select("stripe_customer_id,stripe_subscription_id").eq("user_id", user.id).maybeSingle();
+    if (error) throw error;
+    let customerId = plan?.stripe_customer_id;
+    if (!customerId) {
+      const customer = await stripe.customers.create({ email: user.email, metadata: { userId: user.id } }, { idempotencyKey: `screenme-customer:${user.id}` });
+      customerId = customer.id;
+      const { error: saveError } = await db.from("user_plans").upsert({ user_id: user.id, stripe_customer_id: customerId }, { onConflict: "user_id" });
+      if (saveError) throw saveError;
     }
-
-    // Otherwise, create checkout session
-    return await createCheckoutSession(body.priceId, user.id);
-  } catch (error: any) {
-    console.error('Error in Stripe API:', error);
-    return NextResponse.json(
-      { error: error.message || 'Internal server error' },
-      { status: 500 }
-    );
-  }
-}
-
-// Create checkout session
-async function createCheckoutSession(priceId: string, userId: string) {
-
-  // Check if Stripe client is available
-  if (!stripe) {
-    console.error('Stripe client not available - missing environment variables');
-    return NextResponse.json(
-      { error: 'Payment service not available' },
-      { status: 500 }
-    );
-  }
-
-  // Validate required environment variables
-  if (!process.env.STRIPE_SECRET_KEY) {
-    throw new Error('STRIPE_SECRET_KEY is not defined');
-  }
-
-  // Get base URL with fallback for development
-  const baseUrl = process.env.NEXT_PUBLIC_URL || 'http://localhost:3000';
-
-  if (!baseUrl || baseUrl === 'undefined') {
-    throw new Error('NEXT_PUBLIC_URL environment variable is required for Stripe checkout');
-  }
-
-  const session = await stripe.checkout.sessions.create({
-    mode: 'subscription',
-    payment_method_types: ['card'],
-    line_items: [
-      {
-        price: priceId,
-        quantity: 1,
-      },
-    ],
-    success_url: `${baseUrl}/success?session_id={CHECKOUT_SESSION_ID}`,
-    cancel_url: `${baseUrl}`,
-    metadata: {
-      userId,
-    },
-  });
-
-  return NextResponse.json({ url: session.url });
-}
-
-// Verify completed session and upgrade user
-async function verifySession(sessionId: string, userId: string) {
-  if (!sessionId || !userId) {
-    return NextResponse.json(
-      {
-        success: false,
-        message: 'Missing session ID or user ID'
-      },
-      { status: 400 }
-    );
-  }
-
-  // Check if Supabase client is available
-  if (!supabase) {
-    console.error('Supabase client not available during session verification');
-    return NextResponse.json(
-      {
-        success: false,
-        message: 'Database service not available'
-      },
-      { status: 500 }
-    );
-  }
-
-  // Check if Stripe client is available
-  if (!stripe) {
-    console.error('Stripe client not available during session verification');
-    return NextResponse.json(
-      { 
-        success: false, 
-        message: 'Payment service not available' 
-      },
-      { status: 500 }
-    );
-  }
-
-  // Verify the session with Stripe
-  let session: Stripe.Checkout.Session;
-  try {
-    session = await stripe.checkout.sessions.retrieve(sessionId);
+    const subscriptions = await stripe.subscriptions.list({ customer: customerId, status: "all", limit: 100 });
+    if (subscriptions.data.some(sub => !["canceled", "incomplete_expired"].includes(sub.status))) {
+      const portal = await stripe.billingPortal.sessions.create({ configuration: process.env.STRIPE_PORTAL_CONFIGURATION || undefined, customer: customerId, return_url: `${appUrl()}/dashboard` });
+      return NextResponse.json({ url: portal.url });
+    }
+    const recent = await stripe.checkout.sessions.list({ customer: customerId, limit: 100 });
+    const matching = recent.data.filter(session => session.metadata?.userId === user.id && session.metadata?.priceId === priceId);
+    const existing = matching.find(session => session.status === "open");
+    if (existing?.url) return NextResponse.json({ url: existing.url });
+    // Use the previous finished attempt, not a clock bucket, so simultaneous
+    // checkout requests share one Stripe idempotency key across time boundaries.
+    const previousAttempt = matching.find(session => session.status !== "open")?.id || "initial";
+    const session = await stripe.checkout.sessions.create({
+      mode: "subscription", customer: customerId,
+      line_items: [{ price: priceId, quantity: 1 }],
+      success_url: `${appUrl()}/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${appUrl()}/dashboard`,
+      metadata: { userId: user.id, priceId }, subscription_data: { metadata: { userId: user.id } },
+      integration_identifier: "screenme_reliability_kvzhptnx",
+    }, { idempotencyKey: `screenme-checkout:${user.id}:${priceId}:${previousAttempt}` });
+    return NextResponse.json({ url: session.url });
   } catch (error) {
-    console.error('Error retrieving Stripe session:', error);
-    return NextResponse.json(
-      {
-        success: false,
-        message: 'Invalid session ID or session not found'
-      },
-      { status: 400 }
-    );
+    console.error("Billing request failed", error instanceof Error ? error.name : "DatabaseError");
+    return NextResponse.json({ success: false, error: "Billing could not be completed. Please retry or contact support." }, { status: 503 });
   }
-
-  // Verify the session belongs to the current user
-  if (session.metadata?.userId !== userId) {
-    console.error('Session user mismatch:', {
-      sessionUserId: session.metadata?.userId,
-      requestUserId: userId
-    });
-    return NextResponse.json(
-      {
-        success: false,
-        message: 'Session does not belong to the current user'
-      },
-      { status: 403 }
-    );
-  }
-
-  // Check if payment was successful
-  if (session.payment_status !== 'paid') {
-    return NextResponse.json(
-      {
-        success: false,
-        message: `Payment not completed. Status: ${session.payment_status}`
-      },
-      { status: 400 }
-    );
-  }
-
-  // Check if this session has already been processed using your function
-  const { data: isProcessed, error: checkError } = await supabase
-    .rpc('is_stripe_session_processed', { p_session_id: sessionId });
-
-  if (checkError) {
-    console.error('Error checking session status:', checkError);
-    return NextResponse.json(
-      {
-        success: false,
-        message: 'Database error while checking session status'
-      },
-      { status: 500 }
-    );
-  }
-
-  if (isProcessed) {
-    // Session already processed
-    return NextResponse.json({
-      success: true,
-      message: 'Payment already processed',
-      alreadyProcessed: true
-    });
-  }
-
-  // Upgrade user to Pro using your database function
-  const { data: upgradeSuccess, error: upgradeError } = await supabase
-    .rpc('upgrade_user_to_pro_with_stripe', {
-      p_user_id: userId,
-      p_stripe_customer_id: session.customer as string,
-      p_stripe_subscription_id: session.subscription as string
-    });
-
-  if (upgradeError || !upgradeSuccess) {
-    console.error('Error upgrading user to Pro:', upgradeError);
-    return NextResponse.json(
-      {
-        success: false,
-        message: 'Failed to upgrade user to Pro plan'
-      },
-      { status: 500 }
-    );
-  }
-
-  // Record that this session has been processed with full details
-  const { data: recordSuccess, error: recordError } = await supabase
-    .rpc('record_stripe_session', {
-      p_session_id: sessionId,
-      p_user_id: userId,
-      p_amount: session.amount_total,
-      p_currency: session.currency || 'usd',
-      p_customer_email: session.customer_details?.email,
-      p_stripe_customer_id: session.customer as string,
-      p_subscription_id: session.subscription as string,
-      p_price_id: session.line_items?.data?.[0]?.price?.id,
-      p_mode: session.mode,
-      p_payment_status: session.payment_status,
-      p_metadata: {
-        webhook_processed: false,
-        manual_verification: true,
-        processed_at: new Date().toISOString(),
-        checkout_session_url: session.url
-      }
-    });
-
-  if (recordError) {
-    console.error('Error recording session:', recordError);
-    // Don't fail the request if we can't record the session, 
-    // but log it for monitoring
-  }
-
-  return NextResponse.json({
-    success: true,
-    message: 'Payment verified and plan updated successfully',
-    planUpdated: true
-  });
-} 
+}

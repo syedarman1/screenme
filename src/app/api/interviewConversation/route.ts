@@ -1,3 +1,6 @@
+
+import { toError } from "../../lib/value";
+import { withUsage } from "../../lib/aiRequest";
 // src/app/api/interviewConversation/route.ts
 
 import { NextRequest, NextResponse } from "next/server";
@@ -18,7 +21,7 @@ const openai = process.env.OPENAI_API_KEY
   ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
   : null;
 
-export async function POST(req: NextRequest) {
+async function handleRequest(req: NextRequest) {
     try { // Wrap main logic in a try...catch
         if (!openai) {
             return NextResponse.json(
@@ -90,7 +93,7 @@ export async function POST(req: NextRequest) {
             // --- Option A: Keep current method (with logging) ---
             // const arrayBuf = await audioEntry.arrayBuffer();
             // const buffer = Buffer.from(arrayBuf);
-            // const readableStream = Readable.from(buffer) as any; // Cast needed by SDK types sometimes
+            // const readableStream = Readable.from(buffer) as OpenAI.Chat.ChatCompletionMessageParam[]; // Cast needed by SDK types sometimes
             // const whisperResponse = await openai.audio.transcriptions.create({
             //     model: "whisper-1",
             //     file: readableStream,
@@ -117,7 +120,8 @@ export async function POST(req: NextRequest) {
                // transcript = "[Silence]"; // Or assign a placeholder
             }
 
-        } catch (error: any) {
+        } catch (caught: unknown) {
+      const error = toError(caught);
             console.error("ERROR DURING WHISPER TRANSCRIPTION:", error);
             // Return a structured error
             return NextResponse.json({
@@ -137,7 +141,7 @@ export async function POST(req: NextRequest) {
         try {
             const chatResp = await openai.chat.completions.create({
                 model: "gpt-4o-mini", // or your preferred model
-                messages: history.map((m) => ({ role: m.who === 'ai' ? 'assistant' : m.who, content: m.text })) as any, // Map role correctly
+                messages: history.map((m) => ({ role: m.who === 'ai' ? 'assistant' : m.who, content: m.text })) as OpenAI.Chat.ChatCompletionMessageParam[], // Map role correctly
                 temperature: 0.75, // Adjust as needed
                 max_tokens: 100
             });
@@ -150,7 +154,8 @@ export async function POST(req: NextRequest) {
                 // reply = "[AI could not generate a response]";
             }
 
-        } catch (error: any) {
+        } catch (caught: unknown) {
+      const error = toError(caught);
             console.error("ERROR DURING GPT COMPLETION:", error);
              // Decide: Still return transcript even if GPT fails? Yes.
             return NextResponse.json({
@@ -172,9 +177,13 @@ export async function POST(req: NextRequest) {
         // --- Alternative: Return updated history (If client relies on it) ---
         // return NextResponse.json({ transcript, reply, history }, { status: 200 });
 
-    } catch (e: any) {
+    } catch (caught: unknown) {
+      const e = toError(caught);
          // Catch any unexpected errors during request processing
          console.error("UNEXPECTED API ROUTE ERROR:", e);
          return NextResponse.json({ error: "An unexpected server error occurred.", details: e.message }, { status: 500 });
     }
+}
+export async function POST(req: Request): Promise<Response> {
+  return withUsage(req, "interview_prep", handleRequest);
 }

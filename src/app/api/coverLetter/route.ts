@@ -1,7 +1,10 @@
+
+import { toError } from "../../lib/value";
+import { withUsage } from "../../lib/aiRequest";
 // app/api/coverLetter/route.ts
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
-import { checkUsageLimit, incrementUsage } from "../../lib/usageTracker";
+import { checkUsageLimit } from "../../lib/usageTracker";
 import { ErrorTypes, handleAPIError, validateRequest, validateContentLength } from "../../lib/errorHandler";
 import { getAuthenticatedUser, unauthorized } from "../../lib/auth";
 
@@ -67,7 +70,7 @@ const openai = process.env.OPENAI_API_KEY
 const VALID_TONES = Object.keys(toneInstructions);
 
 /* ── POST ─────────────────────────────────────────────────── */
-export async function POST(request: Request) {
+async function handleRequest(request: Request) {
   try {
     const user = await getAuthenticatedUser(request);
     if (!user) return unauthorized();
@@ -145,7 +148,8 @@ ${jobDesc?.trim() ? `\nJOB DESCRIPTION:\n${String(jobDesc).trim()}` : ""}
           .replace(/\{\{[^}]*\}\}/g, "")
           .trim();
       }
-    } catch (err: any) {
+    } catch (caught: unknown) {
+      const err = toError(caught);
       console.error("OpenAI error:", err);
       if (err.message?.includes("rate limit") || err.message?.includes("quota")) {
         return NextResponse.json({ error: "Cover letter generation temporarily unavailable. Please try again in a few minutes." }, { status: 503 });
@@ -156,8 +160,6 @@ ${jobDesc?.trim() ? `\nJOB DESCRIPTION:\n${String(jobDesc).trim()}` : ""}
       return handleAPIError(ErrorTypes.OPENAI_SERVICE_ERROR());
     }
 
-    const ok = await incrementUsage(userId, "cover_letter");
-    if (!ok) console.warn("Failed to increment usage for user:", userId);
 
     const wordCount = coverLetter.split(/\s+/).filter(Boolean).length;
 
@@ -165,7 +167,8 @@ ${jobDesc?.trim() ? `\nJOB DESCRIPTION:\n${String(jobDesc).trim()}` : ""}
       { coverLetter, wordCount, tone: effectiveTone, success: true },
       { headers: { "Cache-Control": "private, max-age=1800" } }
     );
-  } catch (error: any) {
+  } catch (caught: unknown) {
+      const error = toError(caught);
     console.error("Error processing cover letter request:", error);
     return handleAPIError(error);
   }
@@ -180,4 +183,8 @@ export async function OPTIONS() {
       "Access-Control-Allow-Headers": "Content-Type, Authorization",
     },
   });
+}
+
+export async function POST(req: Request): Promise<Response> {
+  return withUsage(req, "cover_letter", handleRequest);
 }

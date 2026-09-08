@@ -2,7 +2,7 @@
 "use client";
 
 import { useEffect, useState, Suspense } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import confetti from "canvas-confetti";
 import { supabase } from "../lib/supabaseClient";
@@ -23,11 +23,9 @@ interface PaymentVerification {
 }
 
 function SuccessPageContent() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const [state, setState] = useState<SuccessState>("loading");
   const [errorMessage, setErrorMessage] = useState("");
-  const [user, setUser] = useState<any>(null);
   const [retryCount, setRetryCount] = useState(0);
 
   useEffect(() => {
@@ -50,8 +48,6 @@ function SuccessPageContent() {
           return;
         }
 
-        setUser(currentUser);
-
         const sessionId = searchParams.get("session_id");
 
         if (!sessionId) {
@@ -63,8 +59,7 @@ function SuccessPageContent() {
 
         // Verify the payment with our backend
         const verificationResult = await verifyPayment(
-          sessionId,
-          currentUser.id
+          sessionId
         );
 
         if (verificationResult.success) {
@@ -96,8 +91,7 @@ function SuccessPageContent() {
   }, [searchParams, retryCount]);
 
   const verifyPayment = async (
-    sessionId: string,
-    userId: string
+    sessionId: string
   ): Promise<PaymentVerification> => {
     try {
       const response = await authFetch("/api/stripe", {

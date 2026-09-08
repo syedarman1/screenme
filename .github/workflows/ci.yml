@@ -1,0 +1,33 @@
+name: Checks
+on:
+  push:
+    branches: [master]
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - name: Start disposable database
+        run: |
+          docker run -d --name codex-screenme-ci -e POSTGRES_HOST_AUTH_METHOD=trust postgres:17-alpine
+          for attempt in $(seq 1 30); do
+            if docker exec codex-screenme-ci pg_isready -U postgres; then exit 0; fi
+            sleep 1
+          done
+          exit 1
+      - run: npm test
+        env:
+          SCREENME_TEST_DB: codex-screenme-ci
+      - run: npm run build
+      - run: npm audit --audit-level=low

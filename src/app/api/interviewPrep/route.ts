@@ -1,7 +1,11 @@
+import { record } from "../../lib/value";
+
+import { toError } from "../../lib/value";
+import { withUsage } from "../../lib/aiRequest";
 // src/app/api/interviewPrep/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
-import { checkUsageLimit, incrementUsage } from "../../lib/usageTracker";
+import { checkUsageLimit } from "../../lib/usageTracker";
 import { ErrorTypes, handleAPIError } from "../../lib/errorHandler";
 import { getAuthenticatedUser, unauthorized } from "../../lib/auth";
 
@@ -12,7 +16,7 @@ const openai = process.env.OPENAI_API_KEY
   : null;
 
 /* ── Router ───────────────────────────────────────────────── */
-export async function POST(req: NextRequest) {
+async function handleRequest(req: NextRequest) {
   try {
     const user = await getAuthenticatedUser(req);
     if (!user) return unauthorized();
@@ -21,7 +25,8 @@ export async function POST(req: NextRequest) {
     if (contentType.includes("application/json"))   return handleQAGeneration(req, user.id);
     if (contentType.includes("multipart/form-data")) return handleAudioChat(req, user.id);
     return NextResponse.json({ error: "Unsupported content type." }, { status: 400 });
-  } catch (e: any) {
+  } catch (caught: unknown) {
+      const e = toError(caught);
     return handleAPIError(e);
   }
 }
@@ -110,7 +115,8 @@ Rules:
     });
     result = completion.choices[0]?.message?.content ?? "";
     if (!result) throw ErrorTypes.OPENAI_SERVICE_ERROR();
-  } catch (error: any) {
+  } catch (caught: unknown) {
+      const error = toError(caught);
     console.error("Q&A generation error:", error);
     if (error.message?.includes("rate limit") || error.message?.includes("quota")) {
       return NextResponse.json({ error: "Interview question generation temporarily unavailable. Please try again shortly." }, { status: 503 });
@@ -119,11 +125,11 @@ Rules:
   }
 
   /* ── Parse & sanitize ───────────────────────────────────── */
-  let parsed: any;
+  let parsed: Record<string, unknown>;
   try {
-    parsed = JSON.parse(result);
+    parsed = record(JSON.parse(result));
   } catch {
-    console.error("GPT returned non-JSON:", result.substring(0, 500));
+    console.error("AI returned an invalid JSON response");
     return handleAPIError(ErrorTypes.INVALID_RESPONSE_FORMAT());
   }
 
@@ -135,9 +141,9 @@ Rules:
   const VALID_DIFFS = ["Easy", "Medium", "Hard"];
 
   const questions = parsed.questions
-    .filter((q: any) => q && typeof q.question === "string" && q.question.trim().length > 0)
+    .filter((q) => q && typeof q.question === "string" && q.question.trim().length > 0)
     .slice(0, 6)
-    .map((q: any) => ({
+    .map((q) => ({
       question:    String(q.question   || "").slice(0, 300),
       type:        VALID_TYPES.includes(q.type) ? q.type : "Role-Specific",
       difficulty:  VALID_DIFFS.includes(q.difficulty) ? q.difficulty : "Medium",
@@ -150,8 +156,6 @@ Rules:
   }
 
   /* ── Increment usage ────────────────────────────────────── */
-  const ok = await incrementUsage(userId, "interview_prep");
-  if (!ok) console.warn("Failed to increment usage for user:", userId);
 
   return NextResponse.json({ questions }, {
     headers: { "Cache-Control": "private, max-age=1800" },
@@ -221,7 +225,8 @@ async function handleAudioChat(req: NextRequest, userId: string) {
         transcript: "",
       }, { status: 400 });
     }
-  } catch (error: any) {
+  } catch (caught: unknown) {
+      const error = toError(caught);
     console.error("Whisper error:", error);
     return NextResponse.json({ error: "Audio transcription failed. Check your microphone and try again." }, { status: 500 });
   }
@@ -264,7 +269,8 @@ Do not give lengthy explanations. Be concise and conversational.`,
     });
     reply = chatResp.choices[0]?.message?.content?.trim() ?? "";
     if (!reply) reply = "I heard your response. Could you elaborate a bit more on that?";
-  } catch (error: any) {
+  } catch (caught: unknown) {
+      const error = toError(caught);
     console.error("GPT error:", error);
     return NextResponse.json({
       error: "AI interviewer temporarily unavailable.",
@@ -287,4 +293,8 @@ export async function OPTIONS() {
       "Access-Control-Allow-Headers": "Content-Type, Authorization",
     },
   });
+}
+
+export async function POST(req: Request): Promise<Response> {
+  return withUsage(req, "interview_prep", handleRequest);
 }

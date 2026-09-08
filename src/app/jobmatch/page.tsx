@@ -1,6 +1,8 @@
 // src/app/jobmatch/page.tsx
 "use client";
 
+import { toError } from "../lib/value";
+
 import React, { useState, useCallback, useRef } from "react";
 import ResumeUploader from "../components/ResumeUploader";
 import { motion, AnimatePresence } from "framer-motion";
@@ -95,7 +97,6 @@ export default function JobMatchPage() {
 
     try {
       if (!supabase) throw new Error("Authentication service not available");
-      const { data: { user } } = await supabase.auth.getUser();
 
       const r = await authFetch("/api/jobMatch", {
         method: "POST",
@@ -108,7 +109,8 @@ export default function JobMatchPage() {
       setResult(data as MatchResult);
       setActiveTab("matched");
       setTimeout(() => resultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 150);
-    } catch (err: any) {
+    } catch (caught: unknown) {
+      const err = toError(caught);
       setError(err.message || "An unexpected error occurred");
     } finally {
       setLoading(false);

@@ -16,7 +16,9 @@ const TIERS = [
       "3 resume scans / month",
       "2 cover letters / month",
       "2 job-match analyses / month",
-      "Professional tone only",
+      "2 resume tailoring sessions / month",
+      "3 saved resumes and 10 tracked applications",
+      "Professional cover letter tone",
       "Email support",
     ],
     cta: "Get started free",
@@ -27,7 +29,7 @@ const TIERS = [
     name: "Pro",
     price: "$15",
     period: "/month",
-    desc: "Unlimited access. No caps, no compromises.",
+    desc: "All career tools, with no monthly usage caps.",
     features: [
       "Unlimited resume scans",
       "Unlimited cover letters",
@@ -35,26 +37,13 @@ const TIERS = [
       "Unlimited interview prep Q&A",
       "All tone options",
       "Live voice mock interviews",
-      "Priority support",
+      "Unlimited resume tailoring",
+      "20 saved resumes and unlimited applications",
     ],
     cta: "Upgrade to Pro",
     featured: true,
   },
-  {
-    id: "enterprise",
-    name: "Enterprise",
-    price: "Custom",
-    period: "",
-    desc: "For teams and organisations.",
-    features: [
-      "Everything in Pro",
-      "Team seats & analytics",
-      "Dedicated support & SLAs",
-      "Custom integrations",
-    ],
-    cta: "Contact us",
-    featured: false,
-  },
+
 ];
 
 const Check = () => (
@@ -75,7 +64,6 @@ export default function PricingSection() {
   }, []);
 
   const handleCta = async (tier: typeof TIERS[number]) => {
-    if (tier.id === "enterprise") { router.push("/contact"); return; }
     if (tier.id === "free") { router.push(authed ? "/dashboard" : "/login"); return; }
 
     if (!authed) {
@@ -91,7 +79,6 @@ export default function PricingSection() {
     setBusy(true);
     setErr(null);
     try {
-      const { data: { user } } = await supabase!.auth.getUser();
       const res = await authFetch("/api/stripe", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -116,7 +103,7 @@ export default function PricingSection() {
           <p className="text-fg-muted text-base">Start free. Upgrade when you&apos;re ready. Cancel anytime.</p>
         </div>
 
-        <div className="grid md:grid-cols-3 gap-4 items-start">
+        <div className="grid md:grid-cols-2 gap-4 items-start max-w-3xl mx-auto">
           {TIERS.map((tier) => (
             <div
               key={tier.id}
@@ -125,7 +112,7 @@ export default function PricingSection() {
               }`}
             >
               {tier.featured && (
-                <span className="badge badge-accent self-start">Most popular</span>
+                <span className="badge badge-accent self-start">Pro</span>
               )}
 
               <div>
@@ -163,6 +150,7 @@ export default function PricingSection() {
             </div>
           ))}
         </div>
+        <p className="text-center text-xs text-fg-muted mt-6 max-w-2xl mx-auto">Free allowances reset at the start of each calendar month (UTC). Pro renews monthly. Manage or cancel your subscription from the dashboard. Request rate limits apply to all plans.</p>
       </div>
     </section>
   );

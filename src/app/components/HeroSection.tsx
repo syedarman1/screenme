@@ -4,9 +4,9 @@ import React from "react";
 import Link from "next/link";
 
 const STATS = [
-  { value: "10k+", label: "Jobs landed" },
-  { value: "94%", label: "ATS pass rate" },
-  { value: "3×", label: "More callbacks" },
+  { value: "7 tools", label: "One workspace" },
+  { value: "PDF + TXT", label: "Resume uploads" },
+  { value: "Free plan", label: "No card needed" },
 ];
 
 export default function HeroSection() {

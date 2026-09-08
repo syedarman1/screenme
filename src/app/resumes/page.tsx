@@ -308,7 +308,7 @@ export default function ResumesPage() {
 }
 
 /* ── Save Resume Modal ──────────────────────────────────── */
-function SaveResumeModal({ userId, onClose, onSaved }: {
+function SaveResumeModal({ onClose, onSaved }: {
   userId: string;
   onClose: () => void;
   onSaved: () => void;

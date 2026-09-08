@@ -1,8 +1,11 @@
 // src/app/components/ResumeUploader.tsx
 "use client";
 
-import React, { useEffect, useState, useRef } from "react";
-import * as pdfjsLib from "pdfjs-dist/legacy/build/pdf";
+import { toError } from "../lib/value";
+
+import { extractPdf } from "../lib/extractPdf";
+import React, { useState, useRef } from "react";
+
 
 interface ResumeUploaderProps {
   onResumeSubmit: (txt: string) => void;
@@ -19,21 +22,9 @@ export default function ResumeUploader({ onResumeSubmit, simple = false }: Resum
   const [mode, setMode]             = useState<"upload" | "paste">("upload");
   const inputRef                    = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-    pdfjsLib.GlobalWorkerOptions.workerSrc =
-      `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
-  }, []);
-
   const extractTextFromPDF = async (data: ArrayBuffer): Promise<string> => {
     try {
-      const pdf = await pdfjsLib.getDocument({ data }).promise;
-      let txt = "";
-      for (let i = 1; i <= pdf.numPages; i++) {
-        const page    = await pdf.getPage(i);
-        const content = await page.getTextContent();
-        txt += content.items.map((x: any) => x.str).join(" ") + "\n\n";
-      }
-      return txt;
+      return await extractPdf(data);
     } catch (e) {
       console.error("PDF.js error:", e);
       throw new Error("Could not extract text — this may be an image-based PDF. Try pasting your resume text instead.");
@@ -62,7 +53,8 @@ export default function ResumeUploader({ onResumeSubmit, simple = false }: Resum
           : await f.text();
       setCharCount(txt.length);
       onResumeSubmit(txt);
-    } catch (err: any) {
+    } catch (caught: unknown) {
+      const err = toError(caught);
       setError(err.message);
       setFile(null);
       setCharCount(0);

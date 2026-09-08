@@ -1,146 +1,13 @@
+import { record } from "../../lib/value";
+
+import { toError } from "../../lib/value";
+import { withUsage } from "../../lib/aiRequest";
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
-import { z } from "zod";
-import { rateLimit } from "../../lib/rate-limit";
-import { checkUsageLimit, incrementUsage } from "../../lib/usageTracker";
+import { Section, IssueSchema, SimpleAuditSchema, type Audit, type SimpleAudit } from "../../lib/resumeSchema";
+import { checkUsageLimit } from "../../lib/usageTracker";
 import { ErrorTypes, handleAPIError, validateRequest, validateContentLength } from "../../lib/errorHandler";
 import { getAuthenticatedUser, unauthorized } from "../../lib/auth";
-
-// Extended sections to cover more resume types
-const Section = z.enum([
-  "Education",
-  "Skills",
-  "Experience",
-  "Projects",
-  "Summary",
-  "Certifications",
-  "Publications",
-  "Awards",
-  "Volunteer",
-  "Languages",
-  "Interests",
-  "References",
-  "Other"
-]);
-
-// Additional schema for format issues
-const FormatIssueSchema = z.object({
-  type: z.enum(["spacing", "consistency", "readability", "ats_compatibility", "visual_hierarchy"]),
-  description: z.string(),
-  severity: z.enum(["low", "medium", "high"]),
-  location: z.string().optional(),
-});
-
-// Enhanced issue schema with better categorization
-const IssueSchema = z.object({
-  section: Section,
-  line: z.string().min(5),
-  text: z.string().min(10),
-  severity: z.enum(["low", "medium", "high"]),
-  category: z.enum(["content", "format", "ats", "keyword", "structure"]),
-  reason: z.string().min(10).optional(),
-});
-
-const ActionSchema = z.object({
-  section: Section,
-  original: z.string().min(5),
-  rewrite: z.string().min(20),
-  improvement: z.string().min(10).optional(),
-  impact: z.enum(["high", "medium", "low"]), 
-});
-
-const StrengthSchema = z.object({
-  section: Section,
-  text: z.string().min(10),
-  reason: z.string().min(10),
-});
-
-const KeywordSchema = z.object({
-  category: z.string().min(3),
-  terms: z.array(z.string().min(2)),
-  missing: z.array(z.string().min(2)).optional(),
-  density: z.number().optional(), 
-});
-
-// New schema for parsed structure
-const ParsedStructureSchema = z.object({
-  contactInfo: z.object({
-    name: z.string().optional(),
-    email: z.string().optional(),
-    phone: z.string().optional(),
-    location: z.string().optional(),
-    linkedin: z.string().optional(),
-    portfolio: z.string().optional(),
-  }).optional(),
-  sections: z.array(z.object({
-    name: z.string(),
-    content: z.string(),
-    order: z.number(),
-  })),
-  metrics: z.object({
-    totalWords: z.number(),
-    bulletPoints: z.number(),
-    quantifiedAchievements: z.number(),
-    actionVerbs: z.number(),
-  }),
-});
-
-// Simplified audit schema for faster processing
-const SimpleAuditSchema = z.object({
-  score: z.number().int().min(0).max(100),
-  issues: z.array(z.object({
-    section: z.string(), 
-    line: z.string(),
-    text: z.string(),
-    severity: z.enum(["low", "medium", "high"]),
-    category: z.string(), 
-  })),
-  actions: z.array(z.object({
-    section: z.string(), 
-    original: z.string(),
-    rewrite: z.string(),
-  })),
-  strengths: z.array(z.object({
-    section: z.string(), 
-    text: z.string(),
-    reason: z.string(),
-  })).optional(),
-  keywords: z.array(z.object({
-    category: z.string(),
-    terms: z.array(z.string()),
-    missing: z.array(z.string()).optional(),
-    density: z.number().optional(),
-  })).optional(),
-  summary: z.string().optional(),
-});
-
-// Enhanced audit schema
-const AuditSchema = z.object({
-  score: z.number().int().min(0).max(100),
-  subscores: z.object({
-    content: z.number().min(0).max(100),
-    formatting: z.number().min(0).max(100),
-    ats: z.number().min(0).max(100),
-    keywords: z.number().min(0).max(100),
-  }).optional(),
-  issues: z.array(IssueSchema).max(15), 
-  formatIssues: z.array(FormatIssueSchema).optional(),
-  actions: z.array(ActionSchema).max(15),
-  strengths: z.array(StrengthSchema).max(5).optional(),
-  keywords: z.array(KeywordSchema).max(5).optional(),
-  parsedStructure: ParsedStructureSchema.optional(),
-  summary: z.string().min(50).max(500).optional(),
-  targetRole: z.string().optional(), 
-  experienceLevel: z.enum(["entry", "mid", "senior", "executive"]).optional(),
-  metadata: z.object({
-    analyzedAt: z.string(),
-    detectedFormat: z.string(),
-    bulletStyle: z.string(),
-    sectionsFound: z.number(),
-  }).optional(),
-});
-
-type Audit = z.infer<typeof AuditSchema>;
 
 // Optimized prompt for better accuracy and performance
 const OPTIMIZED_PROMPT = `
@@ -149,7 +16,7 @@ Analyze this resume and return ONLY valid JSON. Focus on actionable improvements
 SCORING METHOD:
 - Start at 100 points
 - HIGH severity: -12 points
-- MEDIUM severity: -4 points  
+- MEDIUM severity: -4 points
 - LOW severity: -2 points
 
 UNIVERSAL ANALYSIS CRITERIA:
@@ -244,7 +111,7 @@ function preprocessResume(text: string): {
   detectedFormat: string;
   bulletStyle: string;
 } {
-  
+
   const bulletStyles = {
     dash: /-\s+/g,
     asterisk: /\*\s+/g,
@@ -267,7 +134,7 @@ function preprocessResume(text: string): {
   // Detect format indicators
   const hasMarkdown = /[*_~`#]/.test(text);
   const hasHTML = /<[^>]+>/.test(text);
-  const hasPipes = /\|/.test(text); 
+  const hasPipes = /\|/.test(text);
 
   let detectedFormat = 'plain';
   if (hasMarkdown) detectedFormat = 'markdown';
@@ -275,7 +142,7 @@ function preprocessResume(text: string): {
   if (hasPipes) detectedFormat = 'table';
 
   // Normalize line breaks and spacing
-  let processedText = text
+  const processedText = text
     .replace(/\r\n/g, '\n')
     .replace(/\n{3,}/g, '\n\n')
     .trim();
@@ -311,7 +178,7 @@ function detectSections(text: string): string[] {
 // Helper to extract keywords from resume text
 function extractKeywordsFromText(text: string): { category: string; terms: string[] }[] {
   const keywords: { category: string; terms: string[] }[] = [];
-  
+
   // Common technical skills and tools
   const technicalSkills = [
     // Programming Languages
@@ -327,38 +194,38 @@ function extractKeywordsFromText(text: string): { category: string; terms: strin
     // Other Tools
     'Git', 'Jira', 'Confluence', 'Slack', 'Figma', 'Adobe Creative Suite', 'Microsoft Office', 'Excel', 'PowerPoint'
   ];
-  
+
   // Soft skills and methodologies
   const softSkills = [
     'Leadership', 'Communication', 'Team Management', 'Project Management', 'Problem Solving', 'Critical Thinking',
     'Agile', 'Scrum', 'Kanban', 'Waterfall', 'Lean', 'Six Sigma', 'Customer Service', 'Sales', 'Marketing',
     'Strategic Planning', 'Business Development', 'Financial Analysis', 'Risk Management', 'Quality Assurance'
   ];
-  
+
   // Extract technical skills
-  const foundTechnical = technicalSkills.filter(skill => 
+  const foundTechnical = technicalSkills.filter(skill =>
     text.toLowerCase().includes(skill.toLowerCase())
   );
-  
+
   // Extract soft skills
-  const foundSoft = softSkills.filter(skill => 
+  const foundSoft = softSkills.filter(skill =>
     text.toLowerCase().includes(skill.toLowerCase())
   );
-  
+
   if (foundTechnical.length > 0) {
     keywords.push({
       category: 'Technical Skills',
       terms: foundTechnical
     });
   }
-  
+
   if (foundSoft.length > 0) {
     keywords.push({
       category: 'Soft Skills & Methodologies',
       terms: foundSoft
     });
   }
-  
+
   return keywords;
 }
 
@@ -366,16 +233,16 @@ function extractKeywordsFromText(text: string): { category: string; terms: strin
 function extractBulletPoints(text: string): string[] {
   const bulletPoints: string[] = [];
   const lines = text.split('\n');
-  
+
   for (const line of lines) {
     const trimmed = line.trim();
     // Look for lines that start with bullet points or are likely bullet points
-    if (trimmed.match(/^[•\-\*→]\s+/) || 
+    if (trimmed.match(/^[•\-\*→]\s+/) ||
         (trimmed.length > 20 && trimmed.length < 200 && !trimmed.match(/^[A-Z][a-z]+:/))) {
       bulletPoints.push(trimmed);
     }
   }
-  
+
   return bulletPoints;
 }
 
@@ -384,12 +251,12 @@ function validateOriginalText(originalText: string, resumeText: string): string 
   // Check if the original text is a truncated version of something in the resume
   const normalizedOriginal = originalText.toLowerCase().trim();
   const normalizedResume = resumeText.toLowerCase();
-  
+
   // If the original text is found exactly in the resume, return it as is
   if (normalizedResume.includes(normalizedOriginal)) {
     return originalText;
   }
-  
+
   // Look for a longer version that contains the original text
   const lines = resumeText.split('\n');
   for (const line of lines) {
@@ -399,7 +266,7 @@ function validateOriginalText(originalText: string, resumeText: string): string 
       return line.trim();
     }
   }
-  
+
   // Also check against extracted bullet points
   const bulletPoints = extractBulletPoints(resumeText);
   for (const bullet of bulletPoints) {
@@ -409,13 +276,13 @@ function validateOriginalText(originalText: string, resumeText: string): string 
       return bullet;
     }
   }
-  
+
   // If no match found, return the original (this might be a legitimate short statement)
   return originalText;
 }
 
 // Helper to validate and fix issue-action pairs
-function validateIssueActionPairs(issues: any[], actions: any[], resumeText: string): { issues: any[], actions: any[] } {
+function validateIssueActionPairs(issues: SimpleAudit["issues"], actions: SimpleAudit["actions"], resumeText: string): { issues: SimpleAudit["issues"], actions: SimpleAudit["actions"] } {
   // Ensure same length
   const minLength = Math.min(issues.length, actions.length);
   issues = issues.slice(0, minLength);
@@ -423,23 +290,23 @@ function validateIssueActionPairs(issues: any[], actions: any[], resumeText: str
 
   actions = actions.map((action, index) => {
     const issue = issues[index];
-    
-    
+
+
     if (action.original !== issue.line) {
       action.original = issue.line;
     }
-    
-    
+
+
     const validatedOriginal = validateOriginalText(action.original, resumeText);
     action.original = validatedOriginal;
     issue.line = validatedOriginal;
-    
- 
+
+
     if (action.rewrite === action.original || action.rewrite.length < action.original.length) {
-      
+
       action.rewrite = action.original;
     }
-    
+
     return action;
   });
 
@@ -449,47 +316,19 @@ function validateIssueActionPairs(issues: any[], actions: any[], resumeText: str
 const openai = process.env.OPENAI_API_KEY
   ? new OpenAI({
     apiKey: process.env.OPENAI_API_KEY,
-    timeout: 60000, 
-    maxRetries: 1, 
+    timeout: 60000,
+    maxRetries: 1,
   })
   : null;
 
-export async function POST(req: Request) {
+async function handleRequest(req: Request) {
   try {
-    const ip = req.headers.get("x-forwarded-for") || "anonymous";
-    const { success, limit, remaining } = await rateLimit(ip);
-
-    if (!success) {
-      const retryMinutes = Math.ceil((limit - remaining) / 10); 
-      const rateLimitError = ErrorTypes.RATE_LIMIT_EXCEEDED(retryMinutes);
-      return NextResponse.json(
-        {
-          error: rateLimitError.message,
-          details: {
-            message: rateLimitError.message,
-            code: rateLimitError.code,
-            action: rateLimitError.action,
-            retryAfter: rateLimitError.retryAfter
-          },
-          timestamp: new Date().toISOString()
-        },
-        {
-          status: rateLimitError.status,
-          headers: {
-            "X-RateLimit-Limit": limit.toString(),
-            "X-RateLimit-Remaining": remaining.toString(),
-            "Retry-After": (rateLimitError.retryAfter || 300).toString()
-          }
-        }
-      );
-    }
-
     const user = await getAuthenticatedUser(req);
     if (!user) return unauthorized();
     const userId = user.id;
 
     const body = await req.json().catch(() => ({}));
-    const { resume, options, format } = body;
+    const { resume, options } = body;
 
     // Validate required fields
     const validationError = validateRequest(body, ['resume']);
@@ -497,7 +336,7 @@ export async function POST(req: Request) {
       return handleAPIError(validationError);
     }
 
-    
+
     const contentError = validateContentLength(
       resume,
       'Resume',
@@ -568,14 +407,14 @@ export async function POST(req: Request) {
 
     // Build the prompt
     let enhancedPrompt = OPTIMIZED_PROMPT;
-    
+
     if (options?.targetRole) {
       enhancedPrompt += `\n\nTarget Role: ${options.targetRole}`;
       enhancedPrompt += `\nPrioritize skills and experience relevant to this role.`;
     }
 
-    const model = options?.model || "gpt-4o-mini"; // Better for analysis tasks
-    const temperature = options?.temperature || 0.2; // Keep low for consistency
+    const model = process.env.RESUME_AI_MODEL || "gpt-4o-mini"; // Better for analysis tasks
+    const temperature = 0.2; // Keep low for consistency
 
     let raw = "";
 
@@ -596,9 +435,9 @@ export async function POST(req: Request) {
     }
 
     try {
-      
+
       // Add timeout to prevent hanging - 45 seconds should be sufficient
-      const gptPromise = openai.chat.completions.create({
+      const gpt = await openai.chat.completions.create({
         model,
         temperature,
         messages: [
@@ -607,24 +446,19 @@ export async function POST(req: Request) {
         ],
         response_format: { type: "json_object" },
         max_tokens: 2000, // Increased to handle longer responses with complete original text
-      });
+      }, { signal: AbortSignal.timeout(45_000) });
 
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('OpenAI timeout')), 45000) 
-      );
-
-      const gpt = await Promise.race([gptPromise, timeoutPromise]) as any;
-      
       raw = gpt.choices[0]?.message?.content ?? "";
-      
-    } catch (error: any) {
+
+    } catch (caught: unknown) {
+      const error = toError(caught);
       console.error('OpenAI API error:', error);
-      
+
       if (error.message === 'OpenAI timeout') {
         const timeoutError = ErrorTypes.PROCESSING_ERROR('analyze resume due to timeout. Please try again.');
         return handleAPIError(timeoutError);
       }
-      
+
       // Check for rate limiting
       if (error.status === 429 || error.message?.includes('rate limit')) {
         const rateLimitError = ErrorTypes.OPENAI_SERVICE_ERROR();
@@ -641,15 +475,15 @@ export async function POST(req: Request) {
           { status: 503 }
         );
       }
-      
+
       throw ErrorTypes.OPENAI_SERVICE_ERROR();
     }
 
     let parsed: unknown;
     try {
       parsed = JSON.parse(raw);
-    } catch (error) {
-      console.error("GPT sent non-JSON:", raw.substring(0, 500));
+    } catch {
+      console.error("AI returned an invalid resume-analysis response");
       const formatError = ErrorTypes.INVALID_RESPONSE_FORMAT();
       return NextResponse.json({
         error: formatError.message,
@@ -664,41 +498,41 @@ export async function POST(req: Request) {
     }
 
     // Sanitize before validation — GPT occasionally returns null/non-string values
-    const safe = parsed as any;
+    const safe = record(parsed);
     if (Array.isArray(safe?.issues)) {
       safe.issues = safe.issues
-        .filter((i: any) => i && typeof i.section === "string" && typeof i.line === "string" && typeof i.text === "string")
+        .filter((i) => i && typeof i.section === "string" && typeof i.line === "string" && typeof i.text === "string")
         .slice(0, 15);
     }
     if (Array.isArray(safe?.actions)) {
       safe.actions = safe.actions
-        .filter((a: any) => a && typeof a.section === "string" && typeof a.original === "string" && typeof a.rewrite === "string")
+        .filter((a) => a && typeof a.section === "string" && typeof a.original === "string" && typeof a.rewrite === "string")
         .slice(0, 15);
     }
     if (Array.isArray(safe?.strengths)) {
       safe.strengths = safe.strengths
-        .filter((s: any) => s && typeof s.section === "string" && typeof s.text === "string" && typeof s.reason === "string")
+        .filter((s) => s && typeof s.section === "string" && typeof s.text === "string" && typeof s.reason === "string")
         .slice(0, 10);
     }
     if (Array.isArray(safe?.keywords)) {
       safe.keywords = safe.keywords
-        .filter((k: any) => k && typeof k.category === "string" && k.category.length >= 1 && Array.isArray(k.terms))
-        .map((k: any) => ({
+        .filter((k) => k && typeof k.category === "string" && k.category.length >= 1 && Array.isArray(k.terms))
+        .map((k) => ({
           ...k,
           category: String(k.category),
-          terms: k.terms.filter((t: any) => typeof t === "string" && t.length >= 1).map(String),
+          terms: k.terms.filter((t: unknown) => typeof t === "string" && t.length >= 1).map(String),
           missing: Array.isArray(k.missing)
-            ? k.missing.filter((t: any) => typeof t === "string" && t.length >= 1).map(String)
+            ? k.missing.filter((t: unknown) => typeof t === "string" && t.length >= 1).map(String)
             : [],
         }))
-        .filter((k: any) => k.terms.length > 0)
+        .filter((k) => k.terms.length > 0)
         .slice(0, 10);
     }
 
     const result = SimpleAuditSchema.safeParse(safe);
     if (!result.success) {
       console.error("Schema validation errors:", result.error.format());
-      console.error("Raw parsed data:", JSON.stringify(parsed, null, 2).substring(0, 1000));
+
 
       const errors = result.error.issues;
       const errorMessages = errors.map(err =>
@@ -731,7 +565,7 @@ export async function POST(req: Request) {
       processedData.actions,
       processedText
     );
-    
+
     processedData.issues = validatedIssues;
     processedData.actions = validatedActions;
 
@@ -752,7 +586,7 @@ export async function POST(req: Request) {
          'integrated', 'leveraged', 'engineered', 'architected', 'crafted'];
 
        const firstWord = issue.line.toLowerCase().replace(/^[•\-\*]\s*/, '').split(/\s+/)[0];
-       if ((issue.text.toLowerCase().includes('weak') || issue.text.toLowerCase().includes('action verb')) 
+       if ((issue.text.toLowerCase().includes('weak') || issue.text.toLowerCase().includes('action verb'))
            && strongVerbs.includes(firstWord)) {
          processedData.actions.splice(index, 1);
          return false;
@@ -788,21 +622,21 @@ export async function POST(req: Request) {
      // Check if resume already has good metrics and strong content
      const hasGoodMetrics = /\d+%|\d+\+|\d+,\d+|\d{2,}%|\$\d+|\d+ users|\d+ students|\d+ scans/i.test(processedText);
      const hasStrongVerbs = /(boosted|increased|improved|developed|implemented|led|managed|achieved|delivered|transformed|established|streamlined|created|executed|spearheaded|pioneered|drove|facilitated|resolved|enhanced|optimized|designed|built|launched|constructed|trained|performed|deployed|integrated|leveraged|engineered|architected|crafted)/i.test(processedText);
-     
+
      let recalculatedScore = Math.max(0, 100 - (highIssues * 15) - (mediumIssues * 5) - (lowIssues * 2));
-     
+
      // Modest bonus for strong resumes, but keep room for improvement
      if (hasGoodMetrics && hasStrongVerbs) {
        recalculatedScore = Math.min(95, recalculatedScore + 5); // Cap at 95 to encourage improvement
      } else if (hasGoodMetrics || hasStrongVerbs) {
        recalculatedScore = Math.min(90, recalculatedScore + 3); // Cap at 90
      }
-     
+
      // Apply score caps for critical issues
      const hasHighAtsIssues = processedData.issues.some(
        i => i.severity === 'high' && i.category.toLowerCase().includes('ats')
      );
-     
+
      if (hasHighAtsIssues && recalculatedScore > 75) {
        processedData.score = 75;
      } else if (highIssues >= 3 && recalculatedScore > 70) {
@@ -814,7 +648,7 @@ export async function POST(req: Request) {
      // Ensure we have exactly 5 issues and actions
      const targetIssues = 5;
      const currentIssues = Math.min(processedData.issues.length, processedData.actions.length);
-     
+
      if (currentIssues < targetIssues) {
        // Generate additional constructive feedback
        const additionalIssues = generateAdditionalFeedback(processedText, processedData.issues, targetIssues - currentIssues);
@@ -831,10 +665,10 @@ export async function POST(req: Request) {
 
     // Extract keywords from resume text to ensure comprehensive coverage
     const extractedKeywords = extractKeywordsFromText(processedText);
-    
+
     // Combine AI-generated keywords with extracted keywords
     const enhancedKeywords = processedData.keywords || [];
-    
+
     // Add extracted keywords that weren't already identified by AI
     extractedKeywords.forEach(extracted => {
       const existingCategory = enhancedKeywords.find(k => k.category === extracted.category);
@@ -849,12 +683,12 @@ export async function POST(req: Request) {
 
     // Enhance strengths with specific examples from the resume
     const enhancedStrengths = processedData.strengths || [];
-    
+
     // Add strengths based on actual content found in resume
     const hasQuantifiedAchievements = /\d+%|\d+\+|\d+,\d+|\d{2,}%|\$\d+|\d+ users|\d+ students|\d+ scans/i.test(processedText);
     const hasStrongActionVerbs = /(boosted|increased|improved|developed|implemented|led|managed|achieved|delivered|transformed|established|streamlined|created|executed|spearheaded|pioneered|drove|facilitated|resolved|enhanced|optimized|designed|built|launched|constructed|trained|performed|deployed|integrated|leveraged|engineered|architected|crafted)/i.test(processedText);
     const hasTechnicalSkills = enhancedKeywords.some(k => k.category === 'Technical Skills' && k.terms.length > 0);
-    
+
     if (hasQuantifiedAchievements && !enhancedStrengths.some(s => s.text.toLowerCase().includes('quantified'))) {
       enhancedStrengths.push({
         section: "Experience",
@@ -862,7 +696,7 @@ export async function POST(req: Request) {
         reason: "Resume contains measurable results and impact statements"
       });
     }
-    
+
     if (hasStrongActionVerbs && !enhancedStrengths.some(s => s.text.toLowerCase().includes('action verb'))) {
       enhancedStrengths.push({
         section: "Experience",
@@ -870,7 +704,7 @@ export async function POST(req: Request) {
         reason: "Resume employs powerful verbs like 'led', 'developed', 'implemented', 'achieved'"
       });
     }
-    
+
     if (hasTechnicalSkills && !enhancedStrengths.some(s => s.text.toLowerCase().includes('technical'))) {
       const techSkills = enhancedKeywords.find(k => k.category === 'Technical Skills');
       if (techSkills) {
@@ -886,22 +720,22 @@ export async function POST(req: Request) {
     const audit: Audit = {
       score: processedData.score,
       issues: processedData.issues.map((i) => ({
-        section: (i.section === "Format" ? "Other" : i.section) as any,
+        section: Section.catch("Other").parse(i.section),
         line: clean(i.line),
         text: clean(i.text),
         severity: i.severity,
-        category: i.category as any,
+        category: IssueSchema.shape.category.catch("content").parse(i.category),
         reason: undefined,
       })),
       actions: processedData.actions.map((a) => ({
-        section: (a.section === "Format" ? "Other" : a.section) as any,
+        section: Section.catch("Other").parse(a.section),
         original: clean(a.original),
         rewrite: clean(a.rewrite),
         impact: "medium" as const,
         improvement: undefined,
       })),
       strengths: enhancedStrengths.map((s) => ({
-        section: (s.section === "Format" ? "Other" : s.section) as any,
+        section: Section.catch("Other").parse(s.section),
         text: clean(s.text),
         reason: clean(s.reason),
       })),
@@ -920,15 +754,6 @@ export async function POST(req: Request) {
       }
     };
 
-    try {
-      const incrementSuccess = await incrementUsage(userId, 'resume_scan');
-      if (!incrementSuccess) {
-        console.error('Failed to increment usage for user:', userId);
-      }
-    } catch (error) {
-      console.error('Exception incrementing usage:', error);
-    }
-
     return NextResponse.json(audit, {
       headers: {
         'Cache-Control': 'private, max-age=3600',
@@ -937,25 +762,26 @@ export async function POST(req: Request) {
         'Access-Control-Allow-Headers': 'Content-Type, Authorization',
       }
     });
-  } catch (error: any) {
+  } catch (caught: unknown) {
+      const error = toError(caught);
     console.error("Error processing resume:", error);
     return handleAPIError(error);
   }
 }
 
-function generateAdditionalFeedback(resumeText: string, existingIssues: any[], count: number): { issues: any[], actions: any[] } {
-  const additionalIssues: any[] = [];
-  const additionalActions: any[] = [];
-  
+function generateAdditionalFeedback(resumeText: string, existingIssues: SimpleAudit["issues"], count: number): { issues: SimpleAudit["issues"], actions: SimpleAudit["actions"] } {
+  const additionalIssues: SimpleAudit["issues"] = [];
+  const additionalActions: SimpleAudit["actions"] = [];
+
   // Analyze the resume to find actual sections and content
   const hasSummary = /summary|objective/i.test(resumeText);
   const hasSkills = /skills|technologies|languages/i.test(resumeText);
   const hasProjects = /projects|portfolio/i.test(resumeText);
   const hasCertifications = /certifications|certificates/i.test(resumeText);
-  
+
   // Generate feedback based on what's actually missing or could be improved
   const feedbackOptions = [];
-  
+
   if (!hasSummary) {
     feedbackOptions.push({
       section: "Summary",
@@ -967,7 +793,7 @@ function generateAdditionalFeedback(resumeText: string, existingIssues: any[], c
       rewrite: "Add a compelling 2-3 sentence summary highlighting your key strengths and career objectives"
     });
   }
-  
+
   if (hasSkills) {
     feedbackOptions.push({
       section: "Skills",
@@ -979,7 +805,7 @@ function generateAdditionalFeedback(resumeText: string, existingIssues: any[], c
       rewrite: "Organize skills by proficiency level (Expert, Advanced, Intermediate) to show depth of knowledge"
     });
   }
-  
+
   if (!hasCertifications) {
     feedbackOptions.push({
       section: "Education",
@@ -991,7 +817,7 @@ function generateAdditionalFeedback(resumeText: string, existingIssues: any[], c
       rewrite: "Add relevant certifications or additional training to demonstrate continuous learning"
     });
   }
-  
+
   if (hasProjects) {
     feedbackOptions.push({
       section: "Projects",
@@ -1003,7 +829,7 @@ function generateAdditionalFeedback(resumeText: string, existingIssues: any[], c
       rewrite: "Add business impact context to show how your technical work drives organizational value"
     });
   }
-  
+
   // Generic improvement suggestions that don't fabricate information
   feedbackOptions.push({
     section: "Experience",
@@ -1017,7 +843,7 @@ function generateAdditionalFeedback(resumeText: string, existingIssues: any[], c
 
   // Filter out feedback that might conflict with existing issues
   const existingSections = existingIssues.map(issue => issue.section);
-  const availableFeedback = feedbackOptions.filter(feedback => 
+  const availableFeedback = feedbackOptions.filter(feedback =>
     !existingSections.includes(feedback.section)
   );
 
@@ -1062,4 +888,7 @@ export async function OPTIONS() {
       'Access-Control-Allow-Headers': 'Content-Type, Authorization',
     },
   });
+}
+export async function POST(req: Request): Promise<Response> {
+  return withUsage(req, "resume_scan", handleRequest);
 }

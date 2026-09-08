@@ -173,7 +173,7 @@ const ContactPage = () => {
 
                 {submitStatus === "success" && (
                   <div className="alert-success" role="status">
-                    Message sent — we&apos;ll get back to you soon.
+                    Message received and saved for review.
                   </div>
                 )}
 
@@ -220,28 +220,13 @@ const ContactPage = () => {
                 </div>
               </div>
               <p className="text-sm text-fg-muted">
-                We typically respond within 24 hours
+                For account or billing questions, include the email address you use for ScreenMe.
               </p>
             </div>
 
             <div className="card p-6">
-              <h3 className="text-base font-semibold text-fg mb-4">
-                Response Times
-              </h3>
-              <div className="space-y-3">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-fg-muted">General inquiries</span>
-                  <span className="text-sm text-fg font-medium">24 hours</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-fg-muted">Technical support</span>
-                  <span className="text-sm text-fg font-medium">12 hours</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm text-fg-muted">Urgent issues</span>
-                  <span className="text-sm text-fg font-medium">4 hours</span>
-                </div>
-              </div>
+              <h3 className="text-base font-semibold text-fg mb-4">What to include</h3>
+              <p className="text-sm text-fg-muted">Describe the feature, what you expected, and any error message. Never send passwords or full payment card details.</p>
             </div>
 
             <div className="card p-6">
@@ -254,7 +239,7 @@ const ContactPage = () => {
                     How accurate is the resume scoring?
                   </h4>
                   <p className="text-sm text-fg-muted leading-relaxed">
-                    Our AI analyzes resumes using industry best practices and ATS optimization standards to provide accurate, actionable feedback.
+                    Scores are AI estimates to help you review your resume. They do not reproduce an employer’s screening system or guarantee interviews.
                   </p>
                 </div>
 
@@ -272,7 +257,7 @@ const ContactPage = () => {
                     Is my data secure?
                   </h4>
                   <p className="text-sm text-fg-muted leading-relaxed">
-                    Absolutely. We use enterprise-grade security and never share your information with third parties.
+                    We use service providers for account storage, AI processing, hosting, and payments. See our privacy notice for what each feature sends and stores.
                   </p>
                 </div>
 
