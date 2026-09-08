@@ -1,7 +1,8 @@
+import { withUsage } from "../../lib/aiRequest";
 // src/app/api/interviewPrep/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
-import { checkUsageLimit, incrementUsage } from "../../lib/usageTracker";
+import { checkUsageLimit } from "../../lib/usageTracker";
 import { ErrorTypes, handleAPIError } from "../../lib/errorHandler";
 import { getAuthenticatedUser, unauthorized } from "../../lib/auth";
 
@@ -12,7 +13,7 @@ const openai = process.env.OPENAI_API_KEY
   : null;
 
 /* ── Router ───────────────────────────────────────────────── */
-export async function POST(req: NextRequest) {
+async function handleRequest(req: NextRequest) {
   try {
     const user = await getAuthenticatedUser(req);
     if (!user) return unauthorized();
@@ -150,8 +151,6 @@ Rules:
   }
 
   /* ── Increment usage ────────────────────────────────────── */
-  const ok = await incrementUsage(userId, "interview_prep");
-  if (!ok) console.warn("Failed to increment usage for user:", userId);
 
   return NextResponse.json({ questions }, {
     headers: { "Cache-Control": "private, max-age=1800" },
@@ -287,4 +286,8 @@ export async function OPTIONS() {
       "Access-Control-Allow-Headers": "Content-Type, Authorization",
     },
   });
+}
+
+export async function POST(req: Request): Promise<Response> {
+  return withUsage(req, "interview_prep", handleRequest);
 }

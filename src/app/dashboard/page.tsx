@@ -34,14 +34,10 @@ export default function DashboardPage() {
         if (e || !data?.user) { setError("Please sign in to access your dashboard."); return; }
         setUser(data.user);
 
-        const { data: pd, error: pe } = await supabase.from("user_plans").select("plan").eq("user_id", data.user.id).single();
-        // No client-side writes to user_plans — a signup trigger seeds the row
-        // and the server creates it on first use. Default to free until then.
-        if (pe && pe.code !== "PGRST116") throw pe;
-        setPlan(pd?.plan || "free");
-
-        const { data: ud } = await supabase.from("user_usage").select("*").eq("user_id", data.user.id).single();
-        setUsage(ud);
+        const usageResponse = await authFetch("/api/usage", { method: "POST" });
+        if (!usageResponse.ok) throw new Error("Could not load your plan. Please retry.");
+        const currentUsage = await usageResponse.json();
+        setPlan(currentUsage.plan); setUsage(currentUsage);
 
         // Live plan updates — isolated so a realtime hiccup never gates the dashboard.
         try {

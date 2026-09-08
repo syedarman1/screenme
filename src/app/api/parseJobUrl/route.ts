@@ -1,3 +1,5 @@
+import { allowedJobUrl, fetchJobPage } from "../../lib/jobUrl";
+import { withUsage } from "../../lib/aiRequest";
 // src/app/api/parseJobUrl/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
@@ -5,37 +7,6 @@ import OpenAI from "openai";
 const openai = process.env.OPENAI_API_KEY
   ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY, timeout: 30000 })
   : null;
-
-const ALLOWED_HOSTS = [
-  "linkedin.com", "www.linkedin.com",
-  "indeed.com", "www.indeed.com",
-  "glassdoor.com", "www.glassdoor.com",
-  "lever.co",
-  "greenhouse.io", "boards.greenhouse.io",
-  "jobs.lever.co",
-  "workday.com",
-  "myworkdayjobs.com",
-  "angel.co", "wellfound.com",
-  "ziprecruiter.com", "www.ziprecruiter.com",
-  "monster.com", "www.monster.com",
-  "dice.com", "www.dice.com",
-  "simplyhired.com", "www.simplyhired.com",
-  "careers.google.com",
-  "jobs.apple.com",
-  "amazon.jobs", "www.amazon.jobs",
-];
-
-function isAllowedUrl(urlStr: string): boolean {
-  try {
-    const u = new URL(urlStr);
-    if (u.protocol !== "https:" && u.protocol !== "http:") return false;
-    const host = u.hostname.toLowerCase();
-    // Allow any host that ends with one of our allowed domains
-    return ALLOWED_HOSTS.some(h => host === h || host.endsWith(`.${h}`));
-  } catch {
-    return false;
-  }
-}
 
 function stripHtml(html: string): string {
   // Remove script/style blocks
@@ -52,7 +23,7 @@ function stripHtml(html: string): string {
   return text;
 }
 
-export async function POST(req: NextRequest) {
+async function handleRequest(req: NextRequest) {
   if (!openai) return NextResponse.json({ error: "AI service not configured." }, { status: 503 });
 
   const body = await req.json().catch(() => ({}));
@@ -64,7 +35,7 @@ export async function POST(req: NextRequest) {
 
   const trimmedUrl = url.trim();
 
-  if (!isAllowedUrl(trimmedUrl)) {
+  try { allowedJobUrl(trimmedUrl); } catch {
     return NextResponse.json({
       error: "URL not supported. We support LinkedIn, Indeed, Glassdoor, Greenhouse, Lever, and other major job boards. You can still paste the job description manually.",
     }, { status: 400 });
@@ -73,21 +44,7 @@ export async function POST(req: NextRequest) {
   /* ── Fetch the page ─────────────────────────────────────── */
   let rawHtml: string;
   try {
-    const res = await fetch(trimmedUrl, {
-      headers: {
-        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-        "Accept-Language": "en-US,en;q=0.9",
-      },
-      redirect: "follow",
-      signal: AbortSignal.timeout(15000),
-    });
-    if (!res.ok) {
-      return NextResponse.json({
-        error: `Could not fetch job posting (HTTP ${res.status}). The site may require login. Try pasting the job description manually.`,
-      }, { status: 400 });
-    }
-    rawHtml = await res.text();
+    rawHtml = await fetchJobPage(trimmedUrl);
   } catch (e: any) {
     console.error("Fetch job URL error:", e);
     return NextResponse.json({
@@ -169,4 +126,8 @@ Rules:
       error: "Failed to parse job posting. Try pasting the description manually.",
     }, { status: 500 });
   }
+}
+
+export async function POST(req: Request): Promise<Response> {
+  return withUsage(req, null, handleRequest);
 }

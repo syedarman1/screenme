@@ -1,7 +1,8 @@
+import { withUsage } from "../../lib/aiRequest";
 // src/app/api/tailorResume/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
-import { checkUsageLimit, incrementUsage } from "../../lib/usageTracker";
+import { checkUsageLimit } from "../../lib/usageTracker";
 import { ErrorTypes, handleAPIError } from "../../lib/errorHandler";
 import { getAuthenticatedUser, unauthorized } from "../../lib/auth";
 
@@ -9,7 +10,7 @@ const openai = process.env.OPENAI_API_KEY
   ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY, timeout: 45000 })
   : null;
 
-export async function POST(req: NextRequest) {
+async function handleRequest(req: NextRequest) {
   if (!openai) return NextResponse.json({ error: "AI service not configured." }, { status: 503 });
 
   const user = await getAuthenticatedUser(req);
@@ -66,9 +67,6 @@ The output should be ready to paste directly into a resume template.`;
       return NextResponse.json({ error: "Failed to generate tailored resume. Please try again." }, { status: 500 });
     }
 
-    /* ── Increment usage ── */
-    const ok = await incrementUsage(userId, "resume_tailor");
-    if (!ok) console.warn("Failed to increment usage for user:", userId);
 
     return NextResponse.json({
       tailoredResume: tailored,
@@ -82,4 +80,8 @@ The output should be ready to paste directly into a resume template.`;
     }
     return NextResponse.json({ error: "Failed to tailor resume. Please try again." }, { status: 500 });
   }
+}
+
+export async function POST(req: Request): Promise<Response> {
+  return withUsage(req, "resume_tailor", handleRequest);
 }

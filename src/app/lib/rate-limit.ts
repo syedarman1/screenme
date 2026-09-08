@@ -1,36 +1,11 @@
+import { createHash } from "node:crypto";
+import { supabaseAdmin as db } from "./supabaseAdmin";
 
-
-interface RateLimitResult {
-    success: boolean;
-    limit: number;
-    remaining: number;
-  }
-  
-  const store = new Map<string, { count: number; timestamp: number }>();
-  const WINDOW_SIZE = 60 * 1000; // 1 minute in milliseconds
-  const MAX_REQUESTS = 10; // Maximum number of requests per minute
-  
-  export async function rateLimit(key: string): Promise<RateLimitResult> {
-    const now = Date.now();
-    const record = store.get(key);
-  
-
-    if (record && now - record.timestamp > WINDOW_SIZE) {
-      store.delete(key);
-    }
-  
-
-    const current = store.get(key) || { count: 0, timestamp: now };
-    const newCount = current.count + 1;
-    store.set(key, { count: newCount, timestamp: current.timestamp });
-  
-
-    const remaining = Math.max(0, MAX_REQUESTS - newCount);
-    const success = newCount <= MAX_REQUESTS;
-  
-    return {
-      success,
-      limit: MAX_REQUESTS,
-      remaining,
-    };
-  }
+export async function rateLimit(key: string, limit = 10, window = 60): Promise<{ success: boolean; limit: number; remaining: number; retryAfter: number }> {
+  if (!db) throw new Error("Rate limiting is unavailable.");
+  const { data, error } = await db.rpc("screenme_rate_limit", {
+    p_key: createHash("sha256").update(key).digest("hex"), p_limit: limit, p_window: window,
+  });
+  if (error || !data) throw new Error("Rate limiting is unavailable.");
+  return data;
+}

@@ -1,7 +1,8 @@
+import { withUsage } from "../../lib/aiRequest";
 // app/api/coverLetter/route.ts
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
-import { checkUsageLimit, incrementUsage } from "../../lib/usageTracker";
+import { checkUsageLimit } from "../../lib/usageTracker";
 import { ErrorTypes, handleAPIError, validateRequest, validateContentLength } from "../../lib/errorHandler";
 import { getAuthenticatedUser, unauthorized } from "../../lib/auth";
 
@@ -67,7 +68,7 @@ const openai = process.env.OPENAI_API_KEY
 const VALID_TONES = Object.keys(toneInstructions);
 
 /* ── POST ─────────────────────────────────────────────────── */
-export async function POST(request: Request) {
+async function handleRequest(request: Request) {
   try {
     const user = await getAuthenticatedUser(request);
     if (!user) return unauthorized();
@@ -156,8 +157,6 @@ ${jobDesc?.trim() ? `\nJOB DESCRIPTION:\n${String(jobDesc).trim()}` : ""}
       return handleAPIError(ErrorTypes.OPENAI_SERVICE_ERROR());
     }
 
-    const ok = await incrementUsage(userId, "cover_letter");
-    if (!ok) console.warn("Failed to increment usage for user:", userId);
 
     const wordCount = coverLetter.split(/\s+/).filter(Boolean).length;
 
@@ -180,4 +179,8 @@ export async function OPTIONS() {
       "Access-Control-Allow-Headers": "Content-Type, Authorization",
     },
   });
+}
+
+export async function POST(req: Request): Promise<Response> {
+  return withUsage(req, "cover_letter", handleRequest);
 }

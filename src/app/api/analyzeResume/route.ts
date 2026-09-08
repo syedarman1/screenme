@@ -1,8 +1,8 @@
+import { withUsage } from "../../lib/aiRequest";
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
 import { z } from "zod";
-import { rateLimit } from "../../lib/rate-limit";
-import { checkUsageLimit, incrementUsage } from "../../lib/usageTracker";
+import { checkUsageLimit } from "../../lib/usageTracker";
 import { ErrorTypes, handleAPIError, validateRequest, validateContentLength } from "../../lib/errorHandler";
 import { getAuthenticatedUser, unauthorized } from "../../lib/auth";
 
@@ -454,36 +454,8 @@ const openai = process.env.OPENAI_API_KEY
   })
   : null;
 
-export async function POST(req: Request) {
+async function handleRequest(req: Request) {
   try {
-    const ip = req.headers.get("x-forwarded-for") || "anonymous";
-    const { success, limit, remaining } = await rateLimit(ip);
-
-    if (!success) {
-      const retryMinutes = Math.ceil((limit - remaining) / 10); 
-      const rateLimitError = ErrorTypes.RATE_LIMIT_EXCEEDED(retryMinutes);
-      return NextResponse.json(
-        {
-          error: rateLimitError.message,
-          details: {
-            message: rateLimitError.message,
-            code: rateLimitError.code,
-            action: rateLimitError.action,
-            retryAfter: rateLimitError.retryAfter
-          },
-          timestamp: new Date().toISOString()
-        },
-        {
-          status: rateLimitError.status,
-          headers: {
-            "X-RateLimit-Limit": limit.toString(),
-            "X-RateLimit-Remaining": remaining.toString(),
-            "Retry-After": (rateLimitError.retryAfter || 300).toString()
-          }
-        }
-      );
-    }
-
     const user = await getAuthenticatedUser(req);
     if (!user) return unauthorized();
     const userId = user.id;
@@ -920,15 +892,6 @@ export async function POST(req: Request) {
       }
     };
 
-    try {
-      const incrementSuccess = await incrementUsage(userId, 'resume_scan');
-      if (!incrementSuccess) {
-        console.error('Failed to increment usage for user:', userId);
-      }
-    } catch (error) {
-      console.error('Exception incrementing usage:', error);
-    }
-
     return NextResponse.json(audit, {
       headers: {
         'Cache-Control': 'private, max-age=3600',
@@ -1062,4 +1025,7 @@ export async function OPTIONS() {
       'Access-Control-Allow-Headers': 'Content-Type, Authorization',
     },
   });
+}
+export async function POST(req: Request): Promise<Response> {
+  return withUsage(req, "resume_scan", handleRequest);
 }

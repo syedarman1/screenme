@@ -1,3 +1,4 @@
+import { withUsage } from "../../lib/aiRequest";
 // src/app/api/interviewConversation/route.ts
 
 import { NextRequest, NextResponse } from "next/server";
@@ -18,7 +19,7 @@ const openai = process.env.OPENAI_API_KEY
   ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
   : null;
 
-export async function POST(req: NextRequest) {
+async function handleRequest(req: NextRequest) {
     try { // Wrap main logic in a try...catch
         if (!openai) {
             return NextResponse.json(
@@ -177,4 +178,7 @@ export async function POST(req: NextRequest) {
          console.error("UNEXPECTED API ROUTE ERROR:", e);
          return NextResponse.json({ error: "An unexpected server error occurred.", details: e.message }, { status: 500 });
     }
+}
+export async function POST(req: Request): Promise<Response> {
+  return withUsage(req, "interview_prep", handleRequest);
 }

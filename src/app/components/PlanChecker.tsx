@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import { authFetch } from "../lib/authFetch";
 import { supabase } from "../lib/supabaseClient";
 import { useRouter } from "next/navigation";
 
@@ -19,7 +20,7 @@ export default function PlanChecker({
 }: PlanCheckerProps) {
   const [allowed, setAllowed] = useState<boolean>(true);
   const [loading, setLoading] = useState<boolean>(true);
-  const [debugInfo, setDebugInfo] = useState<any>(null);
+  const [accessError, setAccessError] = useState<string | null>(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -39,41 +40,14 @@ export default function PlanChecker({
           return;
         }
 
-        if (requiredPlan === "pro") {
-          const { data: planUsageData, error } = await supabase.rpc(
-            "get_user_plan_and_usage",
-            { p_user_id: user.id }
-          );
-
-          if (error) { setAllowed(false); return; }
-
-          const planData = planUsageData?.[0];
-          if (!planData || planData.plan !== "pro") {
-            setAllowed(false);
-            return;
-          }
-          setAllowed(true);
-        } else if (feature) {
-          const { data: canUse, error } = await supabase.rpc(
-            "can_use_feature",
-            { p_user_id: user.id, p_feature: feature }
-          );
-
-          if (error) { setAllowed(false); return; }
-
-          if (process.env.NODE_ENV === "development") {
-            const { data: debugData } = await supabase.rpc("debug_user_status", {
-              p_user_id: user.id,
-            });
-            setDebugInfo(debugData?.[0]);
-          }
-
-          if (!canUse) { setAllowed(false); return; }
-          setAllowed(true);
-        } else {
-          setAllowed(true);
-        }
+        const res = await authFetch("/api/usage", { method: "POST" });
+        if (!res.ok) throw new Error("Could not load your plan. Please refresh and try again.");
+        const usage = await res.json();
+        const fields = { resume_scan: "resume_scans", cover_letter: "cover_letters", job_match: "job_matches", interview_prep: "interview_preps", resume_tailor: "resume_tailors" };
+        const limits = { resume_scan: 3, cover_letter: 2, job_match: 2, interview_prep: 0, resume_tailor: 2 };
+        setAllowed(usage.plan === "pro" || (requiredPlan !== "pro" && (!feature || usage[fields[feature]] < limits[feature])));
       } catch {
+        setAccessError("Could not load your plan. Please refresh and try again.");
         setAllowed(false);
       } finally {
         setLoading(false);
@@ -135,15 +109,7 @@ export default function PlanChecker({
             </div>
           </div>
 
-          {debugInfo && process.env.NODE_ENV === "development" && (
-            <details className="mb-4 text-left">
-              <summary className="cursor-pointer text-xs text-fg-subtle">Debug Info</summary>
-              <pre className="text-xs text-fg-muted mt-1 overflow-auto bg-surface-2 p-2 rounded-lg border border-border">
-                {JSON.stringify(debugInfo, null, 2)}
-              </pre>
-            </details>
-          )}
-
+          {accessError && <p role="alert" className="text-sm text-red mb-4">{accessError}</p>}
           <button
             onClick={() => onUpgradeClick ? onUpgradeClick() : router.push("/dashboard")}
             className="btn btn-primary w-full py-3 cursor-pointer"

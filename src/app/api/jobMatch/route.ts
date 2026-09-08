@@ -1,8 +1,9 @@
+import { withUsage } from "../../lib/aiRequest";
 // app/api/jobMatch/route.ts
 import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { z } from 'zod';
-import { checkUsageLimit, incrementUsage } from '../../lib/usageTracker';
+import { checkUsageLimit } from '../../lib/usageTracker';
 import { ErrorTypes, handleAPIError, validateRequest, validateContentLength } from '../../lib/errorHandler';
 import { getAuthenticatedUser, unauthorized } from '../../lib/auth';
 
@@ -64,7 +65,7 @@ const openai = process.env.OPENAI_API_KEY
   : null;
 
 /* ── POST ─────────────────────────────────────────────────── */
-export async function POST(req: Request) {
+async function handleRequest(req: Request) {
   try {
     const user = await getAuthenticatedUser(req);
     if (!user) return unauthorized();
@@ -182,8 +183,6 @@ export async function POST(req: Request) {
     }
 
     /* ── Increment usage + respond ────────────────────────── */
-    const ok = await incrementUsage(userId, 'job_match');
-    if (!ok) console.warn('Failed to increment usage for user:', userId);
 
     const data: MatchResult = validation.data;
     return NextResponse.json({ ...data, success: true }, {
@@ -205,4 +204,8 @@ export async function OPTIONS() {
       'Access-Control-Allow-Headers': 'Content-Type, Authorization',
     },
   });
+}
+
+export async function POST(req: Request): Promise<Response> {
+  return withUsage(req, "job_match", handleRequest);
 }
