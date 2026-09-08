@@ -3,15 +3,11 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  outputFileTracingRoot: process.cwd(),
 
   eslint: {
     // Disable ESLint during builds for now - allows deployment with code quality warnings
     ignoreDuringBuilds: true,
-  },
-
-  typescript: {
-    // Allow build with TypeScript warnings
-    ignoreBuildErrors: true,
   },
 
   webpack(config) {
