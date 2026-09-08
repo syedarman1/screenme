@@ -82,6 +82,17 @@ export default function DashboardPage() {
     } finally { setBusy(false); }
   };
 
+  const handleBilling = async () => {
+    setBusy(true); setUpgradeErr(null);
+    try {
+      const res = await authFetch("/api/stripe/portal", { method: "POST" });
+      const data = await res.json();
+      if (!res.ok || !data.url) throw new Error(data.error || "Billing is unavailable.");
+      window.location.assign(data.url);
+    } catch (error) { setUpgradeErr(error instanceof Error ? error.message : "Billing is unavailable."); }
+    finally { setBusy(false); }
+  };
+
   const isPro = plan === "pro";
 
   const tools: Tool[] = [
@@ -181,6 +192,8 @@ export default function DashboardPage() {
                   {isPro ? "Unlimited access to all features." : "3 scans · 2 cover letters · 2 job matches · 2 tailors per month."}
                 </p>
               </div>
+              <button onClick={handleBilling} disabled={busy} className="btn btn-secondary disabled:opacity-50">Manage billing</button>
+              {isPro && upgradeErr && <p className="text-xs text-red" role="alert">{upgradeErr}</p>}
               {!isPro && (
                 <div className="flex flex-col items-end gap-2">
                   <button onClick={handleUpgrade} disabled={busy} className="btn btn-primary disabled:opacity-50">
