@@ -106,7 +106,7 @@ export default function PlanChecker({
                 "Unlimited resume scans & tailoring",
                 "Unlimited cover letters & job matching",
                 "AI mock interview with voice",
-                "Unlimited applications & saved resumes",
+                "Unlimited applications & 20 saved resumes",
               ].map((benefit) => (
                 <div key={benefit} className="flex items-center gap-2.5">
                   <svg className="w-4 h-4 text-green shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
