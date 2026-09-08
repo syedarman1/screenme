@@ -802,4 +802,3 @@ grant execute on function public.record_payment_event(uuid,text,text,bigint,text
 grant execute on function public.record_payment_event(uuid,text,text,bigint,text,text,text,text,text,text,text,text,jsonb,timestamp with time zone) to public;
 grant usage on all sequences in schema public to service_role;
 commit;
-

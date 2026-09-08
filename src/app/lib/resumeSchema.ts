@@ -39,7 +39,7 @@ const ActionSchema = z.object({
   original: z.string().min(5),
   rewrite: z.string().min(20),
   improvement: z.string().min(10).optional(),
-  impact: z.enum(["high", "medium", "low"]), 
+  impact: z.enum(["high", "medium", "low"]),
 });
 
 const StrengthSchema = z.object({
@@ -52,7 +52,7 @@ const KeywordSchema = z.object({
   category: z.string().min(3),
   terms: z.array(z.string().min(2)),
   missing: z.array(z.string().min(2)).optional(),
-  density: z.number().optional(), 
+  density: z.number().optional(),
 });
 
 // New schema for parsed structure
@@ -82,19 +82,19 @@ const ParsedStructureSchema = z.object({
 export const SimpleAuditSchema = z.object({
   score: z.number().int().min(0).max(100),
   issues: z.array(z.object({
-    section: z.string(), 
+    section: z.string(),
     line: z.string(),
     text: z.string(),
     severity: z.enum(["low", "medium", "high"]),
-    category: z.string(), 
+    category: z.string(),
   })),
   actions: z.array(z.object({
-    section: z.string(), 
+    section: z.string(),
     original: z.string(),
     rewrite: z.string(),
   })),
   strengths: z.array(z.object({
-    section: z.string(), 
+    section: z.string(),
     text: z.string(),
     reason: z.string(),
   })).optional(),
@@ -116,14 +116,14 @@ export const AuditSchema = z.object({
     ats: z.number().min(0).max(100),
     keywords: z.number().min(0).max(100),
   }).optional(),
-  issues: z.array(IssueSchema).max(15), 
+  issues: z.array(IssueSchema).max(15),
   formatIssues: z.array(FormatIssueSchema).optional(),
   actions: z.array(ActionSchema).max(15),
   strengths: z.array(StrengthSchema).max(5).optional(),
   keywords: z.array(KeywordSchema).max(5).optional(),
   parsedStructure: ParsedStructureSchema.optional(),
   summary: z.string().min(50).max(500).optional(),
-  targetRole: z.string().optional(), 
+  targetRole: z.string().optional(),
   experienceLevel: z.enum(["entry", "mid", "senior", "executive"]).optional(),
   metadata: z.object({
     analyzedAt: z.string(),
@@ -135,4 +135,3 @@ export const AuditSchema = z.object({
 
 export type Audit = z.infer<typeof AuditSchema>;
 export type SimpleAudit = z.infer<typeof SimpleAuditSchema>;
-
