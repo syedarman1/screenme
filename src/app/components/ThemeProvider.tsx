@@ -13,15 +13,15 @@ export const useTheme = () => useContext(ThemeContext);
 
 export default function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setTheme] = useState<Theme>("light");
-  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    const stored = localStorage.getItem("screenme-theme") as Theme | null;
-    const preferred = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-    const initial = stored || preferred;
+    let initial: Theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+    try {
+      const stored = localStorage.getItem("screenme-theme");
+      if (stored === "light" || stored === "dark") initial = stored;
+    } catch { /* Storage can be unavailable in privacy-restricted browsers. */ }
     setTheme(initial);
     document.documentElement.setAttribute("data-theme", initial);
-    setMounted(true);
   }, []);
 
   const toggle = () => {
@@ -32,11 +32,10 @@ export default function ThemeProvider({ children }: { children: React.ReactNode 
     window.setTimeout(() => el.classList.remove("theme-transition"), 400);
     setTheme(next);
     el.setAttribute("data-theme", next);
-    localStorage.setItem("screenme-theme", next);
+    try { localStorage.setItem("screenme-theme", next); } catch { /* Keep the theme usable without persistence. */ }
   };
 
-  // Prevent flash — don't render children until we know the theme
-  if (!mounted) return null;
+  // The layout script sets the initial CSS theme; render content on the server.
 
   return (
     <ThemeContext.Provider value={{ theme, toggle }}>
