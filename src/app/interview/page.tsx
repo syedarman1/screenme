@@ -1,6 +1,8 @@
 // src/app/interview/page.tsx
 "use client";
 
+import { toError } from "../lib/value";
+
 import React, { useState, useRef, useCallback } from "react";
 import ResumeUploader from "../components/ResumeUploader";
 import { motion, AnimatePresence } from "framer-motion";
@@ -31,11 +33,6 @@ const TYPE_STYLES: Record<QuestionType, { bg: string; text: string; border: stri
   "Role-Specific":     { bg: "bg-indigo-50",      text: "text-indigo-700",   border: "border-indigo-200", dot: "bg-indigo-400"   },
 };
 
-const DIFF_STYLES: Record<Difficulty, string> = {
-  Easy:   "text-green",
-  Medium: "text-amber-600",
-  Hard:   "text-red",
-};
 
 const DIFF_BG: Record<Difficulty, string> = {
   Easy:   "pill-success",
@@ -91,7 +88,6 @@ export default function InterviewPrepPage() {
 
     try {
       if (!supabase) throw new Error("Authentication service not available");
-      const { data: { user } } = await supabase.auth.getUser();
 
       const context = [
         roleContext.trim() ? roleContext.trim() : null,
@@ -113,7 +109,8 @@ export default function InterviewPrepPage() {
       setQAs(data.questions ?? []);
 
       setTimeout(() => resultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 150);
-    } catch (err: any) {
+    } catch (caught: unknown) {
+      const err = toError(caught);
       if (err.name === "AbortError") setError("Generation cancelled.");
       else setError(err.message || "An unexpected error occurred.");
     } finally {

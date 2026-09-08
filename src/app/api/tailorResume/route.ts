@@ -1,9 +1,11 @@
+
+import { toError } from "../../lib/value";
 import { withUsage } from "../../lib/aiRequest";
 // src/app/api/tailorResume/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
 import { checkUsageLimit } from "../../lib/usageTracker";
-import { ErrorTypes, handleAPIError } from "../../lib/errorHandler";
+import { ErrorTypes } from "../../lib/errorHandler";
 import { getAuthenticatedUser, unauthorized } from "../../lib/auth";
 
 const openai = process.env.OPENAI_API_KEY
@@ -73,7 +75,8 @@ The output should be ready to paste directly into a resume template.`;
       wordCount: tailored.split(/\s+/).filter(Boolean).length,
       success: true,
     });
-  } catch (error: any) {
+  } catch (caught: unknown) {
+      const error = toError(caught);
     console.error("Tailor resume error:", error);
     if (error.message?.includes("rate limit") || error.message?.includes("quota")) {
       return NextResponse.json({ error: "Service temporarily unavailable. Please try again shortly." }, { status: 503 });

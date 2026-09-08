@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
-import { stripe, stripeId, syncSubscription, validateCheckout } from "../../../lib/billing";
+import { stripe, stripeId, syncSubscription, validateCheckout, proPriceId } from "../../../lib/billing";
 import { supabaseAdmin as db } from "../../../lib/supabaseAdmin";
 
 export const runtime = "nodejs";
@@ -35,6 +35,7 @@ export async function POST(req: NextRequest) {
         if (plan) await syncSubscription({ userId: plan.user_id, subscriptionId, key: event.id });
         else {
           const sub = await stripe.subscriptions.retrieve(subscriptionId);
+          if (!sub.items.data.some(item => item.price.id === proPriceId())) return NextResponse.json({ received: true });
           if (sub.metadata.userId) await syncSubscription({ userId: sub.metadata.userId, subscriptionId, key: event.id });
           else return NextResponse.json({ error: "Checkout fulfillment is pending." }, { status: 503 });
         }

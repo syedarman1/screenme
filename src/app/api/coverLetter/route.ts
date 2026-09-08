@@ -1,3 +1,5 @@
+
+import { toError } from "../../lib/value";
 import { withUsage } from "../../lib/aiRequest";
 // app/api/coverLetter/route.ts
 import { NextResponse } from "next/server";
@@ -146,7 +148,8 @@ ${jobDesc?.trim() ? `\nJOB DESCRIPTION:\n${String(jobDesc).trim()}` : ""}
           .replace(/\{\{[^}]*\}\}/g, "")
           .trim();
       }
-    } catch (err: any) {
+    } catch (caught: unknown) {
+      const err = toError(caught);
       console.error("OpenAI error:", err);
       if (err.message?.includes("rate limit") || err.message?.includes("quota")) {
         return NextResponse.json({ error: "Cover letter generation temporarily unavailable. Please try again in a few minutes." }, { status: 503 });
@@ -164,7 +167,8 @@ ${jobDesc?.trim() ? `\nJOB DESCRIPTION:\n${String(jobDesc).trim()}` : ""}
       { coverLetter, wordCount, tone: effectiveTone, success: true },
       { headers: { "Cache-Control": "private, max-age=1800" } }
     );
-  } catch (error: any) {
+  } catch (caught: unknown) {
+      const error = toError(caught);
     console.error("Error processing cover letter request:", error);
     return handleAPIError(error);
   }

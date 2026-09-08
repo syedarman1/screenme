@@ -5,11 +5,6 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
   outputFileTracingRoot: process.cwd(),
 
-  eslint: {
-    // Disable ESLint during builds for now - allows deployment with code quality warnings
-    ignoreDuringBuilds: true,
-  },
-
   webpack(config) {
     // 1. Stub out Node‑only modules so pdfjs-dist doesn't pull in `canvas`
     config.resolve.fallback = {

@@ -1,6 +1,8 @@
 // src/app/components/ResumeUploader.tsx
 "use client";
 
+import { toError } from "../lib/value";
+
 import { extractPdf } from "../lib/extractPdf";
 import React, { useState, useRef } from "react";
 
@@ -51,7 +53,8 @@ export default function ResumeUploader({ onResumeSubmit, simple = false }: Resum
           : await f.text();
       setCharCount(txt.length);
       onResumeSubmit(txt);
-    } catch (err: any) {
+    } catch (caught: unknown) {
+      const err = toError(caught);
       setError(err.message);
       setFile(null);
       setCharCount(0);

@@ -373,7 +373,7 @@ function AppCard({ app, onMove, onEdit, onDelete }: {
 }
 
 /* ── Add/Edit Modal ─────────────────────────────────────── */
-function AppModal({ app, userId, onClose, onSaved }: {
+function AppModal({ app, onClose, onSaved }: {
   app: Application | null;
   userId: string;
   onClose: () => void;

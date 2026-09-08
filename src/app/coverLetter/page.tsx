@@ -1,6 +1,8 @@
 // src/app/coverLetter/page.tsx
 "use client";
 
+import { toError } from "../lib/value";
+
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import ResumeUploader from "../components/ResumeUploader";
 import { Document, Packer, Paragraph, TextRun } from "docx";
@@ -88,7 +90,6 @@ export default function CoverLetterPage() {
 
     try {
       if (!supabase) throw new Error("Authentication service not available");
-      const { data: { user } } = await supabase.auth.getUser();
 
       const res = await authFetch("/api/coverLetter", {
         method: "POST",
@@ -110,7 +111,8 @@ export default function CoverLetterPage() {
       setCoverLetter(data.coverLetter);
       setWordCount(data.wordCount ?? data.coverLetter.split(/\s+/).filter(Boolean).length);
       setTimeout(() => resultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 150);
-    } catch (e: any) {
+    } catch (caught: unknown) {
+      const e = toError(caught);
       if (e.name === "AbortError") setError("Generation cancelled.");
       else setError(e.message || "An unexpected error occurred.");
     } finally {

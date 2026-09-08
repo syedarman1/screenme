@@ -1,5 +1,7 @@
 "use client";
 
+import { toError } from "../lib/value";
+
 import React, { useState, useRef } from "react";
 import ResumeUploader from "../components/ResumeUploader";
 import { motion, AnimatePresence } from "framer-motion";
@@ -178,7 +180,6 @@ export default function ResumeScreen() {
 
     try {
       if (!supabase) throw new Error("Authentication service not available");
-      const { data: { user } } = await supabase.auth.getUser();
 
       const res = await authFetch("/api/analyzeResume", {
         method: "POST",
@@ -199,7 +200,8 @@ export default function ResumeScreen() {
       setAudit(data);
       setActiveTab("issues");
       setTimeout(() => resultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 150);
-    } catch (e: any) {
+    } catch (caught: unknown) {
+      const e = toError(caught);
       if (e.name === "AbortError") setError("Analysis cancelled.");
       else setError(e.message || "Something went wrong. Please try again.");
     } finally {
@@ -485,7 +487,7 @@ export default function ResumeScreen() {
                               {issue.line && (
                                 <div className="mt-4 p-4 bg-bg rounded-lg border border-border">
                                   <p className="text-[10px] font-semibold text-fg-subtle uppercase tracking-widest mb-2">Original</p>
-                                  <p className="text-fg text-sm leading-relaxed italic">"{issue.line}"</p>
+                                  <p className="text-fg text-sm leading-relaxed italic">&quot;{issue.line}&quot;</p>
                                 </div>
                               )}
 

@@ -65,7 +65,7 @@ export function createErrorResponse(
 // Predefined error types for consistency
 export const ErrorTypes = {
   // Validation Errors (400)
-  INVALID_INPUT: (field: string, requirement: string) => 
+  INVALID_INPUT: (field: string, requirement: string) =>
     new APIError(
       `${field} ${requirement}`,
       'INVALID_INPUT',
@@ -197,10 +197,10 @@ export function handleAPIError(error: unknown): NextResponse {
 }
 
 // Utility function to validate request size and format
-export function validateRequest(body: any, requiredFields: string[]): APIError | null {
+export function validateRequest(body: Record<string, unknown>, requiredFields: string[]): APIError | null {
   // Check for missing required fields
-  const missingFields = requiredFields.filter(field => 
-    !body[field] || (typeof body[field] === 'string' && !body[field].trim())
+  const missingFields = requiredFields.filter(field =>
+    !body[field] || (typeof body[field] === 'string' && !(body[field] as string).trim())
   );
 
   if (missingFields.length > 0) {
@@ -212,9 +212,9 @@ export function validateRequest(body: any, requiredFields: string[]): APIError |
 
 // Utility to check content length requirements
 export function validateContentLength(
-  content: string, 
-  type: string, 
-  minLength: number, 
+  content: string,
+  type: string,
+  minLength: number,
   suggestion: string
 ): APIError | null {
   if (content.trim().length < minLength) {

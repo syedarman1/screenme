@@ -20,12 +20,14 @@ export default function PlanChecker({
 }: PlanCheckerProps) {
   const [allowed, setAllowed] = useState<boolean>(true);
   const [loading, setLoading] = useState<boolean>(true);
+  const [signedOut, setSignedOut] = useState(false);
   const [accessError, setAccessError] = useState<string | null>(null);
   const router = useRouter();
 
   useEffect(() => {
     async function checkAccess() {
       if (!supabase) {
+        setAccessError("Account service is unavailable. Please try again later.");
         setAllowed(false);
         setLoading(false);
         return;
@@ -35,6 +37,7 @@ export default function PlanChecker({
         const { data: { user } } = await supabase.auth.getUser();
 
         if (!user) {
+          setSignedOut(true);
           setAllowed(false);
           setLoading(false);
           return;
@@ -67,6 +70,12 @@ export default function PlanChecker({
       </div>
     );
   }
+
+  if (accessError || signedOut) return <div className="card p-8 text-center max-w-md mx-auto my-12">
+    <h3 className="text-lg font-semibold mb-3">{signedOut ? "Sign in to continue" : "Your plan is unavailable"}</h3>
+    <p className="text-sm text-fg-muted mb-5" role="status">{signedOut ? "Sign in or create a free account to use this tool." : accessError}</p>
+    <button className="btn btn-primary" onClick={() => signedOut ? router.push("/login") : window.location.reload()}>{signedOut ? "Sign in" : "Try again"}</button>
+  </div>;
 
   if (!allowed) {
     const featureLabel = feature?.replace(/_/g, " ") || "this feature";
@@ -109,7 +118,6 @@ export default function PlanChecker({
             </div>
           </div>
 
-          {accessError && <p role="alert" className="text-sm text-red mb-4">{accessError}</p>}
           <button
             onClick={() => onUpgradeClick ? onUpgradeClick() : router.push("/dashboard")}
             className="btn btn-primary w-full py-3 cursor-pointer"

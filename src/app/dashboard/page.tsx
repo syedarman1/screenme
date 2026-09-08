@@ -1,5 +1,7 @@
 "use client";
 
+import { toError } from "../lib/value";
+
 import React, { useEffect, useState } from "react";
 import { supabase } from "../lib/supabaseClient";
 import { authFetch } from "../lib/authFetch";
@@ -21,7 +23,7 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [plan, setPlan] = useState<string | null>(null);
-  const [usage, setUsage] = useState<any>(null);
+  const [usage, setUsage] = useState<Record<string, number> | null>(null);
   const [busy, setBusy] = useState(false);
   const [upgradeErr, setUpgradeErr] = useState<string | null>(null);
 
@@ -48,7 +50,8 @@ export default function DashboardPage() {
         } catch (subErr) {
           console.warn("plan_watch realtime subscription failed:", subErr);
         }
-      } catch (err: any) {
+      } catch (caught: unknown) {
+      const err = toError(caught);
         setError(err.message || "Something went wrong.");
       } finally {
         setLoading(false);

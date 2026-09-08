@@ -148,7 +148,7 @@ export async function DELETE(req: NextRequest) {
 }
 
 /* ── GET single resume content (via query param) ────────── */
-export async function OPTIONS(req: NextRequest) {
+export async function OPTIONS() {
   // Reuse OPTIONS for CORS if needed
   return new NextResponse(null, { status: 204 });
 }

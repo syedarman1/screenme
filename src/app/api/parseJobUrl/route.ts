@@ -1,3 +1,5 @@
+
+import { toError } from "../../lib/value";
 import { allowedJobUrl, fetchJobPage } from "../../lib/jobUrl";
 import { withUsage } from "../../lib/aiRequest";
 // src/app/api/parseJobUrl/route.ts
@@ -45,7 +47,8 @@ async function handleRequest(req: NextRequest) {
   let rawHtml: string;
   try {
     rawHtml = await fetchJobPage(trimmedUrl);
-  } catch (e: any) {
+  } catch (caught: unknown) {
+      const e = toError(caught);
     console.error("Fetch job URL error:", e);
     return NextResponse.json({
       error: "Could not reach the job posting. Check the URL or paste the description manually.",
@@ -120,7 +123,8 @@ Rules:
       description: String(parsed.description || "").slice(0, 10000),
       success:     true,
     });
-  } catch (e: any) {
+  } catch (caught: unknown) {
+      const e = toError(caught);
     console.error("GPT extraction error:", e);
     return NextResponse.json({
       error: "Failed to parse job posting. Try pasting the description manually.",

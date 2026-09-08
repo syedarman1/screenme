@@ -13,6 +13,7 @@ before(() => {
   assert.match(container, /^codex-screenme-/);
   sql("drop schema if exists public cascade; drop schema if exists auth cascade; create schema public;");
   sql(readFileSync("tests/db-fixture.sql", "utf8"));
+  sql(readFileSync("supabase/schema-baseline.sql", "utf8"));
   for (const file of readdirSync("supabase/migrations").filter(name => name.startsWith("20260908")).sort()) sql(readFileSync(`supabase/migrations/${file}`, "utf8"));
 });
 const uid = "00000000-0000-4000-8000-000000000001";
@@ -20,7 +21,7 @@ const billing = (key: string, status = "active", observed = "2026-09-08T12:00:00
   `select public.screenme_apply_billing('${key}','${uid}','sub_test','cus_test','${status}','${observed}');`;
 
 test("billing transaction rolls back completely on receipt failure, and can retry", { skip: !container }, () => {
-  sql(`insert into auth.users values('${uid}'); insert into public.user_plans(user_id) values('${uid}');
+  sql(`insert into auth.users values('${uid}'); insert into public.user_plans(user_id) values('${uid}') on conflict do nothing;
     create function public.fail_receipt() returns trigger language plpgsql as $$begin raise exception 'injected failure'; end;$$;
     create trigger fail_receipt before insert on public.billing_fulfillments for each row execute function public.fail_receipt();`);
   assert.throws(() => sql(billing("evt_retry")));
@@ -76,4 +77,20 @@ test("rate limiting shares an atomic counter across processes", { skip: !contain
   const results = await Promise.all(Array.from({ length: 15 }, () => promisify(execFile)("docker", ["exec", container!, "psql", "-U", "postgres", "-At", "-c", "select screenme_rate_limit('test-shared',10,60); "])));
   assert.equal(results.filter(result => JSON.parse(result.stdout).success).length, 10);
   assert.throws(() => sql(`set role authenticated; select screenme_usage('${usageUser}','resume_scan',true);`));
+});
+
+
+test("contact messages are durable and inaccessible to public clients", { skip: !container }, () => {
+  sql("set role service_role; insert into contact_messages(name,email,subject,message) values('Test User','test@example.invalid','Test','Synthetic support message');");
+  assert.equal(sql("select count(*) from contact_messages;"), "1");
+  for (const role of ["anon", "authenticated"]) {
+    assert.throws(() => sql(`set role ${role}; select * from contact_messages;`));
+    assert.throws(() => sql(`set role ${role}; select upgrade_user_to_pro('${uid}');`));
+  }
+});
+
+test("signed-in users can read only their own saved records", { skip: !container }, () => {
+  sql(`insert into resume_versions(user_id,name,content) values('${uid}','Resume','Synthetic resume');`);
+  assert.equal(sql(`set role authenticated; set request.jwt.claim.sub='${usageUser}'; select count(*) from resume_versions;`).split("\n").at(-1), "0");
+  assert.equal(sql(`set role authenticated; set request.jwt.claim.sub='${uid}'; select count(*) from resume_versions;`).split("\n").at(-1), "1");
 });

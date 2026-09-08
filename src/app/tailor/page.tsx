@@ -1,5 +1,7 @@
 "use client";
 
+import { toError } from "../lib/value";
+
 import React, { useState, useRef, useCallback, useEffect } from "react";
 import ResumeUploader from "../components/ResumeUploader";
 import { motion, AnimatePresence } from "framer-motion";
@@ -76,7 +78,8 @@ export default function TailorPage() {
       setTailored(data.tailoredResume);
       setWordCount(data.wordCount ?? 0);
       setTimeout(() => resultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 150);
-    } catch (e: any) {
+    } catch (caught: unknown) {
+      const e = toError(caught);
       setError(e.message || "An unexpected error occurred.");
     } finally {
       setLoading(false);
@@ -103,7 +106,8 @@ export default function TailorPage() {
       if (!res.ok) throw new Error(data.error || "Failed to save.");
       setSaved(true);
       setShowSaveInput(false);
-    } catch (e: any) {
+    } catch (caught: unknown) {
+      const e = toError(caught);
       setError(e.message);
     } finally {
       setSaving(false);
