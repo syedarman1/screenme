@@ -9,6 +9,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { CircularProgressbar, buildStyles } from "react-circular-progressbar";
 import "react-circular-progressbar/dist/styles.css";
 import PlanChecker from "../components/PlanChecker";
+import JobImportHint from "../components/JobImportHint";
 import PageHeader from "../components/PageHeader";
 import { supabase } from "../lib/supabaseClient";
 import { authFetch } from "../lib/authFetch";
@@ -72,7 +73,7 @@ export default function JobMatchPage() {
     setUrlLoading(true);
     setUrlError(null);
     try {
-      const res = await fetch("/api/parseJobUrl", {
+      const res = await authFetch("/api/parseJobUrl", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ url: jobUrl.trim() }),
@@ -203,7 +204,8 @@ export default function JobMatchPage() {
                   {urlLoading ? "Parsing…" : "Import"}
                 </button>
               </div>
-              {urlError && (
+              <JobImportHint />
+            {urlError && (
                 <p className="text-xs text-red mb-2">{urlError}</p>
               )}
 

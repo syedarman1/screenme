@@ -133,5 +133,5 @@ Rules:
 }
 
 export async function POST(req: Request): Promise<Response> {
-  return withUsage(req, null, handleRequest);
+  return withUsage(req, "job_import", handleRequest);
 }

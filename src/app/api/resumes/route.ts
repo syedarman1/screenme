@@ -2,10 +2,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { getAuthenticatedUser } from "../../lib/auth";
+import { savedLimitResponse } from "../../lib/savedLimits";
 
 function serverSupabase() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !key) return null;
   return createClient(url, key, { auth: { persistSession: false } });
 }
@@ -51,23 +52,6 @@ export async function POST(req: NextRequest) {
   if (!content || typeof content !== "string" || content.trim().length < 50)
     return NextResponse.json({ error: "Resume content must be at least 50 characters." }, { status: 400 });
 
-  // Plan-based resume limit: Free = 3, Pro = 20
-  const { data: planData } = await sb.from("user_plans").select("plan").eq("user_id", userId).single();
-  const plan = planData?.plan || "free";
-  const maxResumes = plan === "pro" ? 20 : 3;
-
-  const { count } = await sb
-    .from("resume_versions")
-    .select("id", { count: "exact", head: true })
-    .eq("user_id", userId);
-
-  if (count !== null && count >= maxResumes) {
-    return NextResponse.json(
-      { error: plan === "pro" ? "Maximum 20 saved resumes. Delete one first." : "Free plan allows up to 3 saved resumes. Upgrade to Pro for up to 20.", limitReached: true },
-      { status: 403 }
-    );
-  }
-
   const { data, error } = await sb.from("resume_versions").insert({
     user_id: userId,
     name:    typeof name === "string" && name.trim() ? name.trim().slice(0, 100) : "Untitled Resume",
@@ -76,6 +60,8 @@ export async function POST(req: NextRequest) {
   }).select().single();
 
   if (error) {
+    const limitResponse = savedLimitResponse(error);
+    if (limitResponse) return limitResponse;
     console.error("POST resumes error:", error);
     return NextResponse.json({ error: "Failed to save resume." }, { status: 500 });
   }

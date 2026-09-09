@@ -9,6 +9,7 @@ import { Document, Packer, Paragraph, TextRun } from "docx";
 import { saveAs } from "file-saver";
 import { motion, AnimatePresence } from "framer-motion";
 import PlanChecker from "../components/PlanChecker";
+import JobImportHint from "../components/JobImportHint";
 import PageHeader from "../components/PageHeader";
 import { supabase } from "../lib/supabaseClient";
 import { authFetch } from "../lib/authFetch";
@@ -48,7 +49,7 @@ export default function CoverLetterPage() {
     setUrlLoading(true);
     setUrlError(null);
     try {
-      const res = await fetch("/api/parseJobUrl", {
+      const res = await authFetch("/api/parseJobUrl", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ url: jobUrl.trim() }),
@@ -219,7 +220,8 @@ export default function CoverLetterPage() {
                   {urlLoading ? "Parsing…" : "Import"}
                 </button>
               </div>
-              {urlError && <p className="text-xs text-red mt-1.5">{urlError}</p>}
+              <JobImportHint />
+            {urlError && <p className="text-xs text-red mt-1.5">{urlError}</p>}
               {!urlError && jobUrl && !urlLoading && jobTitle && (
                 <p className="text-xs text-green mt-1.5 flex items-center gap-1">
                   <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>

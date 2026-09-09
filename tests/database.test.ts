@@ -14,7 +14,7 @@ before(() => {
   sql("drop schema if exists public cascade; drop schema if exists auth cascade; create schema public;");
   sql(readFileSync("tests/db-fixture.sql", "utf8"));
   sql(readFileSync("supabase/schema-baseline.sql", "utf8"));
-  for (const file of readdirSync("supabase/migrations").filter(name => name.startsWith("20260908")).sort()) sql(readFileSync(`supabase/migrations/${file}`, "utf8"));
+  for (const file of readdirSync("supabase/migrations").filter(name => /^\d{14}_/.test(name)).sort()) sql(readFileSync(`supabase/migrations/${file}`, "utf8"));
 });
 const uid = "00000000-0000-4000-8000-000000000001";
 const billing = (key: string, status = "active", observed = "2026-09-08T12:00:00Z") =>
@@ -93,4 +93,62 @@ test("signed-in users can read only their own saved records", { skip: !container
   sql(`insert into resume_versions(user_id,name,content) values('${uid}','Resume','Synthetic resume');`);
   assert.equal(sql(`set role authenticated; set request.jwt.claim.sub='${usageUser}'; select count(*) from resume_versions;`).split("\n").at(-1), "0");
   assert.equal(sql(`set role authenticated; set request.jwt.claim.sub='${uid}'; select count(*) from resume_versions;`).split("\n").at(-1), "1");
+});
+
+const importUser = "00000000-0000-4000-8000-000000000003";
+test("job imports share one atomic five-use allowance and do not consume other tools", { skip: !container }, async () => {
+  sql(`insert into auth.users values('${importUser}');`);
+  await Promise.all(Array.from({ length: 12 }, () => promisify(execFile)("docker", ["exec", container!, "psql", "-U", "postgres", "-At", "-v", "ON_ERROR_STOP=1", "-c", `set role service_role; do $$declare v jsonb; begin v:=screenme_usage('${importUser}','job_import',true); if (v->>'allowed')::boolean then perform screenme_finish_usage((v->>'reservationId')::uuid,true); end if; end$$;`])));
+  const usage = JSON.parse(sql(`select screenme_usage('${importUser}');`));
+  assert.equal(usage.job_imports, 5);
+  assert.equal(usage.job_matches, 0);
+  assert.equal(usage.resume_tailors, 0);
+  assert.equal(JSON.parse(sql(`select screenme_usage('${importUser}','job_import',true);`)).allowed, false);
+  sql(`update user_usage set last_reset='2000-01-01' where user_id='${importUser}';`);
+  assert.equal(JSON.parse(sql(`select screenme_usage('${importUser}');`)).job_imports, 0);
+  const reservation = JSON.parse(sql(`select screenme_usage('${importUser}','job_import',true);`));
+  sql(`select screenme_finish_usage('${reservation.reservationId}',false); select screenme_finish_usage('${reservation.reservationId}',false);`);
+  assert.equal(JSON.parse(sql(`select screenme_usage('${importUser}');`)).job_imports, 0);
+  sql(`update user_plans set plan='pro' where user_id='${importUser}'; update user_usage set job_imports=100 where user_id='${importUser}';`);
+  assert.equal(JSON.parse(sql(`select screenme_usage('${importUser}','job_import',true);`)).limit, -1);
+});
+
+const savedUser = "00000000-0000-4000-8000-000000000004";
+async function concurrentSaves(table: string, columns: string, values: string, attempts: number) {
+  return Promise.allSettled(Array.from({ length: attempts }, () => promisify(execFile)("docker", ["exec", container!, "psql", "-U", "postgres", "-At", "-v", "ON_ERROR_STOP=1", "-c", `set role service_role; insert into ${table}(user_id,${columns}) values('${savedUser}',${values});`])));
+}
+test("concurrent saves cannot exceed Free resume or application limits", { skip: !container }, async () => {
+  sql(`insert into auth.users values('${savedUser}');`);
+  const resumes = await concurrentSaves("resume_versions", "name,content", "'Test','Synthetic test resume'", 12);
+  assert.equal(resumes.filter(r => r.status === "fulfilled").length, 3);
+  assert.equal(sql(`select count(*) from resume_versions where user_id='${savedUser}';`), "3");
+  const applications = await concurrentSaves("job_applications", "company,role", "'Test','Test role'", 18);
+  assert.equal(applications.filter(r => r.status === "fulfilled").length, 10);
+  assert.equal(sql(`select count(*) from job_applications where user_id='${savedUser}';`), "10");
+});
+
+test("direct client writes cannot bypass caps or mutate another user's records", { skip: !container }, () => {
+  for (const role of ["anon", "authenticated"]) {
+    for (const query of [
+      `insert into resume_versions(user_id,name,content) values('${savedUser}','Test','Test');`,
+      `insert into job_applications(user_id,company,role) values('${savedUser}','Test','Test');`,
+      `update resume_versions set user_id='${uid}';`,
+      `delete from job_applications;`,
+      `truncate resume_versions;`,
+    ]) assert.throws(() => sql(`set role ${role}; set request.jwt.claim.sub='${savedUser}'; ${query}`));
+  }
+  assert.throws(() => sql(`set role service_role; update resume_versions set user_id='${uid}' where user_id='${savedUser}';`));
+});
+
+test("Pro caps at twenty resumes, permits more applications, and preserves work after downgrade", { skip: !container }, async () => {
+  sql(`update user_plans set plan='pro' where user_id='${savedUser}';`);
+  const resumes = await concurrentSaves("resume_versions", "name,content", "'Pro resume','Synthetic test resume'", 25);
+  assert.equal(resumes.filter(r => r.status === "fulfilled").length, 17);
+  const applications = await concurrentSaves("job_applications", "company,role", "'Pro company','Test role'", 12);
+  assert.equal(applications.filter(r => r.status === "fulfilled").length, 12);
+  sql(`update user_plans set plan='free' where user_id='${savedUser}';`);
+  assert.equal(sql(`set role authenticated; set request.jwt.claim.sub='${savedUser}'; select count(*) from resume_versions;`).split("\n").at(-1), "20");
+  sql(`set role service_role; update resume_versions set name='Still editable' where user_id='${savedUser}'; delete from resume_versions where user_id='${savedUser}' and id not in (select id from resume_versions where user_id='${savedUser}' limit 2);`);
+  assert.equal((await concurrentSaves("resume_versions", "name,content", "'New','Synthetic resume'", 4)).filter(r => r.status === "fulfilled").length, 1);
+  assert.throws(() => sql(`set role service_role; insert into job_applications(user_id,company,role) values('${savedUser}','New','Role');`));
 });
