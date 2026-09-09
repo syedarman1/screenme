@@ -177,7 +177,7 @@ export default function AudioChat({ jobContext }: AudioChatProps) {
       const formData = new FormData();
       formData.append("audio", audioBlob, "audio.webm");
       formData.append("history", JSON.stringify(msgs));
-      if (jobContext) formData.append("jobContext", jobContext.slice(0, 600));
+      if (jobContext) formData.append("jobContext", jobContext.slice(0, 25000));
 
       try {
         const res = await authFetch("/api/interviewPrep", { method: "POST", body: formData });

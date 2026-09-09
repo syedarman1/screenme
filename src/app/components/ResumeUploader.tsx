@@ -4,16 +4,17 @@
 import { toError } from "../lib/value";
 
 import { extractPdf } from "../lib/extractPdf";
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 
 
 interface ResumeUploaderProps {
   onResumeSubmit: (txt: string) => void;
   simple?: boolean;
+  value?: string;
   disabled?: boolean;
 }
 
-export default function ResumeUploader({ onResumeSubmit, simple = false, disabled = false }: ResumeUploaderProps) {
+export default function ResumeUploader({ onResumeSubmit, simple = false, disabled = false, value }: ResumeUploaderProps) {
   const [file, setFile]             = useState<File | null>(null);
   const [loading, setLoading]       = useState(false);
   const [error, setError]           = useState<string | null>(null);
@@ -24,6 +25,12 @@ export default function ResumeUploader({ onResumeSubmit, simple = false, disable
   const inputRef                    = useRef<HTMLInputElement>(null);
   const extractionId = useRef(0);
   const [wordCount, setWordCount] = useState(0);
+
+  useEffect(() => {
+    if (value === undefined) return;
+    setPasteText(value); setCharCount(value.length); setWordCount(value.trim() ? value.trim().split(/\s+/).length : 0);
+    if (value && !file) setMode("paste");
+  }, [value, file]);
 
   const extractTextFromPDF = async (data: ArrayBuffer): Promise<string> => {
     try {

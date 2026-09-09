@@ -152,3 +152,20 @@ test("Pro caps at twenty resumes, permits more applications, and preserves work 
   assert.equal((await concurrentSaves("resume_versions", "name,content", "'New','Synthetic resume'", 4)).filter(r => r.status === "fulfilled").length, 1);
   assert.throws(() => sql(`set role service_role; insert into job_applications(user_id,company,role) values('${savedUser}','New','Role');`));
 });
+
+test("workspace caps are atomic and snapshots are owner-scoped and cascade on deletion", {skip:!container}, async()=>{
+ const owner="00000000-0000-4000-8000-000000000091";
+ sql(`insert into auth.users values('${owner}');`);
+ const insert=`insert into career_workspaces(user_id,kind,title,payload) values('${owner}','scan','Saved review','{"resume":"Synthetic resume","result":{"analyzedAt":"2026-09-09"}}') returning id;`;
+ const results=await Promise.allSettled(Array.from({length:6},()=>promisify(execFile)("docker",["exec",container!,"psql","-U","postgres","-At","-v","ON_ERROR_STOP=1","-c",insert])));
+ assert.equal(results.filter(r=>r.status==="fulfilled").length,3);
+ assert.equal(sql(`select count(*) from workspace_versions where user_id='${owner}';`),"3");
+ assert.equal(sql(`set role authenticated; set request.jwt.claim.sub='${uid}'; select count(*) from career_workspaces where user_id='${owner}';`),"SET\nSET\n0");
+ assert.throws(()=>sql(`set role authenticated; ${insert}`));
+ const id=sql(`select id from career_workspaces where user_id='${owner}' limit 1;`);
+ sql(`update career_workspaces set payload=jsonb_set(payload,'{resume}','"Edited resume"') where id='${id}' and revision=1;`);
+ assert.equal(sql(`select revision from career_workspaces where id='${id}';`),"2");
+ assert.equal(sql(`select count(*) from workspace_versions where workspace_id='${id}';`),"1");
+ assert.throws(()=>sql(`update career_workspaces set user_id='${uid}' where id='${id}';`));
+ sql(`delete from career_workspaces where id='${id}';`);assert.equal(sql(`select count(*) from workspace_versions where workspace_id='${id}';`),"0");
+});
