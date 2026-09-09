@@ -91,7 +91,6 @@ export default function DynamicNavbar() {
           </nav>
 
           <div className="hidden md:flex items-center gap-2">
-            <ThemeToggle />
             {user ? (
               <div className="relative">
                 <button
@@ -132,6 +131,9 @@ export default function DynamicNavbar() {
                       My Resumes
                     </Link>
                     <div className="my-1 mx-2 border-t border-border" />
+                    <div className="px-1">
+                      <ThemeToggle />
+                    </div>
                     <button
                       onClick={() => { setDropdownOpen(false); handleSignOut(); }}
                       className="flex w-full items-center gap-2 px-3 py-2 text-sm text-red hover:bg-surface-2 transition-colors mx-1 rounded-md cursor-pointer"
@@ -154,7 +156,6 @@ export default function DynamicNavbar() {
           </div>
 
           <div className="md:hidden flex items-center gap-2">
-            <ThemeToggle />
             <button
               className="flex flex-col justify-center items-center w-11 h-11 gap-[5px] cursor-pointer"
               onClick={() => setMobileOpen((v) => !v)}
@@ -169,7 +170,7 @@ export default function DynamicNavbar() {
         </nav>
       </header>
 
-      <div className={`fixed inset-0 z-40 md:hidden ${mobileOpen ? "pointer-events-auto" : "pointer-events-none"}`}>
+      <div inert={!mobileOpen} aria-hidden={!mobileOpen} className={`fixed inset-0 z-40 md:hidden ${mobileOpen ? "pointer-events-auto" : "pointer-events-none"}`}>
         <div
           className={`absolute inset-0 bg-fg/20 transition-opacity duration-300 ${mobileOpen ? "opacity-100" : "opacity-0"}`}
           onClick={() => setMobileOpen(false)}
@@ -211,6 +212,7 @@ export default function DynamicNavbar() {
             {user ? (
               <>
                 <div className="flex-1" />
+                <ThemeToggle />
                 <button
                   onClick={handleSignOut}
                   className="text-left text-red hover:bg-surface-2 px-3 py-3 rounded-md text-sm font-medium transition-colors cursor-pointer"
