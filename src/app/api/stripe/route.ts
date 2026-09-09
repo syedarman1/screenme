@@ -1,9 +1,10 @@
 import { rateLimit } from "../../lib/rate-limit";
+import { createHash } from "node:crypto";
 import { boundedRequest } from "../../lib/aiRequest";
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthenticatedUser, unauthorized } from "../../lib/auth";
 import { supabaseAdmin as db } from "../../lib/supabaseAdmin";
-import { stripe, appUrl, proPriceId, fulfillCheckout } from "../../lib/billing";
+import { stripe, appUrl, proPriceId, fulfillCheckout, publishableKey, matchesOnsiteCheckout } from "../../lib/billing";
 
 export async function POST(req: NextRequest) {
   const user = await getAuthenticatedUser(req);
@@ -20,6 +21,9 @@ export async function POST(req: NextRequest) {
     }
     const priceId = proPriceId();
     if (body.priceId && body.priceId !== priceId) return NextResponse.json({ error: "Invalid price." }, { status: 400 });
+    // Older open tabs still expect a URL. Bring them to the new on-site checkout.
+    if (body.action !== "checkout") return NextResponse.json({ url: `${appUrl()}/checkout` });
+    const publicKey = publishableKey();
     const { data: plan, error } = await db.from("user_plans").select("stripe_customer_id,stripe_subscription_id").eq("user_id", user.id).maybeSingle();
     if (error) throw error;
     let customerId = plan?.stripe_customer_id;
@@ -35,21 +39,24 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ url: portal.url });
     }
     const recent = await stripe.checkout.sessions.list({ customer: customerId, limit: 100 });
-    const matching = recent.data.filter(session => session.metadata?.userId === user.id && session.metadata?.priceId === priceId);
+    const matching = recent.data.filter(session => matchesOnsiteCheckout(session, user.id, priceId, appUrl()));
     const existing = matching.find(session => session.status === "open");
-    if (existing?.url) return NextResponse.json({ url: existing.url });
+    if (existing) {
+      const current = await stripe.checkout.sessions.retrieve(existing.id);
+      if (current.status === "open" && current.client_secret) return NextResponse.json({ clientSecret: current.client_secret, publishableKey: publicKey }, { headers: { "Cache-Control": "no-store" } });
+    }
     // Use the previous finished attempt, not a clock bucket, so simultaneous
     // checkout requests share one Stripe idempotency key across time boundaries.
     const previousAttempt = matching.find(session => session.status !== "open")?.id || "initial";
     const session = await stripe.checkout.sessions.create({
-      mode: "subscription", customer: customerId,
+      mode: "subscription", ui_mode: "elements", customer: customerId,
       line_items: [{ price: priceId, quantity: 1 }],
-      success_url: `${appUrl()}/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${appUrl()}/dashboard`,
+      return_url: `${appUrl()}/success?session_id={CHECKOUT_SESSION_ID}`,
       metadata: { userId: user.id, priceId }, subscription_data: { metadata: { userId: user.id } },
       integration_identifier: "screenme_reliability_kvzhptnx",
-    }, { idempotencyKey: `screenme-checkout:${user.id}:${priceId}:${previousAttempt}` });
-    return NextResponse.json({ url: session.url });
+    }, { idempotencyKey: `screenme-onsite-v1:${createHash("sha256").update(appUrl()).digest("hex").slice(0,16)}:${user.id}:${priceId}:${previousAttempt}` });
+    if (!session.client_secret) throw new Error("Checkout could not be initialized.");
+    return NextResponse.json({ clientSecret: session.client_secret, publishableKey: publicKey }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     console.error("Billing request failed", error instanceof Error ? error.name : "DatabaseError");
     return NextResponse.json({ success: false, error: "Billing could not be completed. Please retry or contact support." }, { status: 503 });

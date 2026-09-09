@@ -119,7 +119,7 @@ export default function PlanChecker({
           </div>
 
           <button
-            onClick={() => onUpgradeClick ? onUpgradeClick() : router.push("/dashboard")}
+            onClick={() => onUpgradeClick ? onUpgradeClick() : router.push("/checkout")}
             className="btn btn-primary w-full py-3 cursor-pointer"
           >
             Upgrade to Pro — $15/mo

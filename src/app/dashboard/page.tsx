@@ -35,6 +35,13 @@ export default function DashboardPage() {
         const { data, error: e } = await supabase.auth.getUser();
         if (e || !data?.user) { setError("Please sign in to access your dashboard."); return; }
         setUser(data.user);
+        try {
+          if (sessionStorage.getItem("screenme-after-auth") === "/checkout") {
+            sessionStorage.removeItem("screenme-after-auth");
+            router.replace("/checkout");
+            return;
+          }
+        } catch { /* Checkout remains accessible from the upgrade button. */ }
 
         const usageResponse = await authFetch("/api/usage", { method: "POST" });
         if (!usageResponse.ok) throw new Error("Could not load your plan. Please retry.");
@@ -60,26 +67,7 @@ export default function DashboardPage() {
     return () => { if (channel && supabase) supabase.removeChannel(channel); };
   }, [router]);
 
-  const handleUpgrade = async () => {
-    if (!process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO) {
-      setUpgradeErr("Checkout isn't configured yet — please contact support.");
-      return;
-    }
-    setBusy(true);
-    setUpgradeErr(null);
-    try {
-      const res = await authFetch("/api/stripe", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO }),
-      });
-      const { url } = await res.json();
-      if (url) window.location.href = url;
-      else setUpgradeErr("Couldn't start checkout. Please try again.");
-    } catch {
-      setUpgradeErr("Couldn't start checkout. Please try again.");
-    } finally { setBusy(false); }
-  };
+  const handleUpgrade = () => router.push("/checkout");
 
   const handleBilling = async () => {
     setBusy(true); setUpgradeErr(null);
