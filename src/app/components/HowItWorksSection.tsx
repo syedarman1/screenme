@@ -4,8 +4,8 @@ import React from "react";
 
 const STEPS = [
   { n: "01", title: "Upload your resume", desc: "Paste text or upload a PDF. We extract and parse it into editable text." },
-  { n: "02", title: "Run AI analysis", desc: "Our models scan for ATS issues, keyword gaps, and job compatibility and suggest improvements." },
-  { n: "03", title: "Get your results", desc: "Receive a scored report with specific rewrites, missing keywords, and clear next steps." },
+  { n: "02", title: "Run AI analysis", desc: "Review your resume’s writing, or compare it with the requirements in a target job." },
+  { n: "03", title: "Get your results", desc: "See quoted evidence, supported strengths, and specific next steps. Keep every claim accurate." },
 ];
 
 export default function HowItWorksSection() {
@@ -37,42 +37,17 @@ export default function HowItWorksSection() {
             </div>
           </div>
 
-          <div className="card p-6 flex flex-col gap-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs text-fg-subtle mb-1">Example AI resume score</p>
-                <p className="text-3xl font-semibold text-fg tabular-nums">
-                  84<span className="text-base text-fg-subtle">/100</span>
-                </p>
-              </div>
-              <div className="px-3 py-1 rounded-md bg-surface-2 border border-border text-xs font-semibold text-fg">
-                Good
-              </div>
+          <div className="card p-6 flex flex-col gap-5">
+            <div className="flex items-center justify-between gap-4">
+              <div><p className="text-xs text-fg-subtle mb-2">Example V2 review</p><h3 className="text-xl">Make your contribution clear</h3></div>
+              <span className="badge badge-accent">V2</span>
             </div>
-            {[
-              { label: "Keywords", pct: 78 },
-              { label: "Formatting", pct: 92 },
-              { label: "ATS readability", pct: 85 },
-              { label: "Impact", pct: 70 },
-            ].map(({ label, pct }) => (
-              <div key={label}>
-                <div className="flex justify-between text-xs mb-1.5">
-                  <span className="text-fg-subtle">{label}</span>
-                  <span className="text-fg tabular-nums font-medium">{pct}%</span>
-                </div>
-                <div className="h-1.5 rounded-full bg-surface-2 overflow-hidden">
-                  <div className="h-full rounded-full bg-fg" style={{ width: `${pct}%` }} />
-                </div>
-              </div>
-            ))}
-            <div className="flex flex-wrap gap-2 pt-1">
-              {["Python", "React", "Leadership", "SQL"].map((kw) => (
-                <span key={kw} className="badge badge-accent">{kw}</span>
-              ))}
-              {["Node.js", "AWS"].map((kw) => (
-                <span key={kw} className="badge badge-muted">{kw} missing</span>
-              ))}
+            <div className="grid grid-cols-3 gap-3 border-y border-border py-4">
+              {[['Clarity', 'Strong'], ['Impact', 'Developing'], ['Organization', 'Strong']].map(([label, value]) => <div key={label}><p className="text-xs text-fg-subtle mb-2">{label}</p><p className="text-sm font-medium">{value}</p></div>)}
             </div>
+            <div className="bg-bg border border-border rounded-lg p-4"><p className="section-label mb-2">From the resume</p><blockquote className="text-sm">“Led code reviews for a four-person team.”</blockquote></div>
+            <div><p className="text-sm font-semibold mb-2">Connect the work to an outcome</p><p className="text-sm text-fg-muted">If accurate, describe how the reviews helped the team improve code quality. Use a result you can support; a number is optional.</p></div>
+            <p className="text-xs text-fg-subtle border-t border-border pt-4">Illustrative feedback. Actual results depend on your resume.</p>
           </div>
         </div>
       </div>

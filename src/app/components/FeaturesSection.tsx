@@ -5,14 +5,14 @@ import React from "react";
 const FEATURES = [
   {
     id: "f1",
-    title: "ATS Resume Scanner",
-    description: "Get AI feedback on resume structure, keywords, and wording. Scores are guidance, not a test of an employer’s ATS.",
+    title: "Resume Scanner V2",
+    description: "Review clarity, impact, and organization with quoted evidence and practical next steps.",
     icon: <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />,
   },
   {
     id: "f2",
     title: "Job Match Analyzer",
-    description: "Paste any job description and see your match score, skill gaps, and a prioritized action list to close them.",
+    description: "Compare required and preferred qualifications against your resume, with evidence, coverage, and actionable gaps.",
     icon: <path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />,
   },
   {

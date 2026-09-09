@@ -10,9 +10,10 @@ import React, { useState, useRef } from "react";
 interface ResumeUploaderProps {
   onResumeSubmit: (txt: string) => void;
   simple?: boolean;
+  disabled?: boolean;
 }
 
-export default function ResumeUploader({ onResumeSubmit, simple = false }: ResumeUploaderProps) {
+export default function ResumeUploader({ onResumeSubmit, simple = false, disabled = false }: ResumeUploaderProps) {
   const [file, setFile]             = useState<File | null>(null);
   const [loading, setLoading]       = useState(false);
   const [error, setError]           = useState<string | null>(null);
@@ -21,6 +22,8 @@ export default function ResumeUploader({ onResumeSubmit, simple = false }: Resum
   const [dragging, setDragging]     = useState(false);
   const [mode, setMode]             = useState<"upload" | "paste">("upload");
   const inputRef                    = useRef<HTMLInputElement>(null);
+  const extractionId = useRef(0);
+  const [wordCount, setWordCount] = useState(0);
 
   const extractTextFromPDF = async (data: ArrayBuffer): Promise<string> => {
     try {
@@ -32,8 +35,14 @@ export default function ResumeUploader({ onResumeSubmit, simple = false }: Resum
   };
 
   const handleFile = async (f: File | null) => {
-    if (!f) return;
-    const isPdf = f.type === "application/pdf";
+    if (disabled || !f) return;
+    const id = ++extractionId.current;
+    onResumeSubmit("");
+    setCharCount(0);
+    setWordCount(0);
+    setFile(null);
+    setLoading(false);
+    const isPdf = f.type === "application/pdf" || f.name.toLowerCase().endsWith(".pdf");
     const isTxt = f.type === "text/plain" || f.name.toLowerCase().endsWith(".txt");
     if (!isPdf && !isTxt) {
       setError("Please upload a PDF or TXT file.");
@@ -48,23 +57,30 @@ export default function ResumeUploader({ onResumeSubmit, simple = false }: Resum
     setError(null);
     try {
       const txt =
-        f.type === "application/pdf"
+        isPdf
           ? await extractTextFromPDF(await f.arrayBuffer())
           : await f.text();
+      if (id !== extractionId.current) return;
+      if (!txt.trim()) throw new Error("This file has no readable text. Paste your resume text instead.");
       setCharCount(txt.length);
+      setWordCount(txt.trim().split(/\s+/).length);
       onResumeSubmit(txt);
     } catch (caught: unknown) {
+      if (id !== extractionId.current) return;
       const err = toError(caught);
       setError(err.message);
       setFile(null);
       setCharCount(0);
       onResumeSubmit("");
     } finally {
-      setLoading(false);
+      if (id === extractionId.current) setLoading(false);
     }
   };
 
   const handleClear = () => {
+    extractionId.current++;
+    setLoading(false);
+    setWordCount(0);
     setFile(null);
     setError(null);
     setCharCount(0);
@@ -82,12 +98,9 @@ export default function ResumeUploader({ onResumeSubmit, simple = false }: Resum
   const handlePaste = (val: string) => {
     setPasteText(val);
     setCharCount(val.length);
+    setWordCount(val.trim() ? val.trim().split(/\s+/).length : 0);
     onResumeSubmit(val);
   };
-
-  const wordCount = charCount > 0
-    ? Math.round(charCount / 5)
-    : 0;
 
   return (
     <div className="space-y-4">
@@ -96,8 +109,9 @@ export default function ResumeUploader({ onResumeSubmit, simple = false }: Resum
         <div className="flex gap-1 p-1 bg-bg rounded-lg w-fit">
           {(["upload", "paste"] as const).map((m) => (
             <button
+                type="button"
               key={m}
-              onClick={() => setMode(m)}
+              onClick={() => { if (m !== mode) { handleClear(); setMode(m); } }}
               className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${
                 mode === m
                   ? "bg-surface text-fg shadow-sm"
@@ -116,15 +130,16 @@ export default function ResumeUploader({ onResumeSubmit, simple = false }: Resum
           {!file ? (
             <div
               role="button"
-              tabIndex={loading ? -1 : 0}
+              tabIndex={loading || disabled ? -1 : 0}
+              aria-disabled={loading || disabled}
               aria-label="Upload your resume — PDF or TXT, max 10MB"
               onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") { e.preventDefault(); inputRef.current?.click(); }
+                if (!disabled && !loading && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); inputRef.current?.click(); }
               }}
               onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
               onDragLeave={() => setDragging(false)}
               onDrop={handleDrop}
-              onClick={() => inputRef.current?.click()}
+              onClick={() => { if (!disabled && !loading) inputRef.current?.click(); }}
               className={`relative flex flex-col items-center justify-center gap-3 p-10 rounded-lg border-2 border-dashed cursor-pointer transition-all ${
                 dragging
                   ? "border-border bg-surface-2"
@@ -174,13 +189,14 @@ export default function ResumeUploader({ onResumeSubmit, simple = false }: Resum
                 <div>
                   <p className="text-fg text-sm font-medium">{file.name}</p>
                   {!loading && charCount > 0 && (
-                    <p className="text-fg-subtle text-xs">~{wordCount.toLocaleString()} words extracted</p>
+                    <p className="text-fg-subtle text-xs">{wordCount.toLocaleString()} words extracted</p>
                   )}
                   {loading && <p className="text-fg text-xs">Extracting text…</p>}
                 </div>
               </div>
               {!loading && (
                 <button
+                type="button"
                   onClick={handleClear}
                   className="text-fg-muted hover:text-fg transition-colors p-1"
                   aria-label="Remove file"
@@ -208,8 +224,9 @@ export default function ResumeUploader({ onResumeSubmit, simple = false }: Resum
           />
           {pasteText.length > 0 && (
             <div className="flex items-center justify-between mt-2 px-1">
-              <span className="text-xs text-fg-subtle">~{Math.round(pasteText.length / 5).toLocaleString()} words</span>
+              <span className="text-xs text-fg-subtle">{wordCount.toLocaleString()} words</span>
               <button
+                type="button"
                 onClick={handleClear}
                 className="text-xs text-fg-muted hover:text-fg transition-colors"
               >
