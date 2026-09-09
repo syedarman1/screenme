@@ -136,7 +136,7 @@ export function rejectMissingHeadingClaims(resume: string, claims: string[]) {
       ).test(resume)
     )
       continue;
-    for (const claim of claims) {
+    for (const claim of claims.flatMap((text) => text.split(/[.!?]+/))) {
       const text = normalized(claim);
       const namesHeading = new RegExp(`\\b${heading}\\b`).test(text);
       if (
@@ -146,13 +146,10 @@ export function rejectMissingHeadingClaims(resume: string, claims: string[]) {
       )
         continue;
       const missing =
-        /\b(?:lack|lacks|lacking|missing|absent|without)\b[^.!?]{0,80}\b(?:headers?|headings?|sections?)\b/.test(
+        /\b(?:lack(?:s|ing)?(?: of)?|missing|absent|without|add|include|create|introduce)\s+(?:(?:a|an|the|clear|explicit|separate|dedicated|section|skills|education|experience|certifications|projects|and|or)\s+){0,7}(?:headers?|headings?|sections?)\b/.test(
           text,
         ) ||
-        /\b(?:headers?|headings?|sections?)\b[^.!?]{0,40}\b(?:missing|absent|lacking)\b/.test(
-          text,
-        ) ||
-        /\b(?:add|include|create|introduce)\b[^.!?]{0,60}\b(?:headers?|headings?)\b/.test(
+        /\b(?:headers?|headings?|sections?)\s+(?:(?:for|skills|education|experience|certifications|projects|and|or|is|are)\s+){0,7}(?:missing|absent|lacking)\b/.test(
           text,
         ) ||
         new RegExp(

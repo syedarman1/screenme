@@ -210,3 +210,19 @@ test("explicitly optional polish cannot be presented as a high priority", () => 
   ];
   assert.equal(validateScan(review, strongResume).findings[0].priority, "low");
 });
+
+test("heading safeguards allow advice about missing detail and an absent different section", () => {
+  for (const explanation of [
+    "Add examples under the Skills heading if accurate.",
+    "The Skills section is missing concrete project examples.",
+    "Details are lacking in the Skills section.",
+    "The Skills heading is clear. A Projects section is missing.",
+  ]) {
+    const scan = scanFixture();
+    scan.assessments.organization.explanation = explanation;
+    assert.doesNotThrow(() => validateScan(scan, strongResume));
+  }
+  const scan = scanFixture();
+  scan.assessments.organization.explanation = "Add a clear Skills heading.";
+  assert.throws(() => validateScan(scan, strongResume), /contradicts/);
+});
