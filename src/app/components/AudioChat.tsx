@@ -13,19 +13,19 @@ interface AudioChatProps {
 }
 
 export default function AudioChat({ jobContext }: AudioChatProps) {
-  const [msgs, setMsgs]                   = useState<ChatMsg[]>([]);
-  const [isRecording, setIsRecording]     = useState(false);
-  const [isProcessing, setIsProcessing]   = useState(false);
+  const [msgs, setMsgs] = useState<ChatMsg[]>([]);
+  const [isRecording, setIsRecording] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
   const [hasPermission, setHasPermission] = useState(false);
-  const [isSpeaking, setIsSpeaking]       = useState(false);
-  const [isActive, setIsActive]           = useState(false);
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [isActive, setIsActive] = useState(false);
 
-  const mediaRef    = useRef<MediaRecorder | null>(null);
-  const chunksRef   = useRef<Blob[]>([]);
-  const streamRef   = useRef<MediaStream | null>(null);
-  const synthRef    = useRef<SpeechSynthesis | null>(null);
-  const scrollRef   = useRef<HTMLDivElement>(null);
-  const mountedRef  = useRef(true);
+  const mediaRef = useRef<MediaRecorder | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
+  const streamRef = useRef<MediaStream | null>(null);
+  const synthRef = useRef<SpeechSynthesis | null>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const mountedRef = useRef(true);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -51,14 +51,19 @@ export default function AudioChat({ jobContext }: AudioChatProps) {
       .query({ name: "microphone" as PermissionName })
       .then((ps) => {
         if (mountedRef.current) setHasPermission(ps.state === "granted");
-        ps.onchange = () => { if (mountedRef.current) setHasPermission(ps.state === "granted"); };
+        ps.onchange = () => {
+          if (mountedRef.current) setHasPermission(ps.state === "granted");
+        };
       })
       .catch(() => {});
   }, []);
 
   // Auto-scroll transcript
   useEffect(() => {
-    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
+    scrollRef.current?.scrollTo({
+      top: scrollRef.current.scrollHeight,
+      behavior: "smooth",
+    });
   }, [msgs]);
 
   /* ── Speech helpers ───────────────────────────────────── */
@@ -78,21 +83,31 @@ export default function AudioChat({ jobContext }: AudioChatProps) {
     if (mountedRef.current) setIsSpeaking(false);
   }, []);
 
-  const speak = useCallback((text: string) => {
-    if (!synthRef.current || !text) return;
-    stopSpeech();
-    const utter = new SpeechSynthesisUtterance(stripMarkdown(text));
-    utter.onstart  = () => { if (mountedRef.current) setIsSpeaking(true); };
-    utter.onend    = () => { if (mountedRef.current) setIsSpeaking(false); };
-    utter.onerror  = (e) => {
-      if (e.error !== "canceled" && e.error !== "interrupted") console.error("TTS error:", e.error);
-      if (mountedRef.current) setIsSpeaking(false);
-    };
-    const voices = synthRef.current.getVoices();
-    const preferred = voices.find((v) => /samantha|karen|female/i.test(v.name) && v.lang.startsWith("en"));
-    if (preferred) utter.voice = preferred;
-    synthRef.current.speak(utter);
-  }, [stopSpeech]);
+  const speak = useCallback(
+    (text: string) => {
+      if (!synthRef.current || !text) return;
+      stopSpeech();
+      const utter = new SpeechSynthesisUtterance(stripMarkdown(text));
+      utter.onstart = () => {
+        if (mountedRef.current) setIsSpeaking(true);
+      };
+      utter.onend = () => {
+        if (mountedRef.current) setIsSpeaking(false);
+      };
+      utter.onerror = (e) => {
+        if (e.error !== "canceled" && e.error !== "interrupted")
+          console.error("TTS error:", e.error);
+        if (mountedRef.current) setIsSpeaking(false);
+      };
+      const voices = synthRef.current.getVoices();
+      const preferred = voices.find(
+        (v) => /samantha|karen|female/i.test(v.name) && v.lang.startsWith("en"),
+      );
+      if (preferred) utter.voice = preferred;
+      synthRef.current.speak(utter);
+    },
+    [stopSpeech],
+  );
 
   /* ── Mic permission ───────────────────────────────────── */
   const requestMicPermission = async (): Promise<boolean> => {
@@ -111,7 +126,13 @@ export default function AudioChat({ jobContext }: AudioChatProps) {
   /* ── Start interview ──────────────────────────────────── */
   const handleStart = async () => {
     if (!hasPermission && !(await requestMicPermission())) {
-      setMsgs([{ id: Date.now(), who: "ai", text: "Microphone access denied. Please allow microphone access in your browser settings and try again." }]);
+      setMsgs([
+        {
+          id: Date.now(),
+          who: "ai",
+          text: "Microphone access denied. Please allow microphone access in your browser settings and try again.",
+        },
+      ]);
       return;
     }
     const greeting = jobContext
@@ -154,7 +175,9 @@ export default function AudioChat({ jobContext }: AudioChatProps) {
     mediaRef.current = recorder;
     chunksRef.current = [];
 
-    recorder.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data); };
+    recorder.ondataavailable = (e) => {
+      if (e.data.size > 0) chunksRef.current.push(e.data);
+    };
 
     recorder.onstop = async () => {
       if (!mountedRef.current) return;
@@ -162,7 +185,14 @@ export default function AudioChat({ jobContext }: AudioChatProps) {
       setIsProcessing(true);
 
       if (chunksRef.current.length === 0) {
-        setMsgs((prev) => [...prev, { id: Date.now(), who: "ai", text: "No audio detected. Please speak into your microphone and try again." }]);
+        setMsgs((prev) => [
+          ...prev,
+          {
+            id: Date.now(),
+            who: "ai",
+            text: "No audio detected. Please speak into your microphone and try again.",
+          },
+        ]);
         setIsProcessing(false);
         streamRef.current?.getTracks().forEach((t) => t.stop());
         streamRef.current = null;
@@ -172,7 +202,10 @@ export default function AudioChat({ jobContext }: AudioChatProps) {
       const audioBlob = new Blob(chunksRef.current, { type: "audio/webm" });
       const placeholderId = Date.now();
 
-      setMsgs((prev) => [...prev, { id: placeholderId, who: "user", text: "Processing…" }]);
+      setMsgs((prev) => [
+        ...prev,
+        { id: placeholderId, who: "user", text: "Processing…" },
+      ]);
 
       const formData = new FormData();
       formData.append("audio", audioBlob, "audio.webm");
@@ -180,7 +213,10 @@ export default function AudioChat({ jobContext }: AudioChatProps) {
       if (jobContext) formData.append("jobContext", jobContext.slice(0, 25000));
 
       try {
-        const res = await authFetch("/api/interviewPrep", { method: "POST", body: formData });
+        const res = await authFetch("/api/interviewPrep", {
+          method: "POST",
+          body: formData,
+        });
 
         if (!res.ok) {
           const d = await res.json().catch(() => ({}));
@@ -191,18 +227,27 @@ export default function AudioChat({ jobContext }: AudioChatProps) {
 
         if (!mountedRef.current) return;
         setMsgs((prev) =>
-          prev.map((m) => m.id === placeholderId ? { ...m, text: transcript || "(no transcript)" } : m)
+          prev.map((m) =>
+            m.id === placeholderId
+              ? { ...m, text: transcript || "(no transcript)" }
+              : m,
+          ),
         );
         setTimeout(() => {
           if (!mountedRef.current) return;
-          setMsgs((prev) => [...prev, { id: Date.now() + 1, who: "ai", text: reply || "(no reply)" }]);
+          setMsgs((prev) => [
+            ...prev,
+            { id: Date.now() + 1, who: "ai", text: reply || "(no reply)" },
+          ]);
           speak(reply || "");
         }, 20);
       } catch (caught: unknown) {
-      const e = toError(caught);
+        const e = toError(caught);
         if (!mountedRef.current) return;
         setMsgs((prev) =>
-          prev.map((m) => m.id === placeholderId ? { ...m, text: `Error: ${e.message}` } : m)
+          prev.map((m) =>
+            m.id === placeholderId ? { ...m, text: `Error: ${e.message}` } : m,
+          ),
         );
       } finally {
         if (mountedRef.current) setIsProcessing(false);
@@ -213,7 +258,10 @@ export default function AudioChat({ jobContext }: AudioChatProps) {
     };
 
     recorder.start();
-    if (mountedRef.current) { setIsRecording(true); setIsProcessing(false); }
+    if (mountedRef.current) {
+      setIsRecording(true);
+      setIsProcessing(false);
+    }
   };
 
   const stopRecording = () => {
@@ -223,23 +271,28 @@ export default function AudioChat({ jobContext }: AudioChatProps) {
   /* ── Render ───────────────────────────────────────────── */
   return (
     <div className="bg-surface border border-border rounded-lg overflow-hidden shadow-sm">
-
       {/* Transcript */}
-      <div
-        ref={scrollRef}
-        className="h-64 overflow-y-auto p-5 space-y-3 bg-bg"
-      >
+      <div ref={scrollRef} className="h-64 overflow-y-auto p-5 space-y-3 bg-bg">
         {msgs.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center gap-2 text-center">
             <div className="w-10 h-10 rounded-lg bg-surface-2 border border-border/15 flex items-center justify-center">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" className="stroke-fg" strokeWidth="1.5">
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                className="stroke-fg"
+                strokeWidth="1.5"
+              >
                 <path d="M12 1a3 3 0 00-3 3v7a3 3 0 006 0V4a3 3 0 00-3-3z" />
                 <path d="M19 10v2a7 7 0 01-14 0v-2" />
                 <path d="M12 19v4M8 23h8" />
               </svg>
             </div>
             <p className="text-fg-subtle text-sm">
-              {isActive ? "Recording started — tap the mic button to speak." : 'Click "Start Interview" to begin your mock session.'}
+              {isActive
+                ? "Recording started — tap the mic button to speak."
+                : 'Click "Start Interview" to begin your mock session.'}
             </p>
           </div>
         ) : (
@@ -253,16 +306,20 @@ export default function AudioChat({ jobContext }: AudioChatProps) {
                   <span className="text-fg text-[10px] font-bold">AI</span>
                 </div>
               )}
-              <div className={`max-w-[80%] px-4 py-2.5 rounded-lg text-sm leading-relaxed ${
-                m.who === "user"
-                  ? "bg-accent text-accent-fg rounded-br-sm"
-                  : "bg-surface border border-border text-fg rounded-bl-sm"
-              }`}>
+              <div
+                className={`max-w-[80%] px-4 py-2.5 rounded-lg text-sm leading-relaxed ${
+                  m.who === "user"
+                    ? "bg-accent text-accent-fg rounded-br-sm"
+                    : "bg-surface border border-border text-fg rounded-bl-sm"
+                }`}
+              >
                 {m.text}
               </div>
               {m.who === "user" && (
                 <div className="w-7 h-7 rounded-full bg-[#f0f0f5] border border-border-2 flex items-center justify-center shrink-0 mt-0.5">
-                  <span className="text-fg-muted text-[10px] font-bold">You</span>
+                  <span className="text-fg-muted text-[10px] font-bold">
+                    You
+                  </span>
                 </div>
               )}
             </div>
@@ -278,7 +335,11 @@ export default function AudioChat({ jobContext }: AudioChatProps) {
             <div className="px-4 py-2.5 bg-surface border border-border rounded-lg rounded-bl-sm">
               <div className="flex gap-1 items-center h-4">
                 {[0, 1, 2].map((i) => (
-                  <span key={i} className="w-1.5 h-1.5 rounded-full bg-accent animate-bounce" style={{ animationDelay: `${i * 0.15}s` }} />
+                  <span
+                    key={i}
+                    className="w-1.5 h-1.5 rounded-full bg-accent animate-bounce"
+                    style={{ animationDelay: `${i * 0.15}s` }}
+                  />
                 ))}
               </div>
             </div>
@@ -294,15 +355,31 @@ export default function AudioChat({ jobContext }: AudioChatProps) {
               onClick={handleStart}
               className="flex items-center gap-2 px-5 py-2.5 bg-accent hover:bg-accent-hover text-accent-fg rounded-lg font-semibold text-sm transition-colors active:scale-[.98]"
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                strokeWidth={2}
+              >
                 <polygon points="5 3 19 12 5 21 5 3" />
               </svg>
               Start Interview
             </button>
             {!hasPermission && (
               <p className="text-xs text-fg-subtle flex items-center gap-1.5">
-                <svg className="w-3.5 h-3.5 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+                <svg
+                  className="w-3.5 h-3.5 text-amber-500"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  strokeWidth={2}
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"
+                  />
                 </svg>
                 Microphone access required
               </p>
@@ -317,8 +394,18 @@ export default function AudioChat({ jobContext }: AudioChatProps) {
                 disabled={isProcessing}
                 className="flex items-center gap-2 px-4 py-2.5 bg-surface-2 hover:bg-[#e0efff] text-fg border border-border/20 rounded-lg font-semibold text-sm transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
               >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 1a3 3 0 00-3 3v7a3 3 0 006 0V4a3 3 0 00-3-3zM19 10v2a7 7 0 01-14 0v-2M12 19v4M8 23h8" />
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  strokeWidth={2}
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M12 1a3 3 0 00-3 3v7a3 3 0 006 0V4a3 3 0 00-3-3zM19 10v2a7 7 0 01-14 0v-2M12 19v4M8 23h8"
+                  />
                 </svg>
                 {isProcessing ? "Processing…" : "Speak"}
               </button>
@@ -338,8 +425,15 @@ export default function AudioChat({ jobContext }: AudioChatProps) {
                 onClick={stopSpeech}
                 className="flex items-center gap-2 px-4 py-2.5 bg-amber-50 text-amber-700 border border-amber-200 rounded-lg text-sm font-medium transition-colors hover:bg-amber-100"
               >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-                  <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                  strokeWidth={2}
+                >
+                  <line x1="18" y1="6" x2="6" y2="18" />
+                  <line x1="6" y1="6" x2="18" y2="18" />
                 </svg>
                 Stop Speaking
               </button>

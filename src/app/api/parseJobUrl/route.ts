@@ -1,5 +1,5 @@
+import { recordCompletion } from "../../lib/aiMetrics";
 
-import { toError } from "../../lib/value";
 import { allowedJobUrl, fetchJobPage } from "../../lib/jobUrl";
 import { withUsage } from "../../lib/aiRequest";
 // src/app/api/parseJobUrl/route.ts
@@ -7,7 +7,11 @@ import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
 
 const openai = process.env.OPENAI_API_KEY
-  ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY, timeout: 30000 })
+  ? new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+      timeout: 30000,
+      maxRetries: 0,
+    })
   : null;
 
 function stripHtml(html: string): string {
@@ -18,41 +22,62 @@ function stripHtml(html: string): string {
   // Remove HTML tags
   text = text.replace(/<[^>]+>/g, " ");
   // Decode common entities
-  text = text.replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">")
-    .replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&nbsp;/g, " ");
+  text = text
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&nbsp;/g, " ");
   // Collapse whitespace
   text = text.replace(/\s+/g, " ").trim();
   return text;
 }
 
 async function handleRequest(req: NextRequest) {
-  if (!openai) return NextResponse.json({ error: "AI service not configured." }, { status: 503 });
+  if (!openai)
+    return NextResponse.json(
+      { error: "AI service not configured." },
+      { status: 503 },
+    );
 
   const body = await req.json().catch(() => ({}));
   const { url } = body as { url?: string };
 
   if (!url || typeof url !== "string" || url.trim().length < 10) {
-    return NextResponse.json({ error: "Please provide a valid job posting URL." }, { status: 400 });
+    return NextResponse.json(
+      { error: "Please provide a valid job posting URL." },
+      { status: 400 },
+    );
   }
 
   const trimmedUrl = url.trim();
 
-  try { allowedJobUrl(trimmedUrl); } catch {
-    return NextResponse.json({
-      error: "URL not supported. We support LinkedIn, Indeed, Glassdoor, Greenhouse, Lever, and other major job boards. You can still paste the job description manually.",
-    }, { status: 400 });
+  try {
+    allowedJobUrl(trimmedUrl);
+  } catch {
+    return NextResponse.json(
+      {
+        error:
+          "URL not supported. We support LinkedIn, Indeed, Glassdoor, Greenhouse, Lever, and other major job boards. You can still paste the job description manually.",
+      },
+      { status: 400 },
+    );
   }
 
   /* ── Fetch the page ─────────────────────────────────────── */
   let rawHtml: string;
   try {
     rawHtml = await fetchJobPage(trimmedUrl);
-  } catch (caught: unknown) {
-      const e = toError(caught);
-    console.error("Fetch job URL error:", e);
-    return NextResponse.json({
-      error: "Could not reach the job posting. Check the URL or paste the description manually.",
-    }, { status: 400 });
+  } catch {
+    console.error("Job page retrieval failed");
+    return NextResponse.json(
+      {
+        error:
+          "Could not reach the job posting. Check the URL or paste the description manually.",
+      },
+      { status: 400 },
+    );
   }
 
   /* ── Strip HTML → plain text ────────────────────────────── */
@@ -64,9 +89,13 @@ async function handleRequest(req: NextRequest) {
   }
 
   if (pageText.length < 100) {
-    return NextResponse.json({
-      error: "Could not extract enough content from this page. It may require JavaScript or login. Try pasting the job description manually.",
-    }, { status: 400 });
+    return NextResponse.json(
+      {
+        error:
+          "Could not extract enough content from this page. It may require JavaScript or login. Try pasting the job description manually.",
+      },
+      { status: 400 },
+    );
   }
 
   /* ── GPT extraction ────────────────────────────────────── */
@@ -102,33 +131,44 @@ Rules:
       response_format: { type: "json_object" },
     });
 
+    recordCompletion(completion);
     const result = completion.choices[0]?.message?.content ?? "";
     const parsed = JSON.parse(result);
 
     if (parsed.error) {
-      return NextResponse.json({
-        error: parsed.error + " Try pasting the job description manually.",
-      }, { status: 400 });
+      return NextResponse.json(
+        {
+          error: parsed.error + " Try pasting the job description manually.",
+        },
+        { status: 400 },
+      );
     }
 
     if (!parsed.description || parsed.description.length < 50) {
-      return NextResponse.json({
-        error: "Could not extract a complete job description. Try pasting it manually.",
-      }, { status: 400 });
+      return NextResponse.json(
+        {
+          error:
+            "Could not extract a complete job description. Try pasting it manually.",
+        },
+        { status: 400 },
+      );
     }
 
     return NextResponse.json({
-      jobTitle:    String(parsed.jobTitle || "").slice(0, 200),
-      company:     String(parsed.company || "").slice(0, 200),
+      jobTitle: String(parsed.jobTitle || "").slice(0, 200),
+      company: String(parsed.company || "").slice(0, 200),
       description: String(parsed.description || "").slice(0, 10000),
-      success:     true,
+      success: true,
     });
-  } catch (caught: unknown) {
-      const e = toError(caught);
-    console.error("GPT extraction error:", e);
-    return NextResponse.json({
-      error: "Failed to parse job posting. Try pasting the description manually.",
-    }, { status: 500 });
+  } catch {
+    console.error("Job extraction failed");
+    return NextResponse.json(
+      {
+        error:
+          "Failed to parse job posting. Try pasting the description manually.",
+      },
+      { status: 500 },
+    );
   }
 }
 

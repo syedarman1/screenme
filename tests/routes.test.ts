@@ -7,11 +7,21 @@ let webhook: typeof import("../src/app/api/stripe/webhook/route");
 let billing: typeof import("../src/app/lib/billing");
 let usage: typeof import("../src/app/lib/aiRequest");
 let storageFails = false;
+let monitoringFails = false;
+let monitoringRows: Record<string, unknown>[] = [];
 let authenticated = true;
 let rpcCalls: { name: string; body: Record<string, unknown> }[] = [];
 const originalFetch = globalThis.fetch;
 const userId = "00000000-0000-4000-8000-000000000001";
-const request = (path: string, body: unknown) => new NextRequest(`https://screenme.example${path}`, { method: "POST", headers: { "Content-Type": "application/json", Authorization: "Bearer synthetic-token" }, body: JSON.stringify(body) });
+const request = (path: string, body: unknown) =>
+  new NextRequest(`https://screenme.example${path}`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: "Bearer synthetic-token",
+    },
+    body: JSON.stringify(body),
+  });
 
 before(async () => {
   process.env.NEXT_PUBLIC_SUPABASE_URL = "https://synthetic.supabase.invalid";
@@ -22,18 +32,57 @@ before(async () => {
   process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO = "price_pro";
   globalThis.fetch = async (input, init) => {
     const url = String(input instanceof Request ? input.url : input);
-    assert.ok(url.startsWith("https://synthetic.supabase.invalid/"), `Unexpected network request: ${url}`);
-    if (url.includes("/auth/v1/user")) return Response.json(authenticated ? { id: userId, email: "test@example.invalid" } : { message: "Unauthorized" }, { status: authenticated ? 200 : 401 });
+    assert.ok(
+      url.startsWith("https://synthetic.supabase.invalid/"),
+      `Unexpected network request: ${url}`,
+    );
+    if (url.includes("/auth/v1/user"))
+      return Response.json(
+        authenticated
+          ? { id: userId, email: "test@example.invalid" }
+          : { message: "Unauthorized" },
+        { status: authenticated ? 200 : 401 },
+      );
     const name = new URL(url).pathname.split("/").at(-1)!;
     if (url.includes("/rpc/")) {
       const body = JSON.parse(String(init?.body || "{}"));
       rpcCalls.push({ name, body });
-      if (name === "screenme_rate_limit") return Response.json({ success: true, limit: 10, remaining: 9, retryAfter: 60 });
-      if (name === "screenme_usage") return Response.json({ allowed: true, plan: "free", remaining: 2, limit: 3, reservationId: "00000000-0000-4000-8000-000000000002" });
+      if (name === "screenme_rate_limit")
+        return Response.json({
+          success: true,
+          limit: 10,
+          remaining: 9,
+          retryAfter: 60,
+        });
+      if (name === "screenme_usage")
+        return Response.json({
+          allowed: true,
+          plan: "free",
+          remaining: 2,
+          limit: 3,
+          reservationId: "00000000-0000-4000-8000-000000000002",
+        });
       if (name === "screenme_finish_usage") return Response.json(true);
-      if (name === "screenme_apply_billing") return Response.json(storageFails ? { message: "Injected database failure" } : true, { status: storageFails ? 500 : 200 });
+      if (name === "screenme_apply_billing")
+        return Response.json(
+          storageFails ? { message: "Injected database failure" } : true,
+          { status: storageFails ? 500 : 200 },
+        );
     }
-    if (name === "contact_messages") return Response.json(storageFails ? { message: "Injected database failure" } : { id: "synthetic-message" }, { status: storageFails ? 500 : 201 });
+    if (name === "ai_runs") {
+      monitoringRows.push(JSON.parse(String(init?.body || "{}")));
+      return Response.json(
+        monitoringFails ? { message: "Injected failure" } : {},
+        { status: monitoringFails ? 503 : 201 },
+      );
+    }
+    if (name === "contact_messages")
+      return Response.json(
+        storageFails
+          ? { message: "Injected database failure" }
+          : { id: "synthetic-message" },
+        { status: storageFails ? 500 : 201 },
+      );
     if (name === "user_plans") return Response.json({ user_id: userId });
     throw new Error(`Unexpected request ${url}`);
   };
@@ -42,13 +91,31 @@ before(async () => {
   billing = await import("../src/app/lib/billing");
   usage = await import("../src/app/lib/aiRequest");
 });
-beforeEach(() => { storageFails = false; authenticated = true; rpcCalls = []; mock.restoreAll(); });
-after(() => { globalThis.fetch = originalFetch; mock.restoreAll(); });
+beforeEach(() => {
+  storageFails = false;
+  monitoringFails = false;
+  monitoringRows = [];
+  authenticated = true;
+  rpcCalls = [];
+  mock.restoreAll();
+});
+after(() => {
+  globalThis.fetch = originalFetch;
+  mock.restoreAll();
+});
 
 test("contact confirms success only after durable storage succeeds", async () => {
-  const message = { name: "Test User", email: "test@example.invalid", subject: "Support", message: "Synthetic test message" };
+  const message = {
+    name: "Test User",
+    email: "test@example.invalid",
+    subject: "Support",
+    message: "Synthetic test message",
+  };
   storageFails = true;
-  assert.equal((await contact.POST(request("/api/contact", message))).status, 503);
+  assert.equal(
+    (await contact.POST(request("/api/contact", message))).status,
+    503,
+  );
   storageFails = false;
   const response = await contact.POST(request("/api/contact", message));
   assert.equal(response.status, 200);
@@ -57,37 +124,150 @@ test("contact confirms success only after durable storage succeeds", async () =>
 
 test("contact rejects malformed and oversized submissions", async () => {
   assert.equal((await contact.POST(request("/api/contact", {}))).status, 400);
-  assert.equal((await contact.POST(request("/api/contact", { message: "a".repeat(13_000) }))).status, 413);
+  assert.equal(
+    (
+      await contact.POST(
+        request("/api/contact", { message: "a".repeat(13_000) }),
+      )
+    ).status,
+    413,
+  );
 });
 
 test("AI request failures refund the reservation; successful requests settle it", async () => {
-  const failure = await usage.withUsage(request("/api/test", {}), "resume_scan", async () => NextResponse.json({ error: "Injected AI failure" }, { status: 502 }));
+  const failure = await usage.withUsage(
+    request("/api/test", {}),
+    "resume_scan",
+    async () =>
+      NextResponse.json({ error: "Injected AI failure" }, { status: 502 }),
+  );
   assert.equal(failure.status, 502);
   assert.equal(rpcCalls.at(-1)?.body.p_success, false);
-  const success = await usage.withUsage(request("/api/test", {}), "resume_scan", async () => NextResponse.json({ result: "Synthetic output" }));
+  const success = await usage.withUsage(
+    request("/api/test", {}),
+    "resume_scan",
+    async () => NextResponse.json({ result: "Synthetic output" }),
+  );
   assert.equal(success.status, 200);
   assert.equal(rpcCalls.at(-1)?.body.p_success, true);
 });
 
 test("signed-out requests cannot reach AI or usage reservation", async () => {
   authenticated = false;
-  const response = await usage.withUsage(request("/api/test", {}), "resume_scan", async () => { throw new Error("Must not run"); });
+  const response = await usage.withUsage(
+    request("/api/test", {}),
+    "resume_scan",
+    async () => {
+      throw new Error("Must not run");
+    },
+  );
   assert.equal(response.status, 401);
   assert.equal(rpcCalls.length, 0);
 });
 
-function signedEvent() {
-  const payload = JSON.stringify({ id: "evt_retry_synthetic", type: "customer.subscription.updated", created: Math.floor(Date.now()/1000) - 7*86400, data: { object: { id: "sub_synthetic" } } });
-  const signature = billing.stripe!.webhooks.generateTestHeaderString({ payload, secret: process.env.STRIPE_WEBHOOK_SECRET! });
-  return new NextRequest("https://screenme.example/api/stripe/webhook", { method: "POST", body: payload, headers: { "stripe-signature": signature } });
+function signedEvent(
+  type = "customer.subscription.updated",
+  object: Record<string, unknown> = { id: "sub_synthetic" },
+) {
+  const payload = JSON.stringify({
+    id: "evt_retry_synthetic",
+    type,
+    created: Math.floor(Date.now() / 1000) - 7 * 86400,
+    data: { object },
+  });
+  const signature = billing.stripe!.webhooks.generateTestHeaderString({
+    payload,
+    secret: process.env.STRIPE_WEBHOOK_SECRET!,
+  });
+  return new NextRequest("https://screenme.example/api/stripe/webhook", {
+    method: "POST",
+    body: payload,
+    headers: { "stripe-signature": signature },
+  });
 }
 
 test("Stripe webhook rejects bad signatures and retries an old event after storage failure", async () => {
-  assert.equal((await webhook.POST(request("/api/stripe/webhook", {}))).status, 400);
-  mock.method(billing.stripe!.subscriptions, "retrieve", async () => ({ id: "sub_synthetic", customer: "cus_synthetic", status: "active", metadata: { userId }, items: { data: [{ price: { id: "price_pro" } }] } }));
+  assert.equal(
+    (await webhook.POST(request("/api/stripe/webhook", {}))).status,
+    400,
+  );
+  mock.method(billing.stripe!.subscriptions, "retrieve", async () => ({
+    id: "sub_synthetic",
+    customer: "cus_synthetic",
+    status: "active",
+    metadata: { userId },
+    items: { data: [{ price: { id: "price_pro" } }] },
+  }));
   storageFails = true;
   assert.equal((await webhook.POST(signedEvent())).status, 503);
   storageFails = false;
   assert.equal((await webhook.POST(signedEvent())).status, 200);
-  assert.equal(rpcCalls.filter(call => call.name === "screenme_apply_billing").length, 2);
+  assert.equal(
+    rpcCalls.filter((call) => call.name === "screenme_apply_billing").length,
+    2,
+  );
+});
+
+test("invoice failure, recovery and cancellation webhooks reconcile current Stripe state", async () => {
+  for (const [event, status] of [
+    ["invoice.payment_failed", "past_due"],
+    ["invoice.paid", "active"],
+    ["invoice.payment_succeeded", "active"],
+    ["customer.subscription.updated", "active"],
+    ["customer.subscription.deleted", "canceled"],
+  ]) {
+    mock.method(billing.stripe!.subscriptions, "retrieve", async () => ({
+      id: "sub_synthetic",
+      customer: "cus_synthetic",
+      status,
+      cancel_at_period_end: event === "customer.subscription.updated",
+      items: { data: [{ price: { id: "price_pro" } }] },
+    }));
+    const object = event.startsWith("invoice")
+      ? {
+          id: "in_synthetic",
+          parent: { subscription_details: { subscription: "sub_synthetic" } },
+        }
+      : { id: "sub_synthetic" };
+    assert.equal((await webhook.POST(signedEvent(event, object))).status, 200);
+    assert.equal(rpcCalls.at(-1)?.body.p_status, status);
+    mock.restoreAll();
+  }
+});
+test("monitoring is content-free, failures still refund and telemetry outages cannot break a result", async () => {
+  const response = await usage.withUsage(
+    request("/api/test", { resume: "Private source" }),
+    "resume_scan",
+    async () => NextResponse.json({ summary: "Private output" }),
+  );
+  assert.equal(response.status, 200);
+  assert.match(response.headers.get("X-ScreenMe-Run")!, /^[a-f0-9-]{36}$/);
+  assert.equal(monitoringRows.length, 1);
+  assert.doesNotMatch(
+    JSON.stringify(monitoringRows),
+    /Private|summary|resume\"/,
+  );
+  monitoringFails = true;
+  assert.equal(
+    (
+      await usage.withUsage(request("/api/test", {}), "resume_scan", async () =>
+        NextResponse.json({ ok: true }),
+      )
+    ).status,
+    200,
+  );
+  assert.equal(
+    (
+      await usage.withUsage(
+        request("/api/test", {}),
+        "resume_scan",
+        async () => {
+          throw new Error("Private provider details");
+        },
+      )
+    ).status,
+    503,
+  );
+  assert.equal(rpcCalls.at(-1)?.body.p_success, false);
+  assert.equal(monitoringRows.at(-1)?.status, 503);
 });

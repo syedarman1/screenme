@@ -47,7 +47,8 @@ create trigger workspace_guard before insert or update on public.career_workspac
 create function public.screenme_workspace_snapshot() returns trigger language plpgsql security invoker set search_path='' as $$
 begin
  if new.payload->'result' is not null and new.payload->'result'<>'null'::jsonb and
-   (tg_op='INSERT' or new.payload->'result'->>'analyzedAt' is distinct from old.payload->'result'->>'analyzedAt') then
+   (tg_op='INSERT' or new.payload->'result'->>'analyzedAt' is distinct from old.payload->'result'->>'analyzedAt') and not exists
+   (select 1 from public.workspace_versions where workspace_id=new.id and payload->'result'->>'analyzedAt'=new.payload->'result'->>'analyzedAt') then
   insert into public.workspace_versions(workspace_id,user_id,revision,payload) values(new.id,new.user_id,new.revision,new.payload);
   delete from public.workspace_versions where workspace_id=new.id and id not in
    (select id from public.workspace_versions where workspace_id=new.id order by revision desc limit 10);

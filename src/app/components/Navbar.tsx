@@ -22,9 +22,12 @@ const APP_LINKS = [
   { href: "/interview", label: "Interview" },
   { href: "/applications", label: "Applications" },
   { href: "/resumes", label: "My Resumes" },
+  { href: "/account", label: "Account & billing" },
 ];
 
-const APP_ROUTES = new Set(APP_LINKS.map((l) => l.href).concat(["/tailor", "/success"]));
+const APP_ROUTES = new Set(
+  APP_LINKS.map((l) => l.href).concat(["/tailor", "/success", "/insights"]),
+);
 
 export default function DynamicNavbar() {
   const [user, setUser] = useState<User | null>(null);
@@ -33,18 +36,23 @@ export default function DynamicNavbar() {
   const router = useRouter();
   const pathname = usePathname();
 
-  const isAppRoute = APP_ROUTES.has(pathname);
+  const isAppRoute =
+    APP_ROUTES.has(pathname) || pathname.startsWith("/applications/");
 
   useEffect(() => {
     if (!supabase) return;
     supabase.auth.getUser().then(({ data }) => setUser(data?.user ?? null));
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_e, session) => setUser(session?.user ?? null)
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_e, session) =>
+      setUser(session?.user ?? null),
     );
     return () => subscription.unsubscribe();
   }, []);
 
-  useEffect(() => { setMobileOpen(false); }, [pathname]);
+  useEffect(() => {
+    setMobileOpen(false);
+  }, [pathname]);
 
   const handleSignOut = async () => {
     if (!supabase) return;
@@ -72,22 +80,24 @@ export default function DynamicNavbar() {
           </Link>
 
           <nav className="hidden lg:flex items-center gap-1">
-            {navLinks.map(({ href, label }) => {
-              const active = pathname === href;
-              return (
-                <Link
-                  key={label}
-                  href={href}
-                  className={`text-sm font-medium px-3 py-1.5 rounded-md transition-colors duration-200 ${
-                    active
-                      ? "text-fg bg-surface-2"
-                      : "text-fg-muted hover:text-fg hover:bg-surface-2"
-                  }`}
-                >
-                  {label}
-                </Link>
-              );
-            })}
+            {navLinks
+              .filter((link) => link.href !== "/account")
+              .map(({ href, label }) => {
+                const active = pathname === href;
+                return (
+                  <Link
+                    key={label}
+                    href={href}
+                    className={`text-sm font-medium px-3 py-1.5 rounded-md transition-colors duration-200 ${
+                      active
+                        ? "text-fg bg-surface-2"
+                        : "text-fg-muted hover:text-fg hover:bg-surface-2"
+                    }`}
+                  >
+                    {label}
+                  </Link>
+                );
+              })}
           </nav>
 
           <div className="hidden md:flex items-center gap-2">
@@ -100,18 +110,34 @@ export default function DynamicNavbar() {
                   aria-expanded={dropdownOpen}
                 >
                   <div className="w-6 h-6 rounded-md bg-accent flex items-center justify-center text-accent-fg text-xs font-semibold shrink-0">
-                    {(user.user_metadata?.full_name || user.email || "U")[0].toUpperCase()}
+                    {(user.user_metadata?.full_name ||
+                      user.email ||
+                      "U")[0].toUpperCase()}
                   </div>
                   <span className="text-sm text-fg max-w-[96px] truncate">
-                    {user.user_metadata?.full_name?.split(" ")[0] || user.email?.split("@")[0]}
+                    {user.user_metadata?.full_name?.split(" ")[0] ||
+                      user.email?.split("@")[0]}
                   </span>
-                  <svg className={`w-3 h-3 text-fg-subtle transition-transform duration-200 ${dropdownOpen ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                  <svg
+                    className={`w-3 h-3 text-fg-subtle transition-transform duration-200 ${dropdownOpen ? "rotate-180" : ""}`}
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth={2}
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M19 9l-7 7-7-7"
+                    />
                   </svg>
                 </button>
 
                 {dropdownOpen && (
-                  <div className="fixed inset-0 z-40" onClick={() => setDropdownOpen(false)} />
+                  <div
+                    className="fixed inset-0 z-40"
+                    onClick={() => setDropdownOpen(false)}
+                  />
                 )}
 
                 {dropdownOpen && (
@@ -130,12 +156,22 @@ export default function DynamicNavbar() {
                     >
                       My Resumes
                     </Link>
+                    <Link
+                      href="/account"
+                      onClick={() => setDropdownOpen(false)}
+                      className="block px-4 py-2 text-sm hover:bg-surface-2"
+                    >
+                      Account & billing
+                    </Link>
                     <div className="my-1 mx-2 border-t border-border" />
                     <div className="px-1">
                       <ThemeToggle />
                     </div>
                     <button
-                      onClick={() => { setDropdownOpen(false); handleSignOut(); }}
+                      onClick={() => {
+                        setDropdownOpen(false);
+                        handleSignOut();
+                      }}
                       className="flex w-full items-center gap-2 px-3 py-2 text-sm text-red hover:bg-surface-2 transition-colors mx-1 rounded-md cursor-pointer"
                     >
                       Sign out
@@ -145,10 +181,16 @@ export default function DynamicNavbar() {
               </div>
             ) : (
               <>
-                <Link href="/login" className="btn btn-ghost px-3 py-1.5 text-sm">
+                <Link
+                  href="/login"
+                  className="btn btn-ghost px-3 py-1.5 text-sm"
+                >
                   Sign in
                 </Link>
-                <Link href="/login" className="btn btn-primary px-4 py-2 text-sm">
+                <Link
+                  href="/login"
+                  className="btn btn-primary px-4 py-2 text-sm"
+                >
                   Get started
                 </Link>
               </>
@@ -162,15 +204,25 @@ export default function DynamicNavbar() {
               aria-label={mobileOpen ? "Close menu" : "Open menu"}
               aria-expanded={mobileOpen}
             >
-              <span className={`block w-5 h-[1.5px] bg-fg transition-all duration-300 origin-center ${mobileOpen ? "rotate-45 translate-y-[6.5px]" : ""}`} />
-              <span className={`block w-5 h-[1.5px] bg-fg transition-all duration-300 ${mobileOpen ? "opacity-0 scale-x-0" : ""}`} />
-              <span className={`block w-5 h-[1.5px] bg-fg transition-all duration-300 origin-center ${mobileOpen ? "-rotate-45 -translate-y-[6.5px]" : ""}`} />
+              <span
+                className={`block w-5 h-[1.5px] bg-fg transition-all duration-300 origin-center ${mobileOpen ? "rotate-45 translate-y-[6.5px]" : ""}`}
+              />
+              <span
+                className={`block w-5 h-[1.5px] bg-fg transition-all duration-300 ${mobileOpen ? "opacity-0 scale-x-0" : ""}`}
+              />
+              <span
+                className={`block w-5 h-[1.5px] bg-fg transition-all duration-300 origin-center ${mobileOpen ? "-rotate-45 -translate-y-[6.5px]" : ""}`}
+              />
             </button>
           </div>
         </nav>
       </header>
 
-      <div inert={!mobileOpen} aria-hidden={!mobileOpen} className={`fixed inset-0 z-40 md:hidden ${mobileOpen ? "pointer-events-auto" : "pointer-events-none"}`}>
+      <div
+        inert={!mobileOpen}
+        aria-hidden={!mobileOpen}
+        className={`fixed inset-0 z-40 md:hidden ${mobileOpen ? "pointer-events-auto" : "pointer-events-none"}`}
+      >
         <div
           className={`absolute inset-0 bg-fg/20 transition-opacity duration-300 ${mobileOpen ? "opacity-100" : "opacity-0"}`}
           onClick={() => setMobileOpen(false)}
@@ -184,7 +236,9 @@ export default function DynamicNavbar() {
           {user && (
             <div className="flex items-center gap-3 mb-6 pb-5 border-b border-border">
               <div className="w-9 h-9 rounded-md bg-accent flex items-center justify-center text-accent-fg font-semibold text-sm shrink-0">
-                {(user.user_metadata?.full_name || user.email || "U")[0].toUpperCase()}
+                {(user.user_metadata?.full_name ||
+                  user.email ||
+                  "U")[0].toUpperCase()}
               </div>
               <div className="overflow-hidden">
                 <p className="text-sm font-medium text-fg truncate">

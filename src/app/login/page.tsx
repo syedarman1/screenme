@@ -7,75 +7,193 @@ import Link from "next/link";
 import Logo from "../components/Logo";
 
 export default function AuthPage() {
-  const [email,        setEmail]        = useState("");
-  const [password,     setPassword]     = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [error,        setError]        = useState<string | null>(null);
-  const [message,      setMessage]      = useState<string | null>(null);
-  const [loading,      setLoading]      = useState(false);
-  const [showCreate,   setShowCreate]   = useState(false);
-  const [showForgot,   setShowForgot]   = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [showCreate, setShowCreate] = useState(false);
+  const [showForgot, setShowForgot] = useState(false);
   const router = useRouter();
-  const emailDeliveryEnabled = process.env.NEXT_PUBLIC_EMAIL_DELIVERY_ENABLED !== "false";
+  const emailDeliveryEnabled =
+    process.env.NEXT_PUBLIC_EMAIL_DELIVERY_ENABLED === "true";
 
-  const clear = () => { setError(null); setMessage(null); };
+  const clear = () => {
+    setError(null);
+    setMessage(null);
+  };
 
   const handleForgot = async () => {
-    if (!emailDeliveryEnabled) { setError("Password reset emails are temporarily unavailable. Please contact support."); return; }
-    if (!email) { setError("Enter your email address above first."); return; }
-    if (!supabase) { setError("Account service is unavailable. Please try again later."); return; }
-    setLoading(true); clear();
+    if (!emailDeliveryEnabled) {
+      setError(
+        "Password reset emails are temporarily unavailable. Please contact support.",
+      );
+      return;
+    }
+    if (!email) {
+      setError("Enter your email address above first.");
+      return;
+    }
+    if (!supabase) {
+      setError("Account service is unavailable. Please try again later.");
+      return;
+    }
+    setLoading(true);
+    clear();
     try {
       const { error: e } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: `${window.location.origin}/reset-password`,
       });
       if (e) setError(e.message);
-      else { setMessage("Reset link sent — check your inbox."); setShowForgot(false); }
-    } catch (err: unknown) { setError(err instanceof Error ? err.message : "Account request failed. Please retry."); }
-    finally { setLoading(false); }
+      else {
+        setMessage(
+          "If this account can receive recovery emails, a link will arrive shortly.",
+        );
+        setShowForgot(false);
+      }
+    } catch (err: unknown) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Account request failed. Please retry.",
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResend = async () => {
+    if (!emailDeliveryEnabled || !supabase || !email) {
+      setError("Enter your email first.");
+      return;
+    }
+    setLoading(true);
+    clear();
+    try {
+      const { error } = await supabase.auth.resend({
+        type: "signup",
+        email,
+        options: { emailRedirectTo: `${window.location.origin}/dashboard` },
+      });
+      if (error) throw error;
+      setMessage(
+        "If this account is awaiting confirmation, a new link will arrive shortly.",
+      );
+    } catch {
+      setError(
+        "Could not request a confirmation email. Please try again later.",
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleCreate = async () => {
-    if (!emailDeliveryEnabled) { setError("Email signup is temporarily unavailable. Continue with Google to create your account."); return; }
-    if (!email || !password) { setError("Please enter email and password."); return; }
-    if (!supabase) { setError("Account service is unavailable. Please try again later."); return; }
-    setLoading(true); clear();
+    if (!emailDeliveryEnabled) {
+      setError(
+        "Email signup is temporarily unavailable. Continue with Google to create your account.",
+      );
+      return;
+    }
+    if (!email || !password) {
+      setError("Please enter email and password.");
+      return;
+    }
+    if (!supabase) {
+      setError("Account service is unavailable. Please try again later.");
+      return;
+    }
+    setLoading(true);
+    clear();
     try {
-      if (password.length < 12) { setError("Use at least 12 characters for your password."); return; }
-      const { error: e } = await supabase.auth.signUp({ email, password, options: { emailRedirectTo: `${window.location.origin}/dashboard` } });
+      if (password.length < 12) {
+        setError("Use at least 12 characters for your password.");
+        return;
+      }
+      const { data, error: e } = await supabase.auth.signUp({
+        email,
+        password,
+        options: { emailRedirectTo: `${window.location.origin}/dashboard` },
+      });
       if (e) setError(e.message);
-      else { setMessage("Account created! Check your email to verify."); setShowCreate(false); }
-    } catch (err: unknown) { setError(err instanceof Error ? err.message : "Account request failed. Please retry."); }
-    finally { setLoading(false); }
+      else if (data.session) {
+        router.push("/dashboard");
+      } else {
+        setMessage(
+          "Check your inbox to confirm your email. If you already have an account, sign in or request a reset.",
+        );
+        setShowCreate(false);
+      }
+    } catch (err: unknown) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Account request failed. Please retry.",
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email || !password) { setError("Please enter email and password."); return; }
-    if (!supabase) { setError("Account service is unavailable. Please try again later."); return; }
-    setLoading(true); clear(); setShowCreate(false);
+    if (!email || !password) {
+      setError("Please enter email and password.");
+      return;
+    }
+    if (!supabase) {
+      setError("Account service is unavailable. Please try again later.");
+      return;
+    }
+    setLoading(true);
+    clear();
+    setShowCreate(false);
     try {
-      const { error: e } = await supabase.auth.signInWithPassword({ email, password });
+      const { error: e } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
       if (e) {
-        if (e.message.includes("Email not confirmed")) setError("Verify your email before signing in.");
-        else if (e.message.includes("Invalid login credentials")) { setError("Invalid email or password."); }
-        else setError(e.message);
+        if (e.message.includes("Email not confirmed"))
+          setError("Verify your email before signing in.");
+        else if (e.message.includes("Invalid login credentials")) {
+          setError("Invalid email or password.");
+        } else setError(e.message);
       } else router.push("/dashboard");
-    } catch (err: unknown) { setError(err instanceof Error ? err.message : "Account request failed. Please retry."); }
-    finally { setLoading(false); }
+    } catch (err: unknown) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Account request failed. Please retry.",
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleGoogle = async () => {
-    if (!supabase) { setError("Account service is unavailable. Please try again later."); return; }
-    setLoading(true); clear();
+    if (!supabase) {
+      setError("Account service is unavailable. Please try again later.");
+      return;
+    }
+    setLoading(true);
+    clear();
     try {
       const { error: e } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: { redirectTo: `${window.location.origin}/dashboard` },
       });
       if (e) setError(e.message);
-    } catch (err: unknown) { setError(err instanceof Error ? err.message : "Account request failed. Please retry."); }
-    finally { setLoading(false); }
+    } catch (err: unknown) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Account request failed. Please retry.",
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -86,8 +204,14 @@ export default function AuthPage() {
           <Link href="/" className="inline-flex justify-center">
             <Logo className="text-base" />
           </Link>
-          <h1 className="text-2xl font-semibold text-fg mt-5 mb-1 tracking-tight">{showCreate ? "Create your account" : "Welcome back"}</h1>
-          <p className="text-sm text-fg-subtle">{showCreate ? "Start with a free account" : "Sign in to your account"}</p>
+          <h1 className="text-2xl font-semibold text-fg mt-5 mb-1 tracking-tight">
+            {showCreate ? "Create your account" : "Welcome back"}
+          </h1>
+          <p className="text-sm text-fg-subtle">
+            {showCreate
+              ? "Start with a free account"
+              : "Sign in to your account"}
+          </p>
         </div>
 
         <div className="card p-6 flex flex-col gap-4">
@@ -98,10 +222,22 @@ export default function AuthPage() {
             className="btn btn-primary w-full py-2.5 disabled:opacity-50"
           >
             <svg className="w-4 h-4" viewBox="0 0 24 24" aria-hidden>
-              <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-              <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-              <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-              <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+              <path
+                fill="#4285F4"
+                d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+              />
+              <path
+                fill="#34A853"
+                d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+              />
+              <path
+                fill="#FBBC05"
+                d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+              />
+              <path
+                fill="#EA4335"
+                d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+              />
             </svg>
             Continue with Google
           </button>
@@ -112,100 +248,248 @@ export default function AuthPage() {
             <div className="flex-1 h-px bg-surface-2" />
           </div>
 
-          {!emailDeliveryEnabled && <p role="status" className="text-sm text-fg-muted">Email signup and password reset emails are temporarily unavailable. Continue with Google, or sign in below with an existing password. <Link href="/contact" className="underline">Contact support</Link> if you need help.</p>}
+          {!emailDeliveryEnabled && (
+            <p role="status" className="text-sm text-fg-muted">
+              Email signup and password reset emails are temporarily
+              unavailable. Continue with Google, or sign in below with an
+              existing password.{" "}
+              <Link href="/contact" className="underline">
+                Contact support
+              </Link>{" "}
+              if you need help.
+            </p>
+          )}
 
           {/* Alerts */}
           {error && (
-            <div role="alert" className="p-3 rounded-lg border border-[#ff3b30]/20 bg-red/[0.06]">
+            <div
+              role="alert"
+              className="p-3 rounded-lg border border-[#ff3b30]/20 bg-red/[0.06]"
+            >
               <p className="text-sm text-red">{error}</p>
             </div>
           )}
           {message && (
-            <div role="status" className="p-3 rounded-lg border border-border bg-surface-2">
+            <div
+              role="status"
+              className="p-3 rounded-lg border border-border bg-surface-2"
+            >
               <p className="text-sm text-fg">{message}</p>
             </div>
           )}
 
           {/* Form */}
-          <form onSubmit={event => { if (showCreate) { event.preventDefault(); void handleCreate(); } else { void handleLogin(event); } }} className="flex flex-col gap-3" noValidate>
+          <form
+            onSubmit={(event) => {
+              if (showCreate) {
+                event.preventDefault();
+                void handleCreate();
+              } else {
+                void handleLogin(event);
+              }
+            }}
+            className="flex flex-col gap-3"
+            noValidate
+          >
             <div>
-              <label htmlFor="email" className="block text-xs font-medium text-fg-muted mb-1.5">Email</label>
+              <label
+                htmlFor="email"
+                className="block text-xs font-medium text-fg-muted mb-1.5"
+              >
+                Email
+              </label>
               <input
-                id="email" type="email" autoComplete="email" required
+                id="email"
+                type="email"
+                autoComplete="email"
+                required
                 placeholder="you@example.com"
                 className="w-full bg-bg text-fg placeholder:text-fg-subtle px-3.5 py-2.5 rounded-lg
                          border border-border focus:outline-none focus:border-border-2 focus:bg-surface
                          transition-colors text-sm"
                 value={email}
-                onChange={e => { setEmail(e.target.value); clear(); }}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  clear();
+                }}
               />
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-xs font-medium text-fg-muted mb-1.5">Password</label>
+              <label
+                htmlFor="password"
+                className="block text-xs font-medium text-fg-muted mb-1.5"
+              >
+                Password
+              </label>
               <div className="relative">
                 <input
-                  id="password" type={showPassword ? "text" : "password"} autoComplete={showCreate ? "new-password" : "current-password"} required
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  autoComplete={
+                    showCreate ? "new-password" : "current-password"
+                  }
+                  required
                   placeholder="••••••"
                   minLength={showCreate ? 12 : 6}
                   className="w-full bg-bg text-fg placeholder:text-fg-subtle px-3.5 py-2.5 pr-10 rounded-lg
                            border border-border focus:outline-none focus:border-border-2 focus:bg-surface
                            transition-colors text-sm"
                   value={password}
-                  onChange={e => { setPassword(e.target.value); clear(); }}
+                  onChange={(e) => {
+                    setPassword(e.target.value);
+                    clear();
+                  }}
                 />
                 <button
                   type="button"
-                  onClick={() => setShowPassword(v => !v)}
+                  onClick={() => setShowPassword((v) => !v)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-fg-subtle hover:text-fg-muted transition-colors cursor-pointer"
                   aria-label={showPassword ? "Hide password" : "Show password"}
                 >
-                  {showPassword
-                    ? <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.242 4.242L9.88 9.88" /></svg>
-                    : <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" /><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-                  }
+                  {showPassword ? (
+                    <svg
+                      className="w-4 h-4"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      strokeWidth={1.5}
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.242 4.242L9.88 9.88"
+                      />
+                    </svg>
+                  ) : (
+                    <svg
+                      className="w-4 h-4"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      strokeWidth={1.5}
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z"
+                      />
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                      />
+                    </svg>
+                  )}
                 </button>
               </div>
             </div>
 
             <button
-              type="submit" disabled={loading || (showCreate && !emailDeliveryEnabled)}
+              type="submit"
+              disabled={loading || (showCreate && !emailDeliveryEnabled)}
               className="btn btn-primary w-full py-2.5 disabled:opacity-50 mt-1"
             >
-              {loading && <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>}
-              {loading ? "Please wait…" : showCreate ? "Create account" : "Sign in"}
+              {loading && (
+                <svg
+                  className="animate-spin h-4 w-4"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                >
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                  />
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                  />
+                </svg>
+              )}
+              {loading
+                ? "Please wait…"
+                : showCreate
+                  ? "Create account"
+                  : "Sign in"}
             </button>
           </form>
 
+          {emailDeliveryEnabled && (
+            <button
+              type="button"
+              disabled={loading || !email}
+              onClick={() => void handleResend()}
+              className="text-xs underline disabled:opacity-40"
+            >
+              Resend confirmation email
+            </button>
+          )}
+
           {/* Forgot */}
           <div className="text-right -mt-1">
-            <button type="button" onClick={() => setShowForgot(v => !v)}
-              className="text-xs text-fg-subtle hover:text-fg-muted transition-colors cursor-pointer">
+            <button
+              type="button"
+              onClick={() => setShowForgot((v) => !v)}
+              className="text-xs text-fg-subtle hover:text-fg-muted transition-colors cursor-pointer"
+            >
               Forgot password?
             </button>
           </div>
 
           {showForgot && (
             <div className="pt-3 border-t border-border flex flex-col gap-2">
-              <p className="text-xs text-fg-subtle">Enter your email above and we&apos;ll send a reset link.</p>
-              <button type="button" onClick={handleForgot} disabled={loading || !emailDeliveryEnabled}
+              <p className="text-xs text-fg-subtle">
+                Enter your email above and we&apos;ll send a reset link.
+              </p>
+              <button
+                type="button"
+                onClick={handleForgot}
+                disabled={loading || !emailDeliveryEnabled}
                 className="w-full bg-bg border border-border text-fg-muted hover:text-fg hover:bg-surface-2
-                          font-medium py-2.5 rounded-lg transition-colors text-sm cursor-pointer disabled:opacity-50">
+                          font-medium py-2.5 rounded-lg transition-colors text-sm cursor-pointer disabled:opacity-50"
+              >
                 {loading ? "Sending…" : "Send reset email"}
               </button>
             </div>
           )}
 
-          <button type="button" onClick={() => { clear(); setShowCreate(value => !value); setShowForgot(false); }} className="text-sm underline" disabled={loading}>
+          <button
+            type="button"
+            onClick={() => {
+              clear();
+              setShowCreate((value) => !value);
+              setShowForgot(false);
+            }}
+            className="text-sm underline"
+            disabled={loading}
+          >
             {showCreate ? "Back to sign in" : "Create an account"}
           </button>
-          {showCreate && <p className="text-xs text-fg-muted">Use at least 12 characters for your password. We will send an email to confirm your account.</p>}
-
+          {showCreate && (
+            <p className="text-xs text-fg-muted">
+              Use at least 12 characters for your password. We will send an
+              email to confirm your account.
+            </p>
+          )}
         </div>
 
         <p className="text-center text-fg-subtle text-xs mt-5">
           By continuing you agree to our{" "}
-          <Link href="/terms" className="hover:text-fg-muted transition-colors">Terms of Service</Link>{" and "}<Link href="/privacy" className="hover:text-fg-muted transition-colors">Privacy Notice</Link>
+          <Link href="/terms" className="hover:text-fg-muted transition-colors">
+            Terms of Service
+          </Link>
+          {" and "}
+          <Link
+            href="/privacy"
+            className="hover:text-fg-muted transition-colors"
+          >
+            Privacy Notice
+          </Link>
         </p>
       </div>
     </div>

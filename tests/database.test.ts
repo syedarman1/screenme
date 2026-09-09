@@ -6,38 +6,78 @@ import { readFileSync, readdirSync } from "node:fs";
 
 const container = process.env.SCREENME_TEST_DB;
 function sql(query: string) {
-  return execFileSync("docker", ["exec", "-i", container!, "psql", "-U", "postgres", "-v", "ON_ERROR_STOP=1", "-At"], { input: query, encoding: "utf8", stdio: ["pipe", "pipe", "pipe"] }).trim();
+  return execFileSync(
+    "docker",
+    [
+      "exec",
+      "-i",
+      container!,
+      "psql",
+      "-U",
+      "postgres",
+      "-v",
+      "ON_ERROR_STOP=1",
+      "-At",
+    ],
+    { input: query, encoding: "utf8", stdio: ["pipe", "pipe", "pipe"] },
+  ).trim();
 }
 before(() => {
   if (!container) return;
   assert.match(container, /^codex-screenme-/);
-  sql("drop schema if exists public cascade; drop schema if exists auth cascade; create schema public;");
+  sql(
+    "drop schema if exists public cascade; drop schema if exists auth cascade; create schema public;",
+  );
   sql(readFileSync("tests/db-fixture.sql", "utf8"));
   sql(readFileSync("supabase/schema-baseline.sql", "utf8"));
-  for (const file of readdirSync("supabase/migrations").filter(name => /^\d{14}_/.test(name)).sort()) sql(readFileSync(`supabase/migrations/${file}`, "utf8"));
+  for (const file of readdirSync("supabase/migrations")
+    .filter((name) => /^\d{14}_/.test(name))
+    .sort())
+    sql(readFileSync(`supabase/migrations/${file}`, "utf8"));
 });
 const uid = "00000000-0000-4000-8000-000000000001";
-const billing = (key: string, status = "active", observed = "2026-09-08T12:00:00Z") =>
+const billing = (
+  key: string,
+  status = "active",
+  observed = "2026-09-08T12:00:00Z",
+) =>
   `select public.screenme_apply_billing('${key}','${uid}','sub_test','cus_test','${status}','${observed}');`;
 
-test("billing transaction rolls back completely on receipt failure, and can retry", { skip: !container }, () => {
-  sql(`insert into auth.users values('${uid}'); insert into public.user_plans(user_id) values('${uid}') on conflict do nothing;
+test(
+  "billing transaction rolls back completely on receipt failure, and can retry",
+  { skip: !container },
+  () => {
+    sql(`insert into auth.users values('${uid}'); insert into public.user_plans(user_id) values('${uid}') on conflict do nothing;
     create function public.fail_receipt() returns trigger language plpgsql as $$begin raise exception 'injected failure'; end;$$;
     create trigger fail_receipt before insert on public.billing_fulfillments for each row execute function public.fail_receipt();`);
-  assert.throws(() => sql(billing("evt_retry")));
-  assert.equal(sql(`select plan from user_plans where user_id='${uid}';`), "free");
-  assert.equal(sql("select count(*) from billing_fulfillments;"), "0");
-  sql("drop trigger fail_receipt on billing_fulfillments;");
-  assert.equal(sql(billing("evt_retry")), "t");
-  assert.equal(sql(billing("evt_retry")), "f");
-  assert.equal(sql(`select plan from user_plans where user_id='${uid}';`), "pro");
-});
+    assert.throws(() => sql(billing("evt_retry")));
+    assert.equal(
+      sql(`select plan from user_plans where user_id='${uid}';`),
+      "free",
+    );
+    assert.equal(sql("select count(*) from billing_fulfillments;"), "0");
+    sql("drop trigger fail_receipt on billing_fulfillments;");
+    assert.equal(sql(billing("evt_retry")), "t");
+    assert.equal(sql(billing("evt_retry")), "f");
+    assert.equal(
+      sql(`select plan from user_plans where user_id='${uid}';`),
+      "pro",
+    );
+  },
+);
 
-test("an older observation cannot undo a cancellation", { skip: !container }, () => {
-  sql(billing("evt_cancel", "canceled", "2026-09-08T14:00:00Z"));
-  sql(billing("evt_delayed", "active", "2026-09-08T13:00:00Z"));
-  assert.equal(sql(`select plan from user_plans where user_id='${uid}';`), "free");
-});
+test(
+  "an older observation cannot undo a cancellation",
+  { skip: !container },
+  () => {
+    sql(billing("evt_cancel", "canceled", "2026-09-08T14:00:00Z"));
+    sql(billing("evt_delayed", "active", "2026-09-08T13:00:00Z"));
+    assert.equal(
+      sql(`select plan from user_plans where user_id='${uid}';`),
+      "free",
+    );
+  },
+);
 
 test("public clients cannot fulfill payments", { skip: !container }, () => {
   assert.throws(() => sql("set role anon;" + billing("evt_attack")));
@@ -45,127 +85,583 @@ test("public clients cannot fulfill payments", { skip: !container }, () => {
 });
 
 const usageUser = "00000000-0000-4000-8000-000000000002";
-test("parallel requests cannot exceed the Free allowance", { skip: !container }, async () => {
-  sql(`insert into auth.users values('${usageUser}');`);
-  const requests = Array.from({ length: 10 }, () => promisify(execFile)("docker", ["exec", container!, "psql", "-U", "postgres", "-At", "-v", "ON_ERROR_STOP=1", "-c", `select screenme_usage('${usageUser}','resume_scan',true);`]));
-  const results = await Promise.all(requests);
-  assert.equal(results.filter(result => JSON.parse(result.stdout).allowed).length, 3);
-  assert.equal(sql(`select resume_scans from user_usage where user_id='${usageUser}';`), "3");
-});
+test(
+  "parallel requests cannot exceed the Free allowance",
+  { skip: !container },
+  async () => {
+    sql(`insert into auth.users values('${usageUser}');`);
+    const requests = Array.from({ length: 10 }, () =>
+      promisify(execFile)("docker", [
+        "exec",
+        container!,
+        "psql",
+        "-U",
+        "postgres",
+        "-At",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-c",
+        `select screenme_usage('${usageUser}','resume_scan',true);`,
+      ]),
+    );
+    const results = await Promise.all(requests);
+    assert.equal(
+      results.filter((result) => JSON.parse(result.stdout).allowed).length,
+      3,
+    );
+    assert.equal(
+      sql(`select resume_scans from user_usage where user_id='${usageUser}';`),
+      "3",
+    );
+  },
+);
 
-test("failed requests refund once, and stale requests cannot refund a new month", { skip: !container }, () => {
-  const id = sql(`select id from usage_reservations where user_id='${usageUser}' limit 1;`);
-  sql(`select screenme_finish_usage('${id}',false); select screenme_finish_usage('${id}',false);`);
-  assert.equal(sql(`select resume_scans from user_usage where user_id='${usageUser}';`), "2");
-  const old = sql(`select id from usage_reservations where user_id='${usageUser}' and state='reserved' limit 1;`);
-  sql(`update user_usage set last_reset='2000-01-01' where user_id='${usageUser}'; update usage_reservations set period='2000-01-01' where user_id='${usageUser}';`);
-  const snapshot = JSON.parse(sql(`select screenme_usage('${usageUser}');`));
-  assert.equal(snapshot.resume_scans, 0);
-  sql(`select screenme_usage('${usageUser}','resume_scan',true); select screenme_finish_usage('${old}',false);`);
-  assert.equal(sql(`select resume_scans from user_usage where user_id='${usageUser}';`), "1");
-});
+test(
+  "failed requests refund once, and stale requests cannot refund a new month",
+  { skip: !container },
+  () => {
+    const id = sql(
+      `select id from usage_reservations where user_id='${usageUser}' limit 1;`,
+    );
+    sql(
+      `select screenme_finish_usage('${id}',false); select screenme_finish_usage('${id}',false);`,
+    );
+    assert.equal(
+      sql(`select resume_scans from user_usage where user_id='${usageUser}';`),
+      "2",
+    );
+    const old = sql(
+      `select id from usage_reservations where user_id='${usageUser}' and state='reserved' limit 1;`,
+    );
+    sql(
+      `update user_usage set last_reset='2000-01-01' where user_id='${usageUser}'; update usage_reservations set period='2000-01-01' where user_id='${usageUser}';`,
+    );
+    const snapshot = JSON.parse(sql(`select screenme_usage('${usageUser}');`));
+    assert.equal(snapshot.resume_scans, 0);
+    sql(
+      `select screenme_usage('${usageUser}','resume_scan',true); select screenme_finish_usage('${old}',false);`,
+    );
+    assert.equal(
+      sql(`select resume_scans from user_usage where user_id='${usageUser}';`),
+      "1",
+    );
+  },
+);
 
-test("crashed reservations are reclaimed and Pro plans are never overwritten", { skip: !container }, () => {
-  sql(`update user_plans set plan='pro' where user_id='${usageUser}'; update usage_reservations set created_at=now()-interval '11 minutes' where user_id='${usageUser}' and state='reserved';`);
-  const snapshot = JSON.parse(sql(`select screenme_usage('${usageUser}');`));
-  assert.equal(snapshot.plan, "pro");
-  assert.equal(snapshot.resume_scans, 0);
-  assert.equal(JSON.parse(sql(`select screenme_usage('${usageUser}','interview_prep',true);`)).limit, -1);
-});
+test(
+  "crashed reservations are reclaimed and Pro plans are never overwritten",
+  { skip: !container },
+  () => {
+    sql(
+      `update user_plans set plan='pro' where user_id='${usageUser}'; update usage_reservations set created_at=now()-interval '11 minutes' where user_id='${usageUser}' and state='reserved';`,
+    );
+    const snapshot = JSON.parse(sql(`select screenme_usage('${usageUser}');`));
+    assert.equal(snapshot.plan, "pro");
+    assert.equal(snapshot.resume_scans, 0);
+    assert.equal(
+      JSON.parse(
+        sql(`select screenme_usage('${usageUser}','interview_prep',true);`),
+      ).limit,
+      -1,
+    );
+  },
+);
 
-test("rate limiting shares an atomic counter across processes", { skip: !container }, async () => {
-  const results = await Promise.all(Array.from({ length: 15 }, () => promisify(execFile)("docker", ["exec", container!, "psql", "-U", "postgres", "-At", "-c", "select screenme_rate_limit('test-shared',10,60); "])));
-  assert.equal(results.filter(result => JSON.parse(result.stdout).success).length, 10);
-  assert.throws(() => sql(`set role authenticated; select screenme_usage('${usageUser}','resume_scan',true);`));
-});
+test(
+  "rate limiting shares an atomic counter across processes",
+  { skip: !container },
+  async () => {
+    const results = await Promise.all(
+      Array.from({ length: 15 }, () =>
+        promisify(execFile)("docker", [
+          "exec",
+          container!,
+          "psql",
+          "-U",
+          "postgres",
+          "-At",
+          "-c",
+          "select screenme_rate_limit('test-shared',10,60); ",
+        ]),
+      ),
+    );
+    assert.equal(
+      results.filter((result) => JSON.parse(result.stdout).success).length,
+      10,
+    );
+    assert.throws(() =>
+      sql(
+        `set role authenticated; select screenme_usage('${usageUser}','resume_scan',true);`,
+      ),
+    );
+  },
+);
 
+test(
+  "contact messages are durable and inaccessible to public clients",
+  { skip: !container },
+  () => {
+    sql(
+      "set role service_role; insert into contact_messages(name,email,subject,message) values('Test User','test@example.invalid','Test','Synthetic support message');",
+    );
+    assert.equal(sql("select count(*) from contact_messages;"), "1");
+    for (const role of ["anon", "authenticated"]) {
+      assert.throws(() =>
+        sql(`set role ${role}; select * from contact_messages;`),
+      );
+      assert.throws(() =>
+        sql(`set role ${role}; select upgrade_user_to_pro('${uid}');`),
+      );
+    }
+  },
+);
 
-test("contact messages are durable and inaccessible to public clients", { skip: !container }, () => {
-  sql("set role service_role; insert into contact_messages(name,email,subject,message) values('Test User','test@example.invalid','Test','Synthetic support message');");
-  assert.equal(sql("select count(*) from contact_messages;"), "1");
-  for (const role of ["anon", "authenticated"]) {
-    assert.throws(() => sql(`set role ${role}; select * from contact_messages;`));
-    assert.throws(() => sql(`set role ${role}; select upgrade_user_to_pro('${uid}');`));
-  }
-});
-
-test("signed-in users can read only their own saved records", { skip: !container }, () => {
-  sql(`insert into resume_versions(user_id,name,content) values('${uid}','Resume','Synthetic resume');`);
-  assert.equal(sql(`set role authenticated; set request.jwt.claim.sub='${usageUser}'; select count(*) from resume_versions;`).split("\n").at(-1), "0");
-  assert.equal(sql(`set role authenticated; set request.jwt.claim.sub='${uid}'; select count(*) from resume_versions;`).split("\n").at(-1), "1");
-});
+test(
+  "signed-in users can read only their own saved records",
+  { skip: !container },
+  () => {
+    sql(
+      `insert into resume_versions(user_id,name,content) values('${uid}','Resume','Synthetic resume');`,
+    );
+    assert.equal(
+      sql(
+        `set role authenticated; set request.jwt.claim.sub='${usageUser}'; select count(*) from resume_versions;`,
+      )
+        .split("\n")
+        .at(-1),
+      "0",
+    );
+    assert.equal(
+      sql(
+        `set role authenticated; set request.jwt.claim.sub='${uid}'; select count(*) from resume_versions;`,
+      )
+        .split("\n")
+        .at(-1),
+      "1",
+    );
+  },
+);
 
 const importUser = "00000000-0000-4000-8000-000000000003";
-test("job imports share one atomic five-use allowance and do not consume other tools", { skip: !container }, async () => {
-  sql(`insert into auth.users values('${importUser}');`);
-  await Promise.all(Array.from({ length: 12 }, () => promisify(execFile)("docker", ["exec", container!, "psql", "-U", "postgres", "-At", "-v", "ON_ERROR_STOP=1", "-c", `set role service_role; do $$declare v jsonb; begin v:=screenme_usage('${importUser}','job_import',true); if (v->>'allowed')::boolean then perform screenme_finish_usage((v->>'reservationId')::uuid,true); end if; end$$;`])));
-  const usage = JSON.parse(sql(`select screenme_usage('${importUser}');`));
-  assert.equal(usage.job_imports, 5);
-  assert.equal(usage.job_matches, 0);
-  assert.equal(usage.resume_tailors, 0);
-  assert.equal(JSON.parse(sql(`select screenme_usage('${importUser}','job_import',true);`)).allowed, false);
-  sql(`update user_usage set last_reset='2000-01-01' where user_id='${importUser}';`);
-  assert.equal(JSON.parse(sql(`select screenme_usage('${importUser}');`)).job_imports, 0);
-  const reservation = JSON.parse(sql(`select screenme_usage('${importUser}','job_import',true);`));
-  sql(`select screenme_finish_usage('${reservation.reservationId}',false); select screenme_finish_usage('${reservation.reservationId}',false);`);
-  assert.equal(JSON.parse(sql(`select screenme_usage('${importUser}');`)).job_imports, 0);
-  sql(`update user_plans set plan='pro' where user_id='${importUser}'; update user_usage set job_imports=100 where user_id='${importUser}';`);
-  assert.equal(JSON.parse(sql(`select screenme_usage('${importUser}','job_import',true);`)).limit, -1);
-});
+test(
+  "job imports share one atomic five-use allowance and do not consume other tools",
+  { skip: !container },
+  async () => {
+    sql(`insert into auth.users values('${importUser}');`);
+    await Promise.all(
+      Array.from({ length: 12 }, () =>
+        promisify(execFile)("docker", [
+          "exec",
+          container!,
+          "psql",
+          "-U",
+          "postgres",
+          "-At",
+          "-v",
+          "ON_ERROR_STOP=1",
+          "-c",
+          `set role service_role; do $$declare v jsonb; begin v:=screenme_usage('${importUser}','job_import',true); if (v->>'allowed')::boolean then perform screenme_finish_usage((v->>'reservationId')::uuid,true); end if; end$$;`,
+        ]),
+      ),
+    );
+    const usage = JSON.parse(sql(`select screenme_usage('${importUser}');`));
+    assert.equal(usage.job_imports, 5);
+    assert.equal(usage.job_matches, 0);
+    assert.equal(usage.resume_tailors, 0);
+    assert.equal(
+      JSON.parse(
+        sql(`select screenme_usage('${importUser}','job_import',true);`),
+      ).allowed,
+      false,
+    );
+    sql(
+      `update user_usage set last_reset='2000-01-01' where user_id='${importUser}';`,
+    );
+    assert.equal(
+      JSON.parse(sql(`select screenme_usage('${importUser}');`)).job_imports,
+      0,
+    );
+    const reservation = JSON.parse(
+      sql(`select screenme_usage('${importUser}','job_import',true);`),
+    );
+    sql(
+      `select screenme_finish_usage('${reservation.reservationId}',false); select screenme_finish_usage('${reservation.reservationId}',false);`,
+    );
+    assert.equal(
+      JSON.parse(sql(`select screenme_usage('${importUser}');`)).job_imports,
+      0,
+    );
+    sql(
+      `update user_plans set plan='pro' where user_id='${importUser}'; update user_usage set job_imports=100 where user_id='${importUser}';`,
+    );
+    assert.equal(
+      JSON.parse(
+        sql(`select screenme_usage('${importUser}','job_import',true);`),
+      ).limit,
+      -1,
+    );
+  },
+);
 
 const savedUser = "00000000-0000-4000-8000-000000000004";
-async function concurrentSaves(table: string, columns: string, values: string, attempts: number) {
-  return Promise.allSettled(Array.from({ length: attempts }, () => promisify(execFile)("docker", ["exec", container!, "psql", "-U", "postgres", "-At", "-v", "ON_ERROR_STOP=1", "-c", `set role service_role; insert into ${table}(user_id,${columns}) values('${savedUser}',${values});`])));
+async function concurrentSaves(
+  table: string,
+  columns: string,
+  values: string,
+  attempts: number,
+) {
+  return Promise.allSettled(
+    Array.from({ length: attempts }, () =>
+      promisify(execFile)("docker", [
+        "exec",
+        container!,
+        "psql",
+        "-U",
+        "postgres",
+        "-At",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-c",
+        `set role service_role; insert into ${table}(user_id,${columns}) values('${savedUser}',${values});`,
+      ]),
+    ),
+  );
 }
-test("concurrent saves cannot exceed Free resume or application limits", { skip: !container }, async () => {
-  sql(`insert into auth.users values('${savedUser}');`);
-  const resumes = await concurrentSaves("resume_versions", "name,content", "'Test','Synthetic test resume'", 12);
-  assert.equal(resumes.filter(r => r.status === "fulfilled").length, 3);
-  assert.equal(sql(`select count(*) from resume_versions where user_id='${savedUser}';`), "3");
-  const applications = await concurrentSaves("job_applications", "company,role", "'Test','Test role'", 18);
-  assert.equal(applications.filter(r => r.status === "fulfilled").length, 10);
-  assert.equal(sql(`select count(*) from job_applications where user_id='${savedUser}';`), "10");
-});
+test(
+  "concurrent saves cannot exceed Free resume or application limits",
+  { skip: !container },
+  async () => {
+    sql(`insert into auth.users values('${savedUser}');`);
+    const resumes = await concurrentSaves(
+      "resume_versions",
+      "name,content",
+      "'Test','Synthetic test resume'",
+      12,
+    );
+    assert.equal(resumes.filter((r) => r.status === "fulfilled").length, 3);
+    assert.equal(
+      sql(`select count(*) from resume_versions where user_id='${savedUser}';`),
+      "3",
+    );
+    const applications = await concurrentSaves(
+      "job_applications",
+      "company,role",
+      "'Test','Test role'",
+      18,
+    );
+    assert.equal(
+      applications.filter((r) => r.status === "fulfilled").length,
+      10,
+    );
+    assert.equal(
+      sql(
+        `select count(*) from job_applications where user_id='${savedUser}';`,
+      ),
+      "10",
+    );
+  },
+);
 
-test("direct client writes cannot bypass caps or mutate another user's records", { skip: !container }, () => {
-  for (const role of ["anon", "authenticated"]) {
-    for (const query of [
-      `insert into resume_versions(user_id,name,content) values('${savedUser}','Test','Test');`,
-      `insert into job_applications(user_id,company,role) values('${savedUser}','Test','Test');`,
-      `update resume_versions set user_id='${uid}';`,
-      `delete from job_applications;`,
-      `truncate resume_versions;`,
-    ]) assert.throws(() => sql(`set role ${role}; set request.jwt.claim.sub='${savedUser}'; ${query}`));
-  }
-  assert.throws(() => sql(`set role service_role; update resume_versions set user_id='${uid}' where user_id='${savedUser}';`));
-});
+test(
+  "direct client writes cannot bypass caps or mutate another user's records",
+  { skip: !container },
+  () => {
+    for (const role of ["anon", "authenticated"]) {
+      for (const query of [
+        `insert into resume_versions(user_id,name,content) values('${savedUser}','Test','Test');`,
+        `insert into job_applications(user_id,company,role) values('${savedUser}','Test','Test');`,
+        `update resume_versions set user_id='${uid}';`,
+        `delete from job_applications;`,
+        `truncate resume_versions;`,
+      ])
+        assert.throws(() =>
+          sql(
+            `set role ${role}; set request.jwt.claim.sub='${savedUser}'; ${query}`,
+          ),
+        );
+    }
+    assert.throws(() =>
+      sql(
+        `set role service_role; update resume_versions set user_id='${uid}' where user_id='${savedUser}';`,
+      ),
+    );
+  },
+);
 
-test("Pro caps at twenty resumes, permits more applications, and preserves work after downgrade", { skip: !container }, async () => {
-  sql(`update user_plans set plan='pro' where user_id='${savedUser}';`);
-  const resumes = await concurrentSaves("resume_versions", "name,content", "'Pro resume','Synthetic test resume'", 25);
-  assert.equal(resumes.filter(r => r.status === "fulfilled").length, 17);
-  const applications = await concurrentSaves("job_applications", "company,role", "'Pro company','Test role'", 12);
-  assert.equal(applications.filter(r => r.status === "fulfilled").length, 12);
-  sql(`update user_plans set plan='free' where user_id='${savedUser}';`);
-  assert.equal(sql(`set role authenticated; set request.jwt.claim.sub='${savedUser}'; select count(*) from resume_versions;`).split("\n").at(-1), "20");
-  sql(`set role service_role; update resume_versions set name='Still editable' where user_id='${savedUser}'; delete from resume_versions where user_id='${savedUser}' and id not in (select id from resume_versions where user_id='${savedUser}' limit 2);`);
-  assert.equal((await concurrentSaves("resume_versions", "name,content", "'New','Synthetic resume'", 4)).filter(r => r.status === "fulfilled").length, 1);
-  assert.throws(() => sql(`set role service_role; insert into job_applications(user_id,company,role) values('${savedUser}','New','Role');`));
-});
+test(
+  "Pro caps at twenty resumes, permits more applications, and preserves work after downgrade",
+  { skip: !container },
+  async () => {
+    sql(`update user_plans set plan='pro' where user_id='${savedUser}';`);
+    const resumes = await concurrentSaves(
+      "resume_versions",
+      "name,content",
+      "'Pro resume','Synthetic test resume'",
+      25,
+    );
+    assert.equal(resumes.filter((r) => r.status === "fulfilled").length, 17);
+    const applications = await concurrentSaves(
+      "job_applications",
+      "company,role",
+      "'Pro company','Test role'",
+      12,
+    );
+    assert.equal(
+      applications.filter((r) => r.status === "fulfilled").length,
+      12,
+    );
+    sql(`update user_plans set plan='free' where user_id='${savedUser}';`);
+    assert.equal(
+      sql(
+        `set role authenticated; set request.jwt.claim.sub='${savedUser}'; select count(*) from resume_versions;`,
+      )
+        .split("\n")
+        .at(-1),
+      "20",
+    );
+    sql(
+      `set role service_role; update resume_versions set name='Still editable' where user_id='${savedUser}'; delete from resume_versions where user_id='${savedUser}' and id not in (select id from resume_versions where user_id='${savedUser}' limit 2);`,
+    );
+    assert.equal(
+      (
+        await concurrentSaves(
+          "resume_versions",
+          "name,content",
+          "'New','Synthetic resume'",
+          4,
+        )
+      ).filter((r) => r.status === "fulfilled").length,
+      1,
+    );
+    assert.throws(() =>
+      sql(
+        `set role service_role; insert into job_applications(user_id,company,role) values('${savedUser}','New','Role');`,
+      ),
+    );
+  },
+);
 
-test("workspace caps are atomic and snapshots are owner-scoped and cascade on deletion", {skip:!container}, async()=>{
- const owner="00000000-0000-4000-8000-000000000091";
- sql(`insert into auth.users values('${owner}');`);
- const insert=`insert into career_workspaces(user_id,kind,title,payload) values('${owner}','scan','Saved review','{"resume":"Synthetic resume","result":{"analyzedAt":"2026-09-09"}}') returning id;`;
- const results=await Promise.allSettled(Array.from({length:6},()=>promisify(execFile)("docker",["exec",container!,"psql","-U","postgres","-At","-v","ON_ERROR_STOP=1","-c",insert])));
- assert.equal(results.filter(r=>r.status==="fulfilled").length,3);
- assert.equal(sql(`select count(*) from workspace_versions where user_id='${owner}';`),"3");
- assert.equal(sql(`set role authenticated; set request.jwt.claim.sub='${uid}'; select count(*) from career_workspaces where user_id='${owner}';`),"SET\nSET\n0");
- assert.throws(()=>sql(`set role authenticated; ${insert}`));
- const id=sql(`select id from career_workspaces where user_id='${owner}' limit 1;`);
- sql(`update career_workspaces set payload=jsonb_set(payload,'{resume}','"Edited resume"') where id='${id}' and revision=1;`);
- assert.equal(sql(`select revision from career_workspaces where id='${id}';`),"2");
- assert.equal(sql(`select count(*) from workspace_versions where workspace_id='${id}';`),"1");
- assert.throws(()=>sql(`update career_workspaces set user_id='${uid}' where id='${id}';`));
- sql(`delete from career_workspaces where id='${id}';`);assert.equal(sql(`select count(*) from workspace_versions where workspace_id='${id}';`),"0");
-});
+test(
+  "workspace caps are atomic and snapshots are owner-scoped and cascade on deletion",
+  { skip: !container },
+  async () => {
+    const owner = "00000000-0000-4000-8000-000000000091";
+    sql(`insert into auth.users values('${owner}');`);
+    const insert = `insert into career_workspaces(user_id,kind,title,payload) values('${owner}','scan','Saved review','{"resume":"Synthetic resume","result":{"analyzedAt":"2026-09-09"}}') returning id;`;
+    const results = await Promise.allSettled(
+      Array.from({ length: 6 }, () =>
+        promisify(execFile)("docker", [
+          "exec",
+          container!,
+          "psql",
+          "-U",
+          "postgres",
+          "-At",
+          "-v",
+          "ON_ERROR_STOP=1",
+          "-c",
+          insert,
+        ]),
+      ),
+    );
+    assert.equal(results.filter((r) => r.status === "fulfilled").length, 3);
+    assert.equal(
+      sql(`select count(*) from workspace_versions where user_id='${owner}';`),
+      "3",
+    );
+    assert.equal(
+      sql(
+        `set role authenticated; set request.jwt.claim.sub='${uid}'; select count(*) from career_workspaces where user_id='${owner}';`,
+      ),
+      "SET\nSET\n0",
+    );
+    assert.throws(() => sql(`set role authenticated; ${insert}`));
+    const id = sql(
+      `select id from career_workspaces where user_id='${owner}' limit 1;`,
+    );
+    sql(
+      `update career_workspaces set payload=jsonb_set(payload,'{resume}','"Edited resume"') where id='${id}' and revision=1;`,
+    );
+    assert.equal(
+      sql(`select revision from career_workspaces where id='${id}';`),
+      "2",
+    );
+    assert.equal(
+      sql(
+        `select count(*) from workspace_versions where workspace_id='${id}';`,
+      ),
+      "1",
+    );
+    assert.throws(() =>
+      sql(`update career_workspaces set user_id='${uid}' where id='${id}';`),
+    );
+    sql(`delete from career_workspaces where id='${id}';`);
+    assert.equal(
+      sql(
+        `select count(*) from workspace_versions where workspace_id='${id}';`,
+      ),
+      "0",
+    );
+  },
+);
+
+test(
+  "application links enforce both owners and creation is atomic at the workspace cap",
+  { skip: !container },
+  () => {
+    const owner = "00000000-0000-4000-8000-000000000071",
+      other = "00000000-0000-4000-8000-000000000072";
+    sql(`insert into auth.users values('${owner}'),('${other}');`);
+    const app = sql(
+      `insert into job_applications(user_id,company,role,job_description) values('${owner}','Example','Engineer','A real job description') returning id;`,
+    ).split("\n")[0];
+    const foreign = sql(
+      `insert into job_applications(user_id,company,role) values('${other}','Other','Other') returning id;`,
+    ).split("\n")[0];
+    const work = sql(
+      `select screenme_start_application_work('${owner}','${app}','scan','Source resume');`,
+    );
+    assert.equal(
+      sql(
+        `select payload->>'resume' from career_workspaces where id='${work}';`,
+      ),
+      "Source resume",
+    );
+    assert.throws(() =>
+      sql(
+        `update application_workspaces set application_id='${foreign}' where workspace_id='${work}';`,
+      ),
+    );
+    assert.throws(() =>
+      sql(
+        `select screenme_start_application_work('${other}','${app}','scan','Source');`,
+      ),
+    );
+    assert.equal(
+      sql(
+        `set role authenticated;select set_config('request.jwt.claim.sub','${other}',false);select count(*) from application_workspaces;`,
+      )
+        .split("\n")
+        .at(-1),
+      "0",
+    );
+    sql(
+      `select screenme_start_application_work('${owner}','${app}','match','Resume');select screenme_start_application_work('${owner}','${app}','letter','Resume');`,
+    );
+    assert.throws(() =>
+      sql(
+        `select screenme_start_application_work('${owner}','${app}','tailor','Resume');`,
+      ),
+    );
+    assert.equal(
+      sql(
+        `select count(*) from application_workspaces where user_id='${owner}';`,
+      ),
+      "3",
+    );
+    sql(`delete from job_applications where id='${app}';`);
+    assert.equal(
+      sql(
+        `select count(*) from application_workspaces where user_id='${owner}';`,
+      ),
+      "0",
+    );
+    assert.equal(
+      sql(`select count(*) from career_workspaces where user_id='${owner}';`),
+      "3",
+    );
+  },
+);
+
+test(
+  "monitoring is service-only, aggregates accurately, and has no document fields",
+  { skip: !container },
+  () => {
+    const owner = "00000000-0000-4000-8000-000000000073";
+    sql(`insert into auth.users values('${owner}');`);
+    sql(
+      `insert into ai_runs(id,user_id,feature,status,duration_ms,calls,input_tokens,output_tokens,model,cost_usd,cost_complete,helpful) values(gen_random_uuid(),'${owner}','resume_scan',200,1000,1,100,200,'gpt-5.6-terra',0.0026,true,true),(gen_random_uuid(),'${owner}','resume_scan',502,3000,1,50,100,'gpt-5.6-terra',0.0013,false,null);`,
+    );
+    const stats = JSON.parse(sql(`select screenme_ai_summary('${owner}');`))[0];
+    assert.equal(stats.runs, 2);
+    assert.equal(stats.successes, 1);
+    assert.equal(stats.average_ms, 2000);
+    assert.equal(stats.helpful, 1);
+    assert.equal(stats.unpriced_runs, 1);
+    assert.throws(() => sql("set role authenticated;select * from ai_runs;"));
+    assert.throws(() =>
+      sql("set role authenticated;select screenme_ai_summary(null);"),
+    );
+    const columns = sql(
+      "select column_name from information_schema.columns where table_name='ai_runs';",
+    );
+    assert.doesNotMatch(columns, /resume|prompt|content|email|output_text/);
+    sql(`delete from auth.users where id='${owner}';`);
+    assert.equal(
+      sql(`select count(*) from ai_runs where user_id='${owner}';`),
+      "0",
+    );
+  },
+);
+
+test(
+  "renewal failure, recovery, scheduled cancellation and terminal states reconcile entitlement",
+  { skip: !container },
+  () => {
+    const id = "00000000-0000-4000-8000-000000000074";
+    sql(`insert into auth.users values('${id}');`);
+    let n = 0;
+    for (const [status, expected] of [
+      ["active", "pro"],
+      ["past_due", "free"],
+      ["active", "pro"],
+      ["active", "pro"],
+      ["canceled", "free"],
+      ["trialing", "pro"],
+      ["unpaid", "free"],
+      ["paused", "free"],
+      ["incomplete", "free"],
+      ["incomplete_expired", "free"],
+    ]) {
+      n++;
+      sql(
+        `select screenme_apply_billing('evt_lifecycle_${n}','${id}','sub_lifecycle','cus_lifecycle','${status}','2026-09-09T12:${String(n).padStart(2, "0")}:00Z');`,
+      );
+      assert.equal(
+        sql(`select plan from user_plans where user_id='${id}';`),
+        expected,
+      );
+    }
+  },
+);
+
+test(
+  "restoring a report does not duplicate history and only ten completed reports are retained",
+  { skip: !container },
+  () => {
+    const owner = "00000000-0000-4000-8000-000000000075";
+    sql(`insert into auth.users values('${owner}');`);
+    const id = sql(
+      `insert into career_workspaces(user_id,kind,title,payload) values('${owner}','letter','Letter','{"result":{"analyzedAt":"first","content":"Original"}}') returning id;`,
+    ).split("\n")[0];
+    sql(
+      `update career_workspaces set payload='{"result":{"analyzedAt":"second","content":"Next"}}' where id='${id}';update career_workspaces set payload='{"result":{"analyzedAt":"first","content":"Original"}}' where id='${id}';`,
+    );
+    assert.equal(
+      sql(
+        `select count(*) from workspace_versions where workspace_id='${id}';`,
+      ),
+      "2",
+    );
+    for (let n = 0; n < 12; n++)
+      sql(
+        `update career_workspaces set payload=jsonb_build_object('result',jsonb_build_object('analyzedAt','report-${n}')) where id='${id}';`,
+      );
+    assert.equal(
+      sql(
+        `select count(*) from workspace_versions where workspace_id='${id}';`,
+      ),
+      "10",
+    );
+  },
+);

@@ -78,10 +78,12 @@ export type ScanAnalysis = z.infer<typeof scanSchema>;
 export type MatchAnalysis = z.infer<typeof matchSchema>;
 export type Requirement = MatchAnalysis["requirements"][number];
 export type ScanResult = ScanAnalysis & {
+  runId?: string;
   version: typeof ANALYSIS_VERSION;
   analyzedAt: string;
 };
 export type MatchResult = MatchAnalysis & {
+  runId?: string;
   version: typeof ANALYSIS_VERSION;
   analyzedAt: string;
   coverage: ReturnType<typeof requirementCoverage>;
