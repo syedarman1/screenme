@@ -4,7 +4,8 @@ import { supabaseAdmin as db } from "./supabaseAdmin";
 import { getAuthenticatedUser, unauthorized } from "./auth";
 import { rateLimit } from "./rate-limit";
 
-export type FeatureType = "resume_scan" | "cover_letter" | "job_match" | "interview_prep" | "resume_tailor";
+import type { FeatureType } from "./plans";
+export type { FeatureType } from "./plans";
 export interface UsageCheckResult {
   allowed: boolean; limit: number; remaining: number; plan: "free" | "pro";
   reservationId?: string; reason?: "quota" | "busy";
@@ -45,7 +46,7 @@ export async function withUsage(req: Request, feature: FeatureType | null, handl
     if (error || !data) throw new Error("Usage unavailable");
     const usage = data as UsageCheckResult;
     if (!usage.allowed) return NextResponse.json({
-      error: usage.reason === "busy" ? "Please wait for your other requests to finish." : "Your monthly allowance is used up or this feature requires Pro.",
+      error: usage.reason === "busy" ? "Please wait for your other requests to finish." : feature === "job_import" ? "You’ve used your 5 job-link imports this month. Upgrade to Pro or paste the job description manually." : "Your monthly allowance is used up or this feature requires Pro.",
       details: { ...usage, code: usage.reason === "busy" ? "BUSY" : "USAGE_LIMIT_REACHED" },
     }, { status: usage.reason === "busy" ? 429 : 403 });
     reservationId = usage.reservationId;

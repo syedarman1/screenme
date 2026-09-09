@@ -2,10 +2,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { getAuthenticatedUser } from "../../lib/auth";
+import { savedLimitResponse } from "../../lib/savedLimits";
 
 function serverSupabase() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
   if (!url || !key) return null;
   return createClient(url, key, { auth: { persistSession: false } });
 }
@@ -58,24 +59,6 @@ export async function POST(req: NextRequest) {
   if (!VALID_STATUSES.includes(status as Status))
     return NextResponse.json({ error: "Invalid status." }, { status: 400 });
 
-  /* ── Plan-based limit check ── */
-  const { data: planData } = await sb.from("user_plans").select("plan").eq("user_id", userId).single();
-  const plan = planData?.plan || "free";
-
-  if (plan !== "pro") {
-    const { count } = await sb
-      .from("job_applications")
-      .select("id", { count: "exact", head: true })
-      .eq("user_id", userId);
-
-    if (count !== null && count >= 10) {
-      return NextResponse.json(
-        { error: "Free plan allows up to 10 applications. Upgrade to Pro for unlimited tracking.", limitReached: true },
-        { status: 403 }
-      );
-    }
-  }
-
   const { data, error } = await sb.from("job_applications").insert({
     user_id:         userId,
     company:         company.trim().slice(0, 200),
@@ -88,6 +71,8 @@ export async function POST(req: NextRequest) {
   }).select().single();
 
   if (error) {
+    const limitResponse = savedLimitResponse(error);
+    if (limitResponse) return limitResponse;
     console.error("POST applications error:", error);
     return NextResponse.json({ error: "Failed to save application." }, { status: 500 });
   }

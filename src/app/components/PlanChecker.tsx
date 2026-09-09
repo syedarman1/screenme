@@ -1,5 +1,6 @@
 "use client";
 
+import { FREE_LIMITS, USAGE_FIELDS } from "../lib/plans";
 import React, { useEffect, useState } from "react";
 import { authFetch } from "../lib/authFetch";
 import { supabase } from "../lib/supabaseClient";
@@ -46,9 +47,7 @@ export default function PlanChecker({
         const res = await authFetch("/api/usage", { method: "POST" });
         if (!res.ok) throw new Error("Could not load your plan. Please refresh and try again.");
         const usage = await res.json();
-        const fields = { resume_scan: "resume_scans", cover_letter: "cover_letters", job_match: "job_matches", interview_prep: "interview_preps", resume_tailor: "resume_tailors" };
-        const limits = { resume_scan: 3, cover_letter: 2, job_match: 2, interview_prep: 0, resume_tailor: 2 };
-        setAllowed(usage.plan === "pro" || (requiredPlan !== "pro" && (!feature || usage[fields[feature]] < limits[feature])));
+        setAllowed(usage.plan === "pro" || (requiredPlan !== "pro" && (!feature || usage[USAGE_FIELDS[feature]] < FREE_LIMITS[feature])));
       } catch {
         setAccessError("Could not load your plan. Please refresh and try again.");
         setAllowed(false);
