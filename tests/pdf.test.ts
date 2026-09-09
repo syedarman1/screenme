@@ -3,8 +3,7 @@ import assert from "node:assert/strict";
 import { extractPdf } from "../src/app/lib/extractPdf";
 
 // Synthetic document; no real candidate data or external services.
-function fixture() {
-  const stream = "BT /F1 12 Tf 72 720 Td (ScreenMe Test Resume) Tj ET";
+function fixture(stream = "BT /F1 12 Tf 72 720 Td (ScreenMe Test Resume) Tj ET") {
   const objects = [
     "<< /Type /Catalog /Pages 2 0 R >>",
     "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
@@ -26,4 +25,14 @@ test("extracts a real PDF using the upgraded parser", async () => {
 
 test("rejects a malformed PDF instead of submitting empty resume text", async () => {
   await assert.rejects(extractPdf(new TextEncoder().encode("not a PDF").buffer));
+});
+
+
+test("preserves section and bullet line breaks from a real PDF", async () => {
+  const text = await extractPdf(fixture("BT /F1 12 Tf 72 720 Td (EXPERIENCE) Tj 0 -20 Td (Engineer at Example) Tj 0 -20 Td (Built APIs serving 40000 users) Tj ET"));
+  assert.match(text, /EXPERIENCE\nEngineer at Example\nBuilt APIs/);
+});
+
+test("rejects a valid PDF with no text rather than sending an empty scan", async () => {
+  await assert.rejects(extractPdf(fixture("")), /no readable text/);
 });
