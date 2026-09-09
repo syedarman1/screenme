@@ -26,7 +26,11 @@ const assessmentSchema = z.object({
   explanation: z.string(),
 });
 export const scanSchema = z.object({
-  inputIssue: z.string().nullable(),
+  inputsUsable: z
+    .boolean()
+    .describe(
+      "True when the supplied documents contain a meaningful resume and, for matching, a job posting. Weak or brief resumes are still usable.",
+    ),
   summary: z.string(),
   assessments: z.object({
     clarity: assessmentSchema,
@@ -52,7 +56,11 @@ export const scanSchema = z.object({
   ),
 });
 export const matchSchema = z.object({
-  inputIssue: z.string().nullable(),
+  inputsUsable: z
+    .boolean()
+    .describe(
+      "True when the supplied documents contain a meaningful resume and, for matching, a job posting. Weak or brief resumes are still usable.",
+    ),
   summary: z.string(),
   requirements: z.array(
     z.object({
@@ -83,6 +91,7 @@ export class AnalysisInputError extends Error {}
 function normalized(text: string) {
   return text
     .normalize("NFKC")
+    .replace(/\\[nrt]/g, " ")
     .replace(/[‘’]/g, "'")
     .replace(/[“”]/g, '"')
     .replace(/[–—]/g, "-")
@@ -98,18 +107,69 @@ function requireEvidence(source: string, quote: string | null) {
   if (!quote || !hasSourceEvidence(source, quote))
     throw new AnalysisValidationError("Evidence could not be verified.");
 }
-function checkStrings(value: unknown): void {
+function checkStrings(value: unknown, path = "analysis"): void {
   if (typeof value === "string" && (!value.trim() || value.length > 2000))
-    throw new AnalysisValidationError("Invalid analysis text.");
-  if (Array.isArray(value)) value.forEach(checkStrings);
+    throw new AnalysisValidationError(`Invalid analysis text at ${path}.`);
+  if (Array.isArray(value))
+    value.forEach((item, index) => checkStrings(item, `${path}[${index}]`));
   else if (value && typeof value === "object")
-    Object.values(value).forEach(checkStrings);
+    Object.entries(value).forEach(([key, item]) =>
+      checkStrings(item, `${path}.${key}`),
+    );
+}
+
+// Narrow contradiction check: an existing explicit heading must not be called
+// absent. Content/impact advice about that section remains valid.
+export function rejectMissingHeadingClaims(resume: string, claims: string[]) {
+  const headings = [
+    "skills",
+    "education",
+    "experience",
+    "certifications",
+    "projects",
+  ];
+  for (const heading of headings) {
+    if (
+      !new RegExp(
+        `^\\s*(?:technical |professional |work )?${heading}\\s*(?::|$)`,
+        "im",
+      ).test(resume)
+    )
+      continue;
+    for (const claim of claims) {
+      const text = normalized(claim);
+      const namesHeading = new RegExp(`\\b${heading}\\b`).test(text);
+      if (
+        /\b(?:no need|not missing|already present|does not lack|doesn't lack|no missing)\b/.test(
+          text,
+        )
+      )
+        continue;
+      const missing =
+        /\b(?:lack|lacks|lacking|missing|absent|without)\b[^.!?]{0,80}\b(?:headers?|headings?|sections?)\b/.test(
+          text,
+        ) ||
+        /\b(?:headers?|headings?|sections?)\b[^.!?]{0,40}\b(?:missing|absent|lacking)\b/.test(
+          text,
+        ) ||
+        /\b(?:add|include|create|introduce)\b[^.!?]{0,60}\b(?:headers?|headings?)\b/.test(
+          text,
+        ) ||
+        new RegExp(
+          `\\bno\\s+(?:separate\\s+)?${heading}\\s+(?:section|heading|header)\\b`,
+        ).test(text);
+      if (namesHeading && missing)
+        throw new AnalysisValidationError(
+          "Advice contradicts an existing resume heading.",
+        );
+    }
+  }
 }
 export function validateScan(
   analysis: ScanAnalysis,
   resume: string,
 ): ScanAnalysis {
-  if (analysis.inputIssue)
+  if (!analysis.inputsUsable)
     throw new AnalysisInputError(
       "We couldn't identify enough resume content. Include your experience, education, or projects and try again.",
     );
@@ -128,12 +188,26 @@ export function validateScan(
     )
   )
     throw new AnalysisValidationError("No assessable content.");
+  rejectMissingHeadingClaims(resume, [
+    analysis.summary,
+    ...Object.values(analysis.assessments).map((item) => item.explanation),
+    ...analysis.findings.flatMap((item) => [
+      item.title,
+      item.explanation,
+      item.nextStep,
+    ]),
+  ]);
   const priorities = { high: 0, medium: 1, low: 2 };
   return {
     ...analysis,
-    findings: [...analysis.findings].sort(
-      (a, b) => priorities[a.priority] - priorities[b.priority],
-    ),
+    findings: analysis.findings
+      .map((item) => ({
+        ...item,
+        priority: /\boptional\b/i.test(item.title)
+          ? ("low" as const)
+          : item.priority,
+      }))
+      .sort((a, b) => priorities[a.priority] - priorities[b.priority]),
   };
 }
 export function validateMatch(
@@ -141,7 +215,7 @@ export function validateMatch(
   resume: string,
   job: string,
 ): MatchAnalysis {
-  if (analysis.inputIssue)
+  if (!analysis.inputsUsable)
     throw new AnalysisInputError(
       "We couldn't identify a resume and actionable job requirements. Include the full qualifications and responsibilities, then try again.",
     );

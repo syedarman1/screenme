@@ -9,7 +9,8 @@ import {
 let scan: typeof import("../src/app/api/analyzeResume/route");
 let match: typeof import("../src/app/api/jobMatch/route");
 const originalFetch = globalThis.fetch;
-let mode: "valid" | "invented" | "refused" | "unavailable" | "truncated" =
+let mode:
+  "valid" | "invented" | "refused" | "unavailable" | "truncated" | "heading" =
   "valid";
 let authenticated = true;
 let allowed = true;
@@ -38,7 +39,18 @@ before(async () => {
       assert.equal(body.response_format.type, "json_schema");
       assert.equal(body.response_format.json_schema.strict, true);
       assert.equal(body.messages[1].role, "user");
-      assert.equal(JSON.parse(body.messages[1].content).resume, strongResume);
+      assert.ok(
+        body.messages[0].content.includes(
+          new Date().toISOString().slice(0, 10),
+        ),
+      );
+      const documents = JSON.parse(body.messages[1].content);
+      assert.equal(
+        documents.resumePassages
+          .map((p: { text: string }) => p.text)
+          .join("\n"),
+        strongResume,
+      );
       if (mode === "unavailable")
         return Response.json(
           {
@@ -54,13 +66,43 @@ before(async () => {
         body.response_format.json_schema.name === "resume_review_v2"
           ? scanFixture()
           : matchFixture();
+      const reference = (
+        text: string,
+        passages: { id: string; text: string }[],
+      ) => {
+        const passage = passages.find((p) => p.text.includes(text));
+        assert.ok(
+          passage,
+          `Fixture must have an actual source passage: ${text}`,
+        );
+        return passage.id;
+      };
+      if ("assessments" in data) {
+        for (const item of Object.values(data.assessments))
+          if (item.evidence)
+            item.evidence = reference(item.evidence, documents.resumePassages);
+        for (const item of [...data.findings, ...data.strengths])
+          item.evidence = reference(item.evidence, documents.resumePassages);
+      } else {
+        for (const item of data.requirements) {
+          item.jobEvidence = reference(item.jobEvidence, documents.jobPassages);
+          if (item.resumeEvidence)
+            item.resumeEvidence = reference(
+              item.resumeEvidence,
+              documents.resumePassages,
+            );
+        }
+      }
+      if (mode === "heading" && "assessments" in data)
+        data.assessments.organization.explanation =
+          "The Skills and Education headings are missing.";
       if (mode === "invented" && "strengths" in data)
         data.strengths[0].evidence = "Fabricated experience at Mars Inc";
       return Response.json({
         id: "synthetic",
         object: "chat.completion",
         created: 0,
-        model: "gpt-4o-mini",
+        model: body.model,
         choices: [
           {
             index: 0,
@@ -125,7 +167,12 @@ test("v2 scan and match return verified structured results, no-store, and settle
   assert.deepEqual(settlements, [true, true]);
 });
 test("unverified, refused, and truncated output refund usage without exposing AI content", async () => {
-  for (const failure of ["invented", "refused", "truncated"] as const) {
+  for (const failure of [
+    "invented",
+    "refused",
+    "truncated",
+    "heading",
+  ] as const) {
     mode = failure;
     const response = await scan.POST(request({ resume: strongResume }));
     assert.equal(response.status, 502);
@@ -134,7 +181,7 @@ test("unverified, refused, and truncated output refund usage without exposing AI
       /Mars|synthetic-key|Cannot review this input/,
     );
   }
-  assert.deepEqual(settlements, [false, false, false]);
+  assert.deepEqual(settlements, [false, false, false, false]);
 });
 test("provider credit failures refund usage and are not retried", async () => {
   mode = "unavailable";

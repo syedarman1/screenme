@@ -131,3 +131,82 @@ test("input validation rejects wrong types, oversized documents, whitespace and 
     false,
   );
 });
+
+test("unusable input is distinct from a weak resume and empty feedback is rejected", () => {
+  const scan = scanFixture();
+  scan.inputsUsable = false;
+  assert.throws(
+    () => validateScan(scan, strongResume),
+    /couldn't identify enough resume content/,
+  );
+  scan.inputsUsable = true;
+  scan.summary = " ";
+  assert.throws(() => validateScan(scan, strongResume), /analysis.summary/);
+});
+
+test("a quoted passage cannot justify claiming existing headings are absent", () => {
+  const scan = scanFixture();
+  scan.assessments.organization = {
+    rating: "developing",
+    evidence: "Experience\nSoftware Engineer, Example Systems",
+    explanation:
+      "The lack of section headers for skills and education makes navigation harder.",
+  };
+  assert.throws(
+    () => validateScan(scan, strongResume),
+    /contradicts an existing resume heading/,
+  );
+});
+
+test("adding detail to an existing section is still valid feedback", () => {
+  const scan = scanFixture();
+  scan.findings = [
+    {
+      section: "Skills",
+      priority: "low",
+      title: "Connect skills to projects",
+      evidence: "Skills: Python, SQL, PostgreSQL, Git, REST APIs",
+      explanation: "Add project context to the skills section if accurate.",
+      nextStep: "Describe a SQL project you actually completed.",
+    },
+  ];
+  assert.equal(validateScan(scan, strongResume).findings.length, 1);
+});
+
+test("source quotes tolerate escaped JSON newlines without accepting changed words", () => {
+  assert.ok(
+    hasSourceEvidence(
+      "Experience\nSoftware Engineer",
+      "Experience\\nSoftware Engineer",
+    ),
+  );
+  assert.equal(
+    hasSourceEvidence(
+      "Experience\nSoftware Engineer",
+      "Experience\\nEngineering Manager",
+    ),
+    false,
+  );
+});
+
+test("existing headings can be praised or given content advice without a false contradiction", () => {
+  const scan = scanFixture();
+  scan.assessments.organization.explanation =
+    "No need to add Skills or Education headers; they are already present.";
+  assert.doesNotThrow(() => validateScan(scan, strongResume));
+});
+
+test("explicitly optional polish cannot be presented as a high priority", () => {
+  const review = scanFixture();
+  review.findings = [
+    {
+      section: "Experience",
+      priority: "high",
+      title: "Optional: expand collaboration context",
+      evidence: "Led code reviews for a four-person team",
+      explanation: "Additional context may help.",
+      nextStep: "Describe cross-team work if accurate.",
+    },
+  ];
+  assert.equal(validateScan(review, strongResume).findings[0].priority, "low");
+});

@@ -41,11 +41,11 @@ export function scanFixture(): ScanAnalysis {
     explanation: "Clearly describes scope.",
   };
   return {
-    inputIssue: null,
+    inputsUsable: true,
     summary: "Specific evidence of engineering work.",
     assessments: {
-      clarity: assessment,
-      impact: assessment,
+      clarity: { ...assessment },
+      impact: { ...assessment },
       organization: {
         ...assessment,
         evidence: "Education: BS Computer Science",
@@ -63,7 +63,7 @@ export function scanFixture(): ScanAnalysis {
 }
 export function matchFixture(): MatchAnalysis {
   return {
-    inputIssue: null,
+    inputsUsable: true,
     summary: "Relevant engineering experience; certification is not shown.",
     requirements: [
       {
