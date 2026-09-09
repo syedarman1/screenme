@@ -149,7 +149,7 @@ export function rejectMissingHeadingClaims(resume: string, claims: string[]) {
         /\b(?:lack(?:s|ing)?(?: of)?|missing|absent|without|add|include|create|introduce)\s+(?:(?:a|an|the|clear|explicit|separate|dedicated|section|skills|education|experience|certifications|projects|and|or)\s+){0,7}(?:headers?|headings?|sections?)\b/.test(
           text,
         ) ||
-        /\b(?:headers?|headings?|sections?)\s+(?:(?:for|skills|education|experience|certifications|projects|and|or|is|are)\s+){0,7}(?:missing|absent|lacking)\b/.test(
+        /\b(?:headers?|headings?|sections?)\s+(?:(?:for|skills|education|experience|certifications|projects|and|or|is|are)\s+){0,7}(?:missing|absent|lacking)(?=$|[,:;]|\s+(?:from|in|on|and|which|making|so|but)\b)/.test(
           text,
         ) ||
         new RegExp(
