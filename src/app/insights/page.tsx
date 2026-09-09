@@ -89,13 +89,15 @@ function InsightsContent() {
                     <dt className="text-fg-muted">Average response</dt>
                     <dd>{(r.average_ms / 1000).toFixed(1)}s</dd>
                   </div>
-                  <div>
-                    <dt className="text-fg-muted">Input / output tokens</dt>
-                    <dd>
-                      {r.input_tokens.toLocaleString()} /{" "}
-                      {r.output_tokens.toLocaleString()}
-                    </dd>
-                  </div>
+                  {operator && (
+                    <div>
+                      <dt className="text-fg-muted">Input / output tokens</dt>
+                      <dd>
+                        {r.input_tokens.toLocaleString()} /{" "}
+                        {r.output_tokens.toLocaleString()}
+                      </dd>
+                    </div>
+                  )}
                   <div>
                     <dt className="text-fg-muted">
                       Helpful / needs improvement
@@ -125,11 +127,9 @@ function InsightsContent() {
           </div>
         )}
         <p className="text-xs text-fg-muted mt-8">
-          Failures include rejected input and provider failures after an
-          allowance is reserved. Unstarted, unauthorized, and quota-blocked
-          requests are excluded. Cost estimates use published uncached model
-          rates; unknown models, failed provider calls, and audio can be
-          unpriced. They are not billing invoices.
+          {operator
+            ? "Failures include rejected input and provider failures after an allowance is reserved. Unstarted, unauthorized, and quota-blocked requests are excluded. Cost estimates use published uncached model rates; unknown models, failed provider calls, and audio can be unpriced. Estimates are not invoices."
+            : "This activity covers requests that reached a tool. Visit your dashboard to see your current plan allowances."}
         </p>
       </div>
     </main>
