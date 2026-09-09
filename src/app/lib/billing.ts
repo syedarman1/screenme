@@ -16,6 +16,18 @@ export function proPriceId(): string {
   return id;
 }
 
+export function publishableKey(): string {
+  const key = process.env.STRIPE_PUBLISHABLE_KEY || process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
+  const live = process.env.STRIPE_SECRET_KEY?.startsWith("sk_live_") || process.env.STRIPE_SECRET_KEY?.startsWith("rk_live_");
+  if (!key?.startsWith(live ? "pk_live_" : "pk_test_")) throw new Error("Payment configuration is unavailable.");
+  return key;
+}
+
+export function matchesOnsiteCheckout(session: Stripe.Checkout.Session, userId: string, priceId: string, origin: string): boolean {
+  return session.metadata?.userId === userId && session.metadata?.priceId === priceId
+    && session.ui_mode === "elements" && session.return_url === `${origin}/success?session_id={CHECKOUT_SESSION_ID}`;
+}
+
 export function stripeId(value: string | { id: string } | null | undefined): string | null {
   return typeof value === "string" ? value : value?.id ?? null;
 }

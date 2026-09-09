@@ -3,7 +3,6 @@
 import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "../lib/supabaseClient";
-import { authFetch } from "../lib/authFetch";
 
 const TIERS = [
   {
@@ -55,41 +54,16 @@ const Check = () => (
 export default function PricingSection() {
   const router = useRouter();
   const [authed, setAuthed] = useState<boolean | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [err, setErr] = useState<string | null>(null);
 
   useEffect(() => {
     if (!supabase) return;
     supabase.auth.getSession().then(({ data }) => setAuthed(!!data.session));
   }, []);
 
-  const handleCta = async (tier: typeof TIERS[number]) => {
+  const handleCta = (tier: typeof TIERS[number]) => {
     if (tier.id === "free") { router.push(authed ? "/dashboard" : "/login"); return; }
 
-    if (!authed) {
-      if (process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO)
-        localStorage.setItem("selectedPriceId", process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO);
-      router.push("/login");
-      return;
-    }
-    if (!process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO) {
-      setErr("Checkout isn't configured yet — please contact support.");
-      return;
-    }
-    setBusy(true);
-    setErr(null);
-    try {
-      const res = await authFetch("/api/stripe", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO }),
-      });
-      const { url } = await res.json();
-      if (url) window.location.href = url;
-      else setErr("Couldn't start checkout. Please try again.");
-    } catch {
-      setErr("Couldn't start checkout. Please try again.");
-    } finally { setBusy(false); }
+    router.push("/checkout");
   };
 
   return (
@@ -137,16 +111,12 @@ export default function PricingSection() {
 
               <button
                 onClick={() => handleCta(tier)}
-                disabled={busy && tier.id === "pro"}
                 className={`btn w-full py-2.5 disabled:opacity-50 ${
                   tier.featured ? "btn-primary" : "btn-secondary"
                 }`}
               >
-                {busy && tier.id === "pro" ? "Loading…" : tier.cta}
+                {tier.cta}
               </button>
-              {err && tier.id === "pro" && (
-                <p className="mt-2 text-xs text-red text-center" role="alert">{err}</p>
-              )}
             </div>
           ))}
         </div>

@@ -54,6 +54,8 @@ export default function DynamicNavbar() {
 
   const navLinks = isAppRoute && user ? APP_LINKS : MARKETING_LINKS;
 
+  if (pathname === "/checkout") return null;
+
   return (
     <>
       <header className="fixed top-0 inset-x-0 z-50 bg-surface/90 backdrop-blur-md border-b border-border">
