@@ -4,7 +4,7 @@
 import { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
-import confetti from "canvas-confetti";
+import { ProConfirmation, SuccessShell, VerificationPending } from "./ProConfirmation";
 import { supabase } from "../lib/supabaseClient";
 import { authFetch } from "../lib/authFetch";
 
@@ -66,12 +66,6 @@ function SuccessPageContent() {
           if (verificationResult.alreadyProcessed) {
             setState("already_processed");
           } else {
-            // Fire confetti on successful new payment
-            confetti({
-              particleCount: 100,
-              spread: 70,
-              origin: { y: 0.6 },
-            });
             setState("success");
           }
         } else {
@@ -126,271 +120,24 @@ function SuccessPageContent() {
     setRetryCount((prev) => prev + 1);
   };
 
-  const renderContent = () => {
-    switch (state) {
-      case "loading":
-        return (
-          <div className="text-center">
-            <div className="animate-spin h-16 w-16 mx-auto mb-4 border-4 border-[var(--accent)] border-t-transparent rounded-full" />
-            <h1 className="text-2xl font-bold mb-2">
-              Processing your upgrade...
-            </h1>
-            <p className="text-fg-subtle">
-              Please wait while we verify your payment and activate your Pro
-              features.
-            </p>
-          </div>
-        );
+  if (state === "loading") return <VerificationPending />;
+  if (state === "success" || state === "already_processed") return <ProConfirmation />;
 
-      case "success":
-        return (
-          <div className="text-center">
-            <div className="w-20 h-20 mx-auto mb-6 bg-surface-2 border border-border rounded-full flex items-center justify-center">
-              <svg
-                className="w-10 h-10 text-fg"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M5 13l4 4L19 7"
-                />
-              </svg>
-            </div>
-            <h1 className="text-3xl font-bold mb-4 text-fg">
-              Welcome to Pro!
-            </h1>
-            <p className="text-lg text-fg-muted mb-8">
-              Your payment was successful and your account has been upgraded.
-              You now have access to all Pro features:
-            </p>
-            <ul className="text-left mb-8 space-y-3 max-w-sm mx-auto">
-              <li className="flex items-center gap-3">
-                <svg
-                  className="w-5 h-5 text-[var(--accent)] flex-shrink-0"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M5 13l4 4L19 7"
-                  />
-                </svg>
-                <span>Unlimited resume scans</span>
-              </li>
-              <li className="flex items-center gap-3">
-                <svg
-                  className="w-5 h-5 text-[var(--accent)] flex-shrink-0"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M5 13l4 4L19 7"
-                  />
-                </svg>
-                <span>Unlimited cover letters</span>
-              </li>
-              <li className="flex items-center gap-3">
-                <svg
-                  className="w-5 h-5 text-[var(--accent)] flex-shrink-0"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M5 13l4 4L19 7"
-                  />
-                </svg>
-                <span>Unlimited job matching</span>
-              </li>
-              <li className="flex items-center gap-3">
-                <svg
-                  className="w-5 h-5 text-[var(--accent)] flex-shrink-0"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M5 13l4 4L19 7"
-                  />
-                </svg>
-                <span>All tone options</span>
-              </li>
-              <li className="flex items-center gap-3">
-                <svg
-                  className="w-5 h-5 text-[var(--accent)] flex-shrink-0"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth="2"
-                    d="M5 13l4 4L19 7"
-                  />
-                </svg>
-                <span>Live interview practice</span>
-              </li>
-            </ul>
-            <div className="space-y-3">
-              <Link
-                href="/dashboard"
-                className="inline-block px-8 py-3 bg-[var(--accent)] text-black font-semibold rounded-lg hover:opacity-90 transition transform hover:-translate-y-1"
-              >
-                Go to Dashboard
-              </Link>
-              <p className="text-sm text-fg-subtle">
-                You can start using your Pro features immediately!
-              </p>
-            </div>
-          </div>
-        );
-
-      case "already_processed":
-        return (
-          <div className="text-center">
-            <div className="w-16 h-16 mx-auto mb-6 bg-surface-2 border border-border rounded-full flex items-center justify-center">
-              <svg
-                className="w-8 h-8 text-fg"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
-            </div>
-            <h1 className="text-2xl font-bold mb-4">Already Upgraded!</h1>
-            <p className="text-fg-muted mb-8">
-              This payment has already been processed and your account is
-              already on the Pro plan.
-            </p>
-            <Link
-              href="/dashboard"
-              className="inline-block px-6 py-2 bg-[var(--accent)] text-black font-medium rounded-lg hover:opacity-90 transition"
-            >
-              Go to Dashboard
-            </Link>
-          </div>
-        );
-
-      case "unauthorized":
-        return (
-          <div className="text-center">
-            <svg
-              className="w-16 h-16 mx-auto mb-4 text-yellow-500"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
-              />
-            </svg>
-            <h1 className="text-2xl font-bold mb-2">Authentication Required</h1>
-            <p className="text-fg-subtle mb-6">
-              Please log in to complete your upgrade process.
-            </p>
-            <Link
-              href="/login"
-              className="px-6 py-2 bg-[var(--accent)] text-black font-medium rounded-lg hover:opacity-90 transition"
-            >
-              Log In
-            </Link>
-          </div>
-        );
-
-      case "error":
-      default:
-        return (
-          <div className="text-center">
-            <svg
-              className="w-16 h-16 mx-auto mb-4 text-red"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
-            <h1 className="text-2xl font-bold mb-2">
-              Payment Verification Failed
-            </h1>
-            <p className="text-fg-subtle mb-6">
-              {errorMessage ||
-                "We encountered an issue verifying your payment. Please try again or contact support."}
-            </p>
-            <div className="space-x-4">
-              <button
-                onClick={handleRetry}
-                className="px-6 py-2 bg-[var(--accent)] text-black font-medium rounded-lg hover:opacity-90 transition"
-              >
-                Try Again
-              </button>
-              <Link
-                href="/dashboard"
-                className="px-6 py-2 bg-bg border border-border text-fg-muted font-medium rounded-lg hover:bg-[#ebebf0] transition"
-              >
-                Back to Dashboard
-              </Link>
-            </div>
-            <p className="text-sm text-fg-muted mt-4">
-              If this problem persists, please contact support with your session
-              details.
-            </p>
-          </div>
-        );
-    }
-  };
-
-  return (
-    <div className="min-h-screen bg-bg text-fg flex items-center justify-center p-4">
-      <div className="max-w-md w-full">{renderContent()}</div>
-    </div>
-  );
+  const unauthorized = state === "unauthorized";
+  return <SuccessShell>
+    <section className="mx-auto w-full max-w-xl rounded-3xl border border-border bg-surface p-7 sm:p-12" aria-live="polite">
+      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-fg-subtle">{unauthorized ? "Your account" : "Payment confirmation"}</p>
+      <h1 className="mt-5 text-3xl font-semibold tracking-tight">{unauthorized ? "Sign in to view your upgrade." : "We couldn’t confirm your upgrade."}</h1>
+      <p className="mt-4 text-sm leading-7 text-fg-muted">{unauthorized ? "Use the account you chose at checkout to check your Pro access." : errorMessage || "Please try checking again or contact support for help."}</p>
+      {!unauthorized && <p className="mt-3 text-sm leading-7 text-fg-muted">Checking again won’t create another payment.</p>}
+      <div className="mt-8 flex flex-wrap items-center gap-4">
+        {unauthorized ? <Link href="/login" className="btn btn-primary min-h-12 px-6">Sign in</Link> : <button onClick={handleRetry} className="btn btn-primary min-h-12 px-6">Check again</button>}
+        <Link href="/contact" className="text-sm text-fg-muted underline underline-offset-4">Contact support</Link>
+      </div>
+    </section>
+  </SuccessShell>;
 }
 
 export default function SuccessPage() {
-  return (
-    <Suspense
-      fallback={
-        <div className="min-h-screen bg-bg text-fg flex items-center justify-center p-4">
-          <div className="max-w-md w-full text-center">
-            <div className="animate-spin h-12 w-12 border-4 border-[var(--accent)] border-t-transparent rounded-full mx-auto mb-4"></div>
-            <p className="text-fg-subtle">Loading...</p>
-          </div>
-        </div>
-      }
-    >
-      <SuccessPageContent />
-    </Suspense>
-  );
+  return <Suspense fallback={<VerificationPending />}><SuccessPageContent /></Suspense>;
 }

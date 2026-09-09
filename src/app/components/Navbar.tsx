@@ -54,7 +54,7 @@ export default function DynamicNavbar() {
 
   const navLinks = isAppRoute && user ? APP_LINKS : MARKETING_LINKS;
 
-  if (pathname === "/checkout") return null;
+  if (pathname === "/checkout" || pathname === "/success") return null;
 
   return (
     <>
