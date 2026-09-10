@@ -80,4 +80,3 @@ The public contact form is the advertised support entry point. Outbound Resend/S
 5. Check homepage, signup, recovery, authenticated usage, unauthenticated API rejection, and webhook signature rejection. In Stripe test mode, complete a checkout and cancellation before relying on a live purchase test. Check inbox access separately.
 
 For an application regression, promote the previous known-good Vercel deployment. The new tables and columns can remain. Legacy functions remain available to the service role. Do not roll back the database by deleting receipt or usage records. Restoring old code also restores its known bugs, so follow up promptly. The private `screenme-ops` restore workflow is maintained separately and should not be replaced by a public keepalive workflow.
-
