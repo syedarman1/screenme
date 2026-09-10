@@ -66,6 +66,8 @@ CI also runs real PostgreSQL tests for ownership, concurrency, quotas, report hi
 
 ## Architecture
 
+Read the [engineering decisions and code map](docs/architecture.md) for evidence validation, scoring, request accounting and implementation tradeoffs.
+
 ```mermaid
 flowchart LR
   Applicant[Applicant] --> UI[Next.js workspace]
