@@ -132,6 +132,10 @@ export async function generateWriting(kind: WritingKind, input: WritingInput) {
       new Set(draft.questions.map((q) => q.type)).size !== 6
     )
       throw new AnalysisValidationError("Incomplete interview practice.");
+    rejectNewNumbers(
+      input.resume + " " + input.job,
+      draft.questions.map((q) => q.modelAnswer).join("\n"),
+    );
   } else {
     if (draft.questions.length)
       throw new AnalysisValidationError("Unexpected draft content.");

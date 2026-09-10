@@ -4,7 +4,7 @@ This branch adds saved career workspaces, reviewed edits, verified writing tools
 
 ## Deployment order
 
-1. Apply `20260909224003_saved_review_workspaces.sql`, then `20260909230228_connected_applications_and_monitoring.sql` to the target Supabase project through the migration workflow. These are additive; existing applications and resumes remain intact. Run Supabase database lint and security/performance advisors on the target project.
+1. Apply `20260909224003_saved_review_workspaces.sql`, then `20260909230228_connected_applications_and_monitoring.sql`, then `20260910042451_launch_readiness.sql` to the target Supabase project through the migration workflow. These are additive; existing applications and resumes remain intact. Run Supabase database lint and security/performance advisors on the target project.
 2. Configure `RESUME_AI_MODEL=gpt-5.6-terra`. Configure `SCREENME_OPERATOR_IDS` with the verified auth user IDs of operators who may view aggregate app health; leave it empty to deny aggregate access. Ordinary accounts see their own activity only.
 3. Deploy the application. Verify the owner-only workspace endpoints, restore behavior, account page and tool feedback using a temporary account.
 4. Verify the public Stripe endpoint as described below before calling billing lifecycle delivery production-ready. Live email sender and auth-link checks passed separately; the development billing tests do not establish public webhook delivery.
@@ -25,7 +25,7 @@ References: [Resend SMTP for Supabase](https://resend.com/docs/send-with-supabas
 
 ## Billing activation and verification
 
-The configured Stripe test account had no registered webhook endpoints during this audit. Register `/api/stripe/webhook` at the deployed canonical HTTPS origin in the intended Stripe environment and store its matching signing secret in a sensitive server environment variable. Verify that secret, price, publishable key, restricted/server key and portal configuration all belong to the same environment. Use a restricted key with the permissions this integration needs where possible.
+At the earlier stage-two audit, the configured Stripe test account had no registered webhook endpoints. The launch audit subsequently verified genuine public delivery through a temporary HTTPS endpoint; see `launch-validation.md`. Production already has an enabled canonical webhook with the eight events below. Register `/api/stripe/webhook` at the deployed canonical HTTPS origin in the intended Stripe environment and store its matching signing secret in a sensitive server environment variable. Verify that secret, price, publishable key, restricted/server key and portal configuration all belong to the same environment. Use a restricted key with the permissions this integration needs where possible.
 
 Required events: `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `customer.subscription.created`, `customer.subscription.updated`, `customer.subscription.deleted`, `invoice.paid`, `invoice.payment_succeeded`, `invoice.payment_failed`. Replay a genuine event through Stripe to verify public delivery, signature validation, durable receipt and entitlement update. The success-page reconciliation remains a fallback; it does not replace webhooks for renewals and cancellations.
 
@@ -45,4 +45,15 @@ Saved tool workspaces are capped atomically at Free 3 / Pro 20 across all tools.
 
 ## Validation commands
 
-Use Node 22.13 or later within the supported Node 22 range, install locked dependencies, and run `npm run lint`, `npm run typecheck`, `npm test`, `npm run build`. The database tests require `SCREENME_TEST_DB` naming a disposable Docker PostgreSQL container prefixed `codex-screenme-`; they reset only that fixture database. All 82 tests ran without skips locally. Run the two integration scripts with the isolated development environment file. Never use production Supabase credentials for them.
+Use Node 22.13 or later within the supported Node 22 range, install locked dependencies, and run `npm run lint`, `npm run typecheck`, `npm test`, `npm run build`. The database tests require `SCREENME_TEST_DB` naming a disposable Docker PostgreSQL container prefixed `codex-screenme-`; they reset only that fixture database. The launch suite has 89 tests; run all of them without skips against the disposable database. Run the two integration scripts with the isolated development environment file. Never use production Supabase credentials for them.
+
+
+## Public webhook integration runner
+
+`scripts/test-public-billing.ts` requires Stripe test credentials, a local Supabase database, and one temporary `trycloudflare.com` webhook destination. Store only the endpoint ID and origin in a private JSON state file (`{"origin":"https://your-temporary-host.trycloudflare.com","webhookId":"we_..."}`), and point `SCREENME_QA_STATE` to it. Configure the app with that endpoint's signing secret before starting the runner. It creates and removes its own subscription test clock/customer and local account; the operator must remove the temporary destination and stop the tunnel afterward. Never use production keys/database values. Browser checkout testing is separate from the clock simulation.
+
+## Launch operations
+
+`/support` is restricted to verified IDs in `SCREENME_OPERATOR_IDS`; the owner can reach it from Account and membership. The page lists new and handled requests, links a reply in the operator's email app, and supports handling/reopening. Check it regularly. The public form returns a reference after durable storage and no longer advertises an unverified receiving mailbox. No automatic support notifications are sent.
+
+Set an explicit `STRIPE_PORTAL_CONFIGURATION` from the live account, with invoice history, payment-method updates and cancellation at period end enabled. Keep live/test keys, prices and portal configuration in matching modes. The account view recognizes both cancellation flags and explicit cancellation timestamps.

@@ -1,7 +1,12 @@
 import { NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../lib/auth";
 import { supabaseAdmin as db } from "../../lib/supabaseAdmin";
-import { stripe, stripeId } from "../../lib/billing";
+import { isOperator } from "../../lib/operator";
+import {
+  stripe,
+  stripeId,
+  subscriptionCancellationScheduled,
+} from "../../lib/billing";
 export async function GET(req: Request) {
   const user = await getAuthenticatedUser(req);
   if (!user)
@@ -46,7 +51,7 @@ export async function GET(req: Request) {
       if (stripeId(sub.customer) !== plan.stripe_customer_id) throw new Error();
       billing = {
         status: sub.status,
-        cancelAtPeriodEnd: sub.cancel_at_period_end,
+        cancelAtPeriodEnd: subscriptionCancellationScheduled(sub),
         periodEnd:
           sub.cancel_at ?? sub.items.data[0]?.current_period_end ?? null,
         live: sub.livemode,
@@ -55,8 +60,19 @@ export async function GET(req: Request) {
       billingError = true;
     }
   }
+  const operator = isOperator(user.id);
+  const supportCount = operator
+    ? await db
+        .from("contact_messages")
+        .select("id", { head: true, count: "exact" })
+        .eq("status", "new")
+    : null;
   return NextResponse.json(
     {
+      operator,
+      openSupportRequests: supportCount?.error
+        ? null
+        : (supportCount?.count ?? null),
       savedWorkspaces: workspaceError ? null : savedWorkspaces,
       workspaceLimit: plan?.plan === "pro" ? 20 : 3,
       email: user.email,

@@ -10,6 +10,7 @@ const ContactPage = () => {
     subject: "",
     message: "",
   });
+  const [reference, setReference] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitStatus, setSubmitStatus] = useState<
     "idle" | "success" | "error"
@@ -56,6 +57,7 @@ const ContactPage = () => {
         }
         setSubmitStatus("error");
       } else {
+        setReference(data.reference);
         setSubmitStatus("success");
         setFormData({ name: "", email: "", subject: "", message: "" });
       }
@@ -71,7 +73,7 @@ const ContactPage = () => {
   const handleInputChange = (
     e: React.ChangeEvent<
       HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
-    >
+    >,
   ) => {
     setFormData((prev) => ({
       ...prev,
@@ -99,11 +101,18 @@ const ContactPage = () => {
               <form onSubmit={handleSubmit} className="space-y-5">
                 <div className="grid md:grid-cols-2 gap-5">
                   <div>
-                    <label htmlFor="contact-name" className="block text-xs font-medium text-fg-muted mb-1.5">Name</label>
+                    <label
+                      htmlFor="contact-name"
+                      className="block text-xs font-medium text-fg-muted mb-1.5"
+                    >
+                      Name
+                    </label>
                     <input
                       id="contact-name"
                       type="text"
                       name="name"
+                      minLength={2}
+                      maxLength={100}
                       autoComplete="name"
                       value={formData.name}
                       onChange={handleInputChange}
@@ -113,11 +122,17 @@ const ContactPage = () => {
                     />
                   </div>
                   <div>
-                    <label htmlFor="contact-email" className="block text-xs font-medium text-fg-muted mb-1.5">Email</label>
+                    <label
+                      htmlFor="contact-email"
+                      className="block text-xs font-medium text-fg-muted mb-1.5"
+                    >
+                      Email
+                    </label>
                     <input
                       id="contact-email"
                       type="email"
                       name="email"
+                      maxLength={254}
                       autoComplete="email"
                       value={formData.email}
                       onChange={handleInputChange}
@@ -129,27 +144,37 @@ const ContactPage = () => {
                 </div>
 
                 <div>
-                <label htmlFor="contact-subject" className="block text-xs font-medium text-fg-muted mb-1.5">Topic</label>
-                <select
-                  id="contact-subject"
-                  name="subject"
-                  value={formData.subject}
-                  onChange={handleInputChange}
-                  required
-                  className="input"
-                >
-                  <option value="">Select a topic</option>
-                  <option value="resume-help">Resume Help</option>
-                  <option value="job-search">Job Search Advice</option>
-                  <option value="technical-support">Technical Support</option>
-                  <option value="feature-request">Feature Request</option>
-                  <option value="partnership">Partnership</option>
-                  <option value="other">Other</option>
-                </select>
+                  <label
+                    htmlFor="contact-subject"
+                    className="block text-xs font-medium text-fg-muted mb-1.5"
+                  >
+                    Topic
+                  </label>
+                  <select
+                    id="contact-subject"
+                    name="subject"
+                    value={formData.subject}
+                    onChange={handleInputChange}
+                    required
+                    className="input"
+                  >
+                    <option value="">Select a topic</option>
+                    <option value="resume-help">Resume Help</option>
+                    <option value="job-search">Job Search Advice</option>
+                    <option value="technical-support">Technical Support</option>
+                    <option value="feature-request">Feature Request</option>
+                    <option value="partnership">Partnership</option>
+                    <option value="other">Other</option>
+                  </select>
                 </div>
 
                 <div>
-                  <label htmlFor="contact-message" className="block text-xs font-medium text-fg-muted mb-1.5">Message</label>
+                  <label
+                    htmlFor="contact-message"
+                    className="block text-xs font-medium text-fg-muted mb-1.5"
+                  >
+                    Message
+                  </label>
                   <textarea
                     id="contact-message"
                     name="message"
@@ -173,7 +198,8 @@ const ContactPage = () => {
 
                 {submitStatus === "success" && (
                   <div className="alert-success" role="status">
-                    Message received and saved for review.
+                    Message received and saved for review. Keep your reference:{" "}
+                    <span className="break-all font-mono">{reference}</span>
                   </div>
                 )}
 
@@ -205,28 +231,40 @@ const ContactPage = () => {
             <div className="card p-6">
               <div className="flex items-center mb-4">
                 <div className="icon-box mr-3">
-                  <svg width="18" height="18" viewBox="0 0 24 24" className="stroke-fg fill-none" strokeWidth="1.5">
+                  <svg
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    className="stroke-fg fill-none"
+                    strokeWidth="1.5"
+                  >
                     <polyline points="22,6 12,13 2,6" />
                     <rect x="2" y="6" width="20" height="14" rx="2" ry="2" />
                   </svg>
                 </div>
                 <div>
                   <h3 className="text-base font-semibold text-fg">
-                    Email Support
+                    Account & billing support
                   </h3>
                   <p className="text-sm text-fg-muted">
-                    help@screenme.dev
+                    Use the form on this page
                   </p>
                 </div>
               </div>
               <p className="text-sm text-fg-muted">
-                For account or billing questions, include the email address you use for ScreenMe.
+                For account or billing questions, include the email address you
+                use for ScreenMe.
               </p>
             </div>
 
             <div className="card p-6">
-              <h3 className="text-base font-semibold text-fg mb-4">What to include</h3>
-              <p className="text-sm text-fg-muted">Describe the feature, what you expected, and any error message. Never send passwords or full payment card details.</p>
+              <h3 className="text-base font-semibold text-fg mb-4">
+                What to include
+              </h3>
+              <p className="text-sm text-fg-muted">
+                Describe the feature, what you expected, and any error message.
+                Never send passwords or full payment card details.
+              </p>
             </div>
 
             <div className="card p-6">
@@ -236,10 +274,13 @@ const ContactPage = () => {
               <div className="space-y-5">
                 <div>
                   <h4 className="font-medium text-fg mb-1.5 text-sm">
-                    How accurate is the resume scoring?
+                    How should I use the feedback?
                   </h4>
                   <p className="text-sm text-fg-muted leading-relaxed">
-                    Scores are AI estimates to help you review your resume. They do not reproduce an employer’s screening system or guarantee interviews.
+                    Reviews quote your source and suggest changes; job matches
+                    show evidence coverage. Check every claim before using it.
+                    Results do not reproduce an employer’s screening system or
+                    guarantee interviews.
                   </p>
                 </div>
 
@@ -248,7 +289,9 @@ const ContactPage = () => {
                     Can I use this for any industry?
                   </h4>
                   <p className="text-sm text-fg-muted leading-relaxed">
-                    Yes! Our system adapts to different industries and job levels, providing tailored recommendations for your specific field.
+                    Yes! Our system adapts to different industries and job
+                    levels, providing tailored recommendations for your specific
+                    field.
                   </p>
                 </div>
 
@@ -257,7 +300,9 @@ const ContactPage = () => {
                     Is my data secure?
                   </h4>
                   <p className="text-sm text-fg-muted leading-relaxed">
-                    We use service providers for account storage, AI processing, hosting, and payments. See our privacy notice for what each feature sends and stores.
+                    We use service providers for account storage, AI processing,
+                    hosting, and payments. See our privacy notice for what each
+                    feature sends and stores.
                   </p>
                 </div>
 
@@ -266,7 +311,8 @@ const ContactPage = () => {
                     How many resumes can I analyze?
                   </h4>
                   <p className="text-sm text-fg-muted leading-relaxed">
-                    Free users can analyze up to 3 resumes per month. Premium users get unlimited analysis and advanced features.
+                    Free users can analyze up to 3 resumes per month. Premium
+                    users get unlimited analysis and advanced features.
                   </p>
                 </div>
               </div>

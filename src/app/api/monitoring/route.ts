@@ -1,12 +1,7 @@
 import { NextResponse } from "next/server";
 import { getAuthenticatedUser } from "../../lib/auth";
 import { supabaseAdmin as db } from "../../lib/supabaseAdmin";
-const isOperator = (id: string) =>
-  (process.env.SCREENME_OPERATOR_IDS ?? "")
-    .split(",")
-    .map((s) => s.trim())
-    .filter(Boolean)
-    .includes(id);
+import { isOperator } from "../../lib/operator";
 export async function GET(req: Request) {
   const user = await getAuthenticatedUser(req);
   if (!user)

@@ -26,7 +26,12 @@ const APP_LINKS = [
 ];
 
 const APP_ROUTES = new Set(
-  APP_LINKS.map((l) => l.href).concat(["/tailor", "/success", "/insights"]),
+  APP_LINKS.map((l) => l.href).concat([
+    "/tailor",
+    "/success",
+    "/insights",
+    "/support",
+  ]),
 );
 
 export default function DynamicNavbar() {
@@ -37,7 +42,9 @@ export default function DynamicNavbar() {
   const pathname = usePathname();
 
   const isAppRoute =
-    APP_ROUTES.has(pathname) || pathname.startsWith("/applications/");
+    APP_ROUTES.has(pathname) ||
+    pathname.startsWith("/applications/") ||
+    pathname.startsWith("/resumes/");
 
   useEffect(() => {
     if (!supabase) return;

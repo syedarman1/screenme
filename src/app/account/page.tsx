@@ -7,6 +7,8 @@ import { supabase } from "../lib/supabaseClient";
 type Account = {
   savedWorkspaces: number | null;
   workspaceLimit: number;
+  operator: boolean;
+  openSupportRequests: number | null;
   email: string;
   plan: string;
   billingAvailable: boolean;
@@ -99,6 +101,23 @@ function AccountPageContent() {
           </p>
         ) : (
           <div className="space-y-6">
+            {account.operator && (
+              <section className="card p-6">
+                <p className="section-label mb-2">ScreenMe operations</p>
+                <h2 className="text-xl">Support & app health</h2>
+                <div className="flex flex-wrap gap-3 mt-4">
+                  <Link className="btn btn-primary" href="/support">
+                    Support inbox
+                    {account.openSupportRequests !== null
+                      ? ` · ${account.openSupportRequests} open`
+                      : ""}
+                  </Link>
+                  <Link className="btn btn-secondary" href="/insights">
+                    App health
+                  </Link>
+                </div>
+              </section>
+            )}
             <section className="card p-6">
               <h2 className="text-xl">
                 {account.plan === "pro" ? "ScreenMe Pro" : "ScreenMe Free"}

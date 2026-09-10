@@ -19,7 +19,7 @@ const TIERS = [
       "3 saved resumes and 10 tracked applications",
       "5 job-link imports / month",
       "Professional cover letter tone",
-      "Email support",
+      "Contact support",
     ],
     cta: "Get started free",
     featured: false,
@@ -44,11 +44,16 @@ const TIERS = [
     cta: "Upgrade to Pro",
     featured: true,
   },
-
 ];
 
 const Check = () => (
-  <svg className="w-4 h-4 shrink-0 text-fg" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+  <svg
+    className="w-4 h-4 shrink-0 text-fg"
+    fill="none"
+    viewBox="0 0 24 24"
+    stroke="currentColor"
+    strokeWidth={2.5}
+  >
     <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
   </svg>
 );
@@ -62,8 +67,11 @@ export default function PricingSection() {
     supabase.auth.getSession().then(({ data }) => setAuthed(!!data.session));
   }, []);
 
-  const handleCta = (tier: typeof TIERS[number]) => {
-    if (tier.id === "free") { router.push(authed ? "/dashboard" : "/login"); return; }
+  const handleCta = (tier: (typeof TIERS)[number]) => {
+    if (tier.id === "free") {
+      router.push(authed ? "/dashboard" : "/login");
+      return;
+    }
 
     router.push("/checkout");
   };
@@ -76,7 +84,9 @@ export default function PricingSection() {
           <h2 className="text-3xl md:text-4xl font-semibold tracking-tight text-fg mb-2">
             Simple pricing.
           </h2>
-          <p className="text-fg-muted text-base">Start free. Upgrade when you&apos;re ready. Cancel anytime.</p>
+          <p className="text-fg-muted text-base">
+            Start free. Upgrade when you&apos;re ready. Cancel anytime.
+          </p>
         </div>
 
         <div className="grid md:grid-cols-2 gap-4 items-start max-w-3xl mx-auto">
@@ -96,8 +106,14 @@ export default function PricingSection() {
                   {tier.name}
                 </p>
                 <div className="flex items-end gap-1.5 mb-2">
-                  <span className="text-3xl font-semibold tabular-nums text-fg">{tier.price}</span>
-                  {tier.period && <span className="text-sm text-fg-subtle mb-0.5">{tier.period}</span>}
+                  <span className="text-3xl font-semibold tabular-nums text-fg">
+                    {tier.price}
+                  </span>
+                  {tier.period && (
+                    <span className="text-sm text-fg-subtle mb-0.5">
+                      {tier.period}
+                    </span>
+                  )}
                 </div>
                 <p className="text-sm text-fg-muted">{tier.desc}</p>
               </div>
@@ -122,7 +138,11 @@ export default function PricingSection() {
             </div>
           ))}
         </div>
-        <p className="text-center text-xs text-fg-muted mt-6 max-w-2xl mx-auto">Free allowances reset at the start of each calendar month (UTC). Pro renews monthly. Manage or cancel your subscription from the dashboard. Request rate limits apply to all plans.</p>
+        <p className="text-center text-xs text-fg-muted mt-6 max-w-2xl mx-auto">
+          Free allowances reset at the start of each calendar month (UTC). Pro
+          renews monthly. Manage or cancel your subscription from the dashboard.
+          Request rate limits apply to all plans.
+        </p>
       </div>
     </section>
   );

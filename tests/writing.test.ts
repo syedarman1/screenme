@@ -8,11 +8,19 @@ let verified = true;
 let output = strongResume;
 let calls = 0;
 let usable = true;
+let questions: {
+  question: string;
+  type: string;
+  difficulty: string;
+  modelAnswer: string;
+  tip: string;
+}[] = [];
 beforeEach(() => {
   verified = true;
   output = strongResume;
   calls = 0;
   usable = true;
+  questions = [];
   process.env.OPENAI_API_KEY = "synthetic";
   globalThis.fetch = async (_input, init) => {
     calls++;
@@ -26,7 +34,7 @@ beforeEach(() => {
             supported: verified,
             reason: verified ? "Supported" : "Invented qualification",
           }
-        : { usable, content: output, questions: [] };
+        : { usable, content: output, questions };
     return Response.json({
       id: "test",
       object: "chat.completion",
@@ -100,4 +108,26 @@ test("malformed inputs cannot reach the writing provider", async () => {
   );
   assert.equal(r.status, 400);
   assert.equal(calls, 0);
+});
+
+test("interview outlines reject invented personal metrics before verification", async () => {
+  questions = [
+    "Behavioral",
+    "Technical",
+    "Situational",
+    "Problem-Solving",
+    "Motivation",
+    "Role-Specific",
+  ].map((type) => ({
+    question: "How would you describe this experience?",
+    type,
+    difficulty: "Medium",
+    modelAnswer: "I reduced onboarding time by 99%.",
+    tip: "Use your own facts.",
+  }));
+  await assert.rejects(
+    generateWriting("interview", input()),
+    /unsupported number/,
+  );
+  assert.equal(calls, 1);
 });

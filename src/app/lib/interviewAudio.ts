@@ -11,12 +11,13 @@ const historySchema = z
     }),
   )
   .max(30);
-export async function interviewAudio(req: Request) {
+export async function interviewAudio(req: Request, provider?: OpenAI) {
   const response = (body: unknown, status = 200) =>
     NextResponse.json(body, {
       status,
       headers: { "Cache-Control": "no-store" },
     });
+  let stage = "validation";
   try {
     const form = await req.formData();
     const audio = form.get("audio");
@@ -45,13 +46,16 @@ export async function interviewAudio(req: Request) {
     const job = form.get("jobContext");
     if (job !== null && (typeof job !== "string" || job.length > 25000))
       return response({ error: "Job context is too long." }, 400);
-    const client = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY,
-      timeout: 25000,
-      maxRetries: 0,
-      fetch: globalThis.fetch,
-    });
+    // Keep the SDK transport: native fetch cannot send its Node multipart stream.
+    const client =
+      provider ??
+      new OpenAI({
+        apiKey: process.env.OPENAI_API_KEY,
+        timeout: 25000,
+        maxRetries: 0,
+      });
     const signal = AbortSignal.timeout(50000);
+    stage = "transcription";
     recordUnpricedCall("whisper-1");
     const transcript = (
       await client.audio.transcriptions.create(
@@ -64,6 +68,7 @@ export async function interviewAudio(req: Request) {
         { error: "No speech was detected. Try a short spoken answer." },
         400,
       );
+    stage = "coaching";
     const model = process.env.RESUME_AI_MODEL || "gpt-5.6-terra";
     const completion = await client.chat.completions.create(
       {
@@ -101,6 +106,12 @@ export async function interviewAudio(req: Request) {
       );
     return response({ transcript, reply, success: true, version: "2.0" });
   } catch (error) {
+    console.error("Interview request failed", {
+      stage,
+      name: error instanceof Error ? error.name : "UnknownError",
+      status: error instanceof OpenAI.APIError ? error.status : undefined,
+      code: error instanceof OpenAI.APIError ? error.code : undefined,
+    });
     return response(
       {
         error:
