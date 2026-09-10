@@ -4,7 +4,7 @@ This branch adds saved career workspaces, reviewed edits, verified writing tools
 
 ## Deployment order
 
-1. Apply `20260910044842_saved_review_workspaces.sql`, then `20260910044844_connected_applications_and_monitoring.sql`, then `20260910044845_launch_readiness.sql` to the target Supabase project through the migration workflow. These are additive; existing applications and resumes remain intact. Run Supabase database lint and security/performance advisors on the target project.
+1. Apply `20260910044842_saved_review_workspaces.sql`, then `20260910044844_connected_applications_and_monitoring.sql`, then `20260910044845_launch_readiness.sql`, then `20260910045000_workspace_relation_indexes.sql` to the target Supabase project through the migration workflow. These are additive; existing applications and resumes remain intact. Run Supabase database lint and security/performance advisors on the target project.
 2. Configure `RESUME_AI_MODEL=gpt-5.6-terra`. Configure `SCREENME_OPERATOR_IDS` with the verified auth user IDs of operators who may view aggregate app health; leave it empty to deny aggregate access. Ordinary accounts see their own activity only.
 3. Deploy the application. Verify the owner-only workspace endpoints, restore behavior, account page and tool feedback using a temporary account.
 4. Verify the public Stripe endpoint as described below before calling billing lifecycle delivery production-ready. Live email sender and auth-link checks passed separately; the development billing tests do not establish public webhook delivery.

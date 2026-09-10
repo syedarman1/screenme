@@ -1,0 +1,2 @@
+create index application_workspaces_application_fk on public.application_workspaces(application_id,user_id);
+create index application_workspaces_workspace_fk on public.application_workspaces(workspace_id,user_id);
