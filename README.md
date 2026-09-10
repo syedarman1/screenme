@@ -1,6 +1,75 @@
 # ScreenMe
 
-ScreenMe is a Next.js career workspace: resume analysis and tailoring, cover letters, job matching, interview practice, saved resumes, and an application tracker. Supabase provides authentication and storage; OpenAI powers the AI tools; Stripe manages Pro subscriptions.
+**A full-stack career workspace with evidence-backed AI analysis, transactional usage accounting, and subscription billing.**
+
+[Open ScreenMe](https://www.screenme.dev) · [Analysis design](docs/tools-v2.md) · [Test suite](tests) · [Development setup](#local-development)
+
+ScreenMe brings resume review, job-description comparison, resume tailoring, cover letters, interview practice, and application tracking into one authenticated workspace. The implementation combines a Next.js/TypeScript application with PostgreSQL-backed account state, Supabase authentication and storage, OpenAI inference, and Stripe subscriptions.
+
+## Engineering highlights
+
+- **Evidence provenance:** resume and job text are segmented into numbered source passages. The response schema restricts model-selected evidence to those passage IDs; the server resolves references back to original text. This prevents fabricated citation text while leaving the model's interpretation subject to review.
+- **Runtime validation:** Zod schemas and application validators check response structure, evidence/status consistency, duplicate requirements, and input bounds. A versioned request header rejects stale analysis clients rather than returning an incompatible payload.
+- **Deterministic scoring:** job requirement coverage is computed in application code using explicit weights: required = 3, unspecified = 2, preferred = 1; supported = full credit, partial = half, not evidenced = zero. The result measures documented coverage of extracted requirements.
+- **Concurrency control:** authenticated AI routes reserve allowance through database transactions before provider work. Successful requests settle reservations; failures refund them. Database-backed limits coordinate requests across application instances.
+- **Idempotent billing:** webhook signatures authenticate payment events. Delivery receipts and entitlement changes commit atomically, and the handler retrieves current subscription state to accommodate delayed or out-of-order events.
+- **Authorization boundaries:** saved-record writes use authenticated server routes, while owner-scoped reads and database policies constrain access. Plan-aware database triggers serialize saves against account limits.
+- **Failure-oriented tests:** the suite covers duplicate payment delivery, rollback, concurrent quota use, cross-account isolation, evidence rejection, PDF extraction, and private-network URL rejection.
+
+## Architecture
+
+```mermaid
+flowchart TD
+    UI["Next.js / React workspace"] --> API["Authenticated route handlers"]
+    API --> Gate["Request bounds, rate limits, usage reservation"]
+    Gate --> Engine["Document passages + structured AI analysis"]
+    Engine --> Provider["OpenAI"]
+    Provider --> Validate["Schema validation + source resolution"]
+    Validate --> UI
+    Gate <--> DB["PostgreSQL: usage, plans, saved records"]
+    UI --> Auth["Supabase Auth"]
+    API --> Storage["Supabase Storage"]
+    Stripe["Stripe events"] --> Webhook["Signature verification + billing transaction"]
+    Webhook --> DB
+```
+
+The scanner and matcher share an analysis engine. Tailoring, cover letters, and interview tools have separate generation routes. Model credentials, privileged database access, and entitlement changes stay on the server.
+
+## Core workflows
+
+| Workflow | Implementation |
+| --- | --- |
+| Resume review | Qualitative assessments of clarity, impact, and organization, plus prioritized findings linked to source passages |
+| Job comparison | Required/preferred qualification groups, supporting resume evidence, and weighted coverage |
+| Document generation | Resume tailoring and cover letters based on supplied career information |
+| Interview practice | Interview preparation and conversational practice for Pro accounts |
+| Career records | Saved resumes, an application tracker, and a user-specific dashboard |
+| Billing | On-site subscription checkout, billing portal, and webhook-driven plan updates |
+
+## Code map
+
+| Area | Entry points |
+| --- | --- |
+| Analysis orchestration | [analysisEngine.ts](src/app/lib/analysisEngine.ts), [analysisEvidence.ts](src/app/lib/analysisEvidence.ts), [analysisV2.ts](src/app/lib/analysisV2.ts) |
+| Request lifecycle | [aiRequest.ts](src/app/lib/aiRequest.ts), [auth.ts](src/app/lib/auth.ts), [rate-limit.ts](src/app/lib/rate-limit.ts) |
+| Billing | [billing.ts](src/app/lib/billing.ts), [webhook route](src/app/api/stripe/webhook/route.ts) |
+| Persistence and invariants | [Schema baseline](supabase/schema-baseline.sql), [migrations](supabase/migrations) |
+| Verification | [Tests](tests), [CI workflow](.github/workflows/ci.yml), [analysis evaluation](scripts/evaluate-analysis-v2.ts) |
+
+**Stack:** Next.js 15 · React 19 · TypeScript · PostgreSQL/Supabase · OpenAI · Stripe · Zod · PDF.js · Tailwind CSS.
+
+## Design tradeoffs
+
+Source-reference validation guarantees that displayed evidence comes from the input; it does not prove that every model interpretation is correct. Job coverage is a document-comparison metric, not a hiring probability or ATS certification. PDF extraction preserves text boundaries but does not perform OCR or reconstruct visual layout.
+
+Automated provider fixtures test application behavior. The opt-in live evaluation suite separately checks output quality on synthetic cases; it uses a funded API project and is not part of ordinary offline tests. See [analysis tools v2](docs/tools-v2.md).
+
+## Development and operations
+
+The reference below preserves the setup, migration ordering, test prerequisites, billing configuration, and release procedures needed to operate the application.
+
+<details>
+<summary>Development setup and operations reference</summary>
 
 ## Local development
 
@@ -11,7 +80,7 @@ Use Node 22.23.2 (`.nvmrc`). Run `npm ci`, copy `.env.example` to `.env.local`, 
 Required configuration:
 
 - `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, and server-only `SUPABASE_SERVICE_ROLE_KEY`.
-- `OPENAI_API_KEY`; optional `RESUME_AI_MODEL` defaults to `gpt-4o-mini`.
+- `OPENAI_API_KEY`; optional `RESUME_AI_MODEL` overrides the scanner/matcher default in [analysisEngine.ts](src/app/lib/analysisEngine.ts).
 - `NEXT_PUBLIC_URL`: application origin, HTTPS in production (`https://www.screenme.dev`).
 - `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, and `NEXT_PUBLIC_STRIPE_PRICE_PRO`. The optional server-only `STRIPE_PRICE_PRO` overrides the accepted Pro price; keep both price settings aligned.
 - `STRIPE_PORTAL_CONFIGURATION`: explicit active portal configuration from the same Stripe account and mode as the secret key.
@@ -88,7 +157,7 @@ For an application regression, promote the previous known-good Vercel deployment
 PR #20 was merged and released to `https://www.screenme.dev`. The four timestamped migration filenames match their production migration-history versions. An authenticated synthetic account passed staging checks for usage snapshots/refunds, Free restrictions, invalid prices, missing billing accounts, and save/list/delete flows for resumes and applications; it was removed afterward. No live charge or AI generation was performed.
 
 Open operator actions: configure and verify custom SMTP before enabling public email signup/reset delivery; confirm the support address and operating business details; reconcile the legacy Pro account whose subscription reference is absent from both configured Stripe modes. Its entitlement has been preserved. The private restore workflow remains separate. Old main-checkout keepalive commits are retained locally on `archive/screenme-before-repair-2026-09-08`.
-# On-site checkout
+## On-site checkout
 
 Pro upgrades open `/checkout`, using ScreenMe's current wordmark, Stripe's Payment Element, and Express Checkout Element. The server creates a subscription Checkout Session with `ui_mode: elements`; the browser receives only the owner's client secret and the matching publishable key. Keep `STRIPE_PUBLISHABLE_KEY` in the same test/live mode as `STRIPE_SECRET_KEY`. The verified webhook remains responsible for durable subscription access.
 
@@ -103,3 +172,5 @@ Test with a separate customer and Stripe test credentials: sign in from checkout
 - Apply the `plan_limits_and_job_imports` migration before publishing this app version. It is compatible with the preceding application version; do not restore direct client write privileges when rolling back UI code.
 - `/api/dashboard` returns only the signed-in user's counts, usage, and four recent applications with no-store caching. The dashboard refreshes on focus and billing-plan changes. Limits beside tools show remaining allowance, not usage already consumed.
 - Run `SCREENME_TEST_DB=<disposable codex-screenme-* container> npm test` to exercise concurrent quota use, direct-write rejection, downgrade behavior, and the dashboard/API guards. Never point the fixture at a production database.
+
+</details>
