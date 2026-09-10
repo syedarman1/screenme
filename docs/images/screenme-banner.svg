@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="440" viewBox="0 0 1280 440" role="img" aria-labelledby="title desc">
+<title id="title">ScreenMe — Your next chapter starts here.</title><desc id="desc">Evidence-backed career tools, from the first resume review to the next interview.</desc>
+<rect width="1280" height="440" rx="22" fill="#111312"/>
+<path d="M815 0v440M900 0v440M985 0v440M1070 0v440M1155 0v440M1240 0v440M770 70h510M770 155h510M770 240h510M770 325h510M770 410h510" stroke="#272b28"/>
+<rect x="64" y="55" width="36" height="36" rx="10" fill="#dbe9dd"/>
+<rect x="78" y="69" width="8" height="8" rx="2" fill="#243629"/>
+<text x="115" y="83" font-family="Arial,Helvetica,sans-serif" font-weight="700" font-size="29" fill="#f5f5f0">ScreenMe</text>
+<text x="65" y="176" font-family="Arial,Helvetica,sans-serif" font-size="17" letter-spacing="3" fill="#a7b8aa">A FOCUSED CAREER WORKSPACE</text>
+<text x="62" y="249" font-family="Arial,Helvetica,sans-serif" font-weight="600" font-size="59" letter-spacing="-2" fill="#f5f5f0">Your next chapter</text>
+<text x="62" y="318" font-family="Arial,Helvetica,sans-serif" font-weight="600" font-size="59" letter-spacing="-2" fill="#f5f5f0">starts here.</text>
+<text x="65" y="381" font-family="Arial,Helvetica,sans-serif" font-size="19" fill="#aeb3ae">Better applications. Grounded in your experience.</text>
+<rect x="850" y="75" width="337" height="289" rx="17" fill="#fafbf8" stroke="#d6ded6"/>
+<text x="880" y="117" font-family="Arial,Helvetica,sans-serif" font-size="12" letter-spacing="1.6" font-weight="700" fill="#5d705f">BUILT AROUND YOUR EXPERIENCE</text>
+<text x="880" y="158" font-family="Arial,Helvetica,sans-serif" font-size="24" font-weight="600" fill="#202922">Make every line count.</text>
+<path d="M880 181h276" stroke="#dde3dc"/>
+<g font-family="Arial,Helvetica,sans-serif" font-size="17" fill="#344b39">
+<circle cx="891" cy="214" r="11" fill="#e2ebe0"/><path d="m886 214 3 3 6-7" stroke="#45644c" stroke-width="2" fill="none"/><text x="916" y="220">Evidence-backed reviews</text>
+<circle cx="891" cy="260" r="11" fill="#e2ebe0"/><path d="m886 260 3 3 6-7" stroke="#45644c" stroke-width="2" fill="none"/><text x="916" y="266">Saved work that stays yours</text>
+<circle cx="891" cy="306" r="11" fill="#e2ebe0"/><path d="m886 306 3 3 6-7" stroke="#45644c" stroke-width="2" fill="none"/><text x="916" y="312">One connected workflow</text></g>
+</svg>

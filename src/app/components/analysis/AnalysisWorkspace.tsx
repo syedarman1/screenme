@@ -1,5 +1,10 @@
 "use client";
+import { useGenerationGuard } from "../../hooks/useGenerationGuard";
+import ReportFeedback from "./ReportFeedback";
 
+import WorkspaceBar from "../workspace/WorkspaceBar";
+import { useCareerWorkspace } from "../../hooks/useCareerWorkspace";
+import ImprovementEditor from "./ImprovementEditor";
 import Link from "next/link";
 import { useRef, useState } from "react";
 import ResumeUploader from "../ResumeUploader";
@@ -102,7 +107,13 @@ function NextStep({ text }: { text: string }) {
   );
 }
 
-export function ScanReport({ result }: { result: ScanResult }) {
+export function ScanReport({
+  result,
+  onImprove,
+}: {
+  result: ScanResult;
+  onImprove?: (finding: ScanResult["findings"][number]) => void;
+}) {
   const [tab, setTab] = useState<"findings" | "strengths">("findings");
   return (
     <div className="space-y-6">
@@ -218,6 +229,14 @@ export function ScanReport({ result }: { result: ScanResult }) {
                     </p>
                     <Evidence label="From your resume" text={item.evidence} />
                     <NextStep text={item.nextStep} />
+                    {onImprove && (
+                      <button
+                        onClick={() => onImprove(item)}
+                        className="btn btn-primary mt-4 text-sm"
+                      >
+                        Improve this passage
+                      </button>
+                    )}
                   </div>
                 </details>
               ))
@@ -468,18 +487,31 @@ export default function AnalysisWorkspace({
   kind: "scan" | "match";
 }) {
   const matching = kind === "match";
-  const [resume, setResume] = useState("");
-  const [job, setJob] = useState("");
-  const [targetRole, setTargetRole] = useState("");
+  const workspace = useCareerWorkspace(kind);
+  const [canGenerate, setCanGenerate] = useState(false);
+  const { resume, job, targetRole } = workspace.payload;
+  const setResume = (resume: string) =>
+    workspace.setPayload((p) => ({ ...p, resume }));
+  const setJob = (job: string) => workspace.setPayload((p) => ({ ...p, job }));
+  const setTargetRole = (targetRole: string) =>
+    workspace.setPayload((p) => ({ ...p, targetRole }));
+  const [improvement, setImprovement] = useState<
+    ScanResult["findings"][number] | null
+  >(null);
   const [jobUrl, setJobUrl] = useState("");
   const [importing, setImporting] = useState(false);
   const [importError, setImportError] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [result, setResult] = useState<ScanResult | MatchResult | null>(null);
+  useGenerationGuard(loading || importing, setError);
+  const result = workspace.payload.result as ScanResult | MatchResult | null;
+  const setResult = (result: ScanResult | MatchResult | null) =>
+    workspace.setPayload((p) => ({ ...p, result }));
   const reportRef = useRef<HTMLDivElement>(null);
   const [uploaderKey, setUploaderKey] = useState(0);
   const canSubmit =
+    workspace.ready &&
+    canGenerate &&
     resume.trim().length >= 100 &&
     resume.length <= MAX_RESUME_LENGTH &&
     (!matching || (job.trim().length >= 50 && job.length <= MAX_JOB_LENGTH));
@@ -547,7 +579,14 @@ export default function AnalysisWorkspace({
         throw new Error(
           "The tool was updated. Refresh the page and try again.",
         );
-      setResult(data);
+      data.runId = response.headers.get("X-ScreenMe-Run") || undefined;
+      workspace.setPayload((p) => ({
+        ...p,
+        result: data,
+        reportResume: resume,
+        reportJob: job,
+      }));
+      await workspace.flush();
       requestAnimationFrame(() => {
         reportRef.current?.scrollIntoView({
           behavior: "smooth",
@@ -575,6 +614,31 @@ export default function AnalysisWorkspace({
   }
   return (
     <div className="page-shell">
+      {improvement && (
+        <ImprovementEditor
+          resume={resume}
+          finding={improvement}
+          onClose={() => setImprovement(null)}
+          onAccept={async (original, replacement) => {
+            const start = resume.indexOf(original);
+            if (start < 0 || resume.indexOf(original, start + 1) >= 0)
+              throw new Error(
+                "This passage changed or appears more than once. Edit the resume directly.",
+              );
+            if (!(await workspace.flush()))
+              throw new Error(
+                "Save your current work before accepting this edit.",
+              );
+            setResume(
+              resume.slice(0, start) +
+                replacement +
+                resume.slice(start + original.length),
+            );
+            setImprovement(null);
+            await workspace.flush();
+          }}
+        />
+      )}
       <div className="mx-auto w-full max-w-[1244px] px-5 sm:px-8">
         <nav
           aria-label="Analysis tools"
@@ -591,6 +655,7 @@ export default function AnalysisWorkspace({
             VERSION 02
           </span>
         </nav>
+        <WorkspaceBar workspace={workspace} disabled={loading || importing} />
         <header className="mb-9 flex flex-col sm:flex-row justify-between gap-6 sm:items-end">
           <div>
             <p className="section-label mb-3">
@@ -635,7 +700,13 @@ export default function AnalysisWorkspace({
                 Clear
               </button>
             </div>
-            <PlanChecker feature={matching ? "job_match" : "resume_scan"}>
+            <PlanChecker
+              feature={matching ? "job_match" : "resume_scan"}
+              identity={workspace.owner}
+              allowSavedWork={workspace.revision > 0}
+              refreshToken={result?.analyzedAt}
+              onAccessChange={setCanGenerate}
+            >
               <form
                 onSubmit={(event) => {
                   event.preventDefault();
@@ -650,7 +721,8 @@ export default function AnalysisWorkspace({
                   <div>
                     <h3 className="text-sm mb-3">Your resume</h3>
                     <ResumeUploader
-                      key={uploaderKey}
+                      key={`${workspace.id}-${uploaderKey}`}
+                      value={resume}
                       onResumeSubmit={updateResume}
                       disabled={loading || importing}
                     />
@@ -796,9 +868,23 @@ export default function AnalysisWorkspace({
           >
             {result ? (
               matching ? (
-                <MatchReport result={result as MatchResult} />
+                <>
+                  <MatchReport result={result as MatchResult} />
+                  <ReportFeedback key={result.runId} runId={result.runId} />
+                </>
               ) : (
-                <ScanReport result={result as ScanResult} />
+                <>
+                  <p className="text-xs text-fg-muted mb-3">
+                    {workspace.payload.reportResume !== resume
+                      ? "Your resume has changed since this report. Review it again to check the edits."
+                      : "Report saved with the original source text."}
+                  </p>
+                  <ScanReport
+                    result={result as ScanResult}
+                    onImprove={setImprovement}
+                  />
+                  <ReportFeedback key={result.runId} runId={result.runId} />
+                </>
               )
             ) : (
               <EmptyReport matching={matching} loading={loading} />

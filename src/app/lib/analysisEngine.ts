@@ -1,3 +1,4 @@
+import { recordCompletion } from "./aiMetrics";
 import OpenAI from "openai";
 import { ZodError } from "zod";
 import { LengthFinishReasonError } from "openai/error";
@@ -92,6 +93,7 @@ export async function analyzeDocument(
       ...common,
       response_format: zodResponseFormat(schemas.scan, "resume_review_v2"),
     });
+    recordCompletion(completion);
     const parsed = completion.choices[0]?.message.parsed;
     if (!parsed)
       throw new AnalysisValidationError("No usable analysis returned.");
@@ -107,6 +109,7 @@ export async function analyzeDocument(
     ...common,
     response_format: zodResponseFormat(schemas.match!, "job_comparison_v2"),
   });
+  recordCompletion(completion);
   const parsed = completion.choices[0]?.message.parsed;
   if (!parsed)
     throw new AnalysisValidationError("No usable analysis returned.");

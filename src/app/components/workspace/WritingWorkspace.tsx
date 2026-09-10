@@ -1,0 +1,409 @@
+"use client";
+import { useGenerationGuard } from "../../hooks/useGenerationGuard";
+import { useEffect, useState } from "react";
+import { useCareerWorkspace } from "../../hooks/useCareerWorkspace";
+import { authFetch } from "../../lib/authFetch";
+import type { WorkspacePayload, WorkspaceKind } from "../../lib/workspace";
+import { WORKSPACE_LABELS } from "../../lib/workspace";
+import WorkspaceBar, { downloadText } from "./WorkspaceBar";
+import ResumeUploader from "../ResumeUploader";
+import PlanChecker from "../PlanChecker";
+import ReportFeedback from "../analysis/ReportFeedback";
+import AudioChat from "../AudioChat";
+const features = {
+  tailor: "resume_tailor",
+  letter: "cover_letter",
+  interview: "interview_prep",
+} as const;
+const endpoints = {
+  tailor: "/api/tailorResume",
+  letter: "/api/coverLetter",
+  interview: "/api/interviewPrep",
+};
+type Kind = Extract<WorkspaceKind, "tailor" | "letter" | "interview">;
+export default function WritingWorkspace({ kind }: { kind: Kind }) {
+  const w = useCareerWorkspace(kind);
+  const [canGenerate, setCanGenerate] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [checked, setChecked] = useState(false);
+  const [saved, setSaved] = useState(false);
+  useGenerationGuard(busy, setError);
+  const p = w.payload;
+  const result = p.result && "content" in p.result ? p.result : null;
+  useEffect(() => {
+    setChecked(false);
+    setSaved(false);
+  }, [w.id, result?.analyzedAt]);
+  const exportContent = () =>
+    result
+      ? kind === "interview"
+        ? `${result.content}\n\n${result.questions?.map((q) => `${q.question}\n${q.modelAnswer}\n${q.tip}`).join("\n\n")}\n\nMy notes\n${p.notes}`
+        : result.content
+      : "";
+  async function downloadDocx() {
+    try {
+      const { Document, Packer, Paragraph } = await import("docx");
+      const blob = await Packer.toBlob(
+        new Document({
+          sections: [
+            {
+              children: exportContent()
+                .split("\n")
+                .map((text) => new Paragraph({ text })),
+            },
+          ],
+        }),
+      );
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${w.title.replace(/[^a-z0-9 -]/gi, "").slice(0, 80) || "ScreenMe"}.docx`;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch {
+      setError("Could not export the document. Your draft is still saved.");
+    }
+  }
+  async function copyDraft() {
+    try {
+      await navigator.clipboard.writeText(exportContent());
+      setError("Copied to clipboard.");
+    } catch {
+      setError("Clipboard unavailable. Select the draft text or download it.");
+    }
+  }
+  const change = (key: keyof WorkspacePayload, value: string) => {
+    w.setPayload((old) => ({ ...old, [key]: value }));
+    setChecked(false);
+    setSaved(false);
+  };
+  async function generate() {
+    setBusy(true);
+    setError("");
+    setChecked(false);
+    try {
+      const response = await authFetch(endpoints[kind], {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          resume: p.resume,
+          context: p.resume,
+          job: p.job,
+          jobDesc: p.job,
+          company: p.company,
+          jobTitle: p.jobTitle,
+          tone: p.tone,
+        }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error);
+      data.runId = response.headers.get("X-ScreenMe-Run") || undefined;
+      w.setPayload((old) => ({
+        ...old,
+        result: data,
+        reportResume: p.resume,
+        reportJob: p.job,
+      }));
+      await w.flush();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not create the draft.");
+    } finally {
+      setBusy(false);
+    }
+  }
+  async function saveResume() {
+    if (!result) return;
+    setBusy(true);
+    setError("");
+    try {
+      const response = await authFetch("/api/resumes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: w.title, content: result.content }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error);
+      setSaved(true);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not save resume.");
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <main className="page-shell">
+      <div className="max-w-6xl mx-auto px-5 sm:px-8">
+        <WorkspaceBar workspace={w} disabled={busy} />
+        <header className="mb-8">
+          <p className="section-label">Your next application · Version 02</p>
+          <h1 className="text-3xl sm:text-4xl mt-3">
+            {kind === "tailor"
+              ? "Your experience. Focused for this role."
+              : kind === "letter"
+                ? "A letter that sounds like you."
+                : "Prepare with evidence, not a script."}
+          </h1>
+          <p className="text-fg-muted text-sm mt-4">
+            {kind === "interview"
+              ? "Practice role-specific questions with honest answer outlines and your own notes."
+              : "Start from your actual experience, review the draft, and make every change yours."}
+          </p>
+        </header>
+        <PlanChecker
+          feature={features[kind]}
+          requiredPlan={kind === "interview" ? "pro" : "free"}
+          identity={w.owner}
+          allowSavedWork={w.revision > 0}
+          refreshToken={result?.analyzedAt}
+          onAccessChange={setCanGenerate}
+        >
+          <div className="grid lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] gap-6">
+            <section className="card p-5 sm:p-6">
+              <fieldset
+                disabled={busy || !w.ready}
+                className="space-y-5 disabled:opacity-50"
+              >
+                <h2 className="font-semibold">Your documents</h2>
+                <ResumeUploader
+                  key={w.id}
+                  value={p.resume}
+                  onResumeSubmit={(value) => change("resume", value)}
+                  disabled={busy || !w.ready}
+                />
+                {kind === "interview" && (
+                  <p className="text-xs text-fg-muted">
+                    Resume optional. Without it, outlines ask you to supply your
+                    own examples.
+                  </p>
+                )}
+                <label className="block text-sm">
+                  Job description
+                  <textarea
+                    value={p.job}
+                    onChange={(e) => change("job", e.target.value)}
+                    maxLength={25000}
+                    className="input w-full min-h-48 mt-2"
+                  />
+                </label>
+                {kind === "letter" && (
+                  <>
+                    <label className="block text-sm">
+                      Company
+                      <input
+                        value={p.company}
+                        onChange={(e) => change("company", e.target.value)}
+                        maxLength={200}
+                        className="input w-full mt-2"
+                      />
+                    </label>
+                    <label className="block text-sm">
+                      Job title
+                      <input
+                        value={p.jobTitle}
+                        onChange={(e) => change("jobTitle", e.target.value)}
+                        maxLength={200}
+                        className="input w-full mt-2"
+                      />
+                    </label>
+                    <label className="block text-sm">
+                      Tone
+                      <select
+                        value={p.tone}
+                        onChange={(e) => change("tone", e.target.value)}
+                        className="input w-full mt-2"
+                      >
+                        {[
+                          "Professional",
+                          "Enthusiastic",
+                          "Concise",
+                          "Formal",
+                          "Creative",
+                        ].map((t) => (
+                          <option key={t}>{t}</option>
+                        ))}
+                      </select>
+                    </label>
+                  </>
+                )}
+                <button
+                  disabled={
+                    busy ||
+                    !w.ready ||
+                    !canGenerate ||
+                    (kind !== "interview" && p.resume.trim().length < 100) ||
+                    (kind !== "letter" && p.job.trim().length < 50) ||
+                    (kind === "letter" &&
+                      (!p.company.trim() || !p.jobTitle.trim()))
+                  }
+                  onClick={() => void generate()}
+                  className="btn btn-primary w-full"
+                >
+                  {busy
+                    ? "Preparing and checking your draft…"
+                    : `Create ${WORKSPACE_LABELS[kind].toLowerCase()}`}
+                </button>
+                <p className="text-xs text-fg-muted">
+                  Uses one{" "}
+                  {kind === "tailor"
+                    ? "tailoring"
+                    : kind === "letter"
+                      ? "cover letter"
+                      : "interview preparation"}{" "}
+                  allowance. A separate check reviews factual claims before the
+                  draft is shown.
+                </p>
+              </fieldset>
+            </section>
+            <section className="card p-5 sm:p-7" aria-label="Writing result">
+              {error && (
+                <p role="alert" className="mb-5 text-sm">
+                  {error}
+                </p>
+              )}
+              {!result ? (
+                <div className="py-16">
+                  <p className="section-label">Build on what is true</p>
+                  <h2 className="text-2xl mt-4">
+                    Your draft will appear here.
+                  </h2>
+                  <p className="text-sm text-fg-muted mt-3">
+                    Your documents and finished work save to your account. You
+                    control the final wording.
+                  </p>
+                </div>
+              ) : (
+                <>
+                  <div className="flex justify-between gap-3">
+                    <h2 className="text-xl">{WORKSPACE_LABELS[kind]}</h2>
+                    <span className="text-xs text-fg-muted">
+                      Editable draft
+                    </span>
+                  </div>
+                  {(p.resume !== p.reportResume || p.job !== p.reportJob) && (
+                    <p role="status" className="text-xs mt-3">
+                      Your source documents changed. Generate again to update
+                      this draft.
+                    </p>
+                  )}
+                  {kind === "interview" ? (
+                    <div className="space-y-4 mt-5">
+                      <p className="text-sm text-fg-muted">{result.content}</p>
+                      {result.questions?.map((q, i) => (
+                        <details
+                          key={i}
+                          className="border border-border rounded-xl p-4"
+                        >
+                          <summary className="cursor-pointer">
+                            <span className="text-xs text-fg-muted">
+                              {q.type} · {q.difficulty}
+                            </span>
+                            <h3 className="mt-2 font-medium">{q.question}</h3>
+                          </summary>
+                          <p className="text-xs uppercase tracking-wider mt-4">
+                            Answer outline
+                          </p>
+                          <p className="text-sm whitespace-pre-wrap mt-2">
+                            {q.modelAnswer}
+                          </p>
+                          <p className="text-sm text-fg-muted mt-3">{q.tip}</p>
+                        </details>
+                      ))}
+                      <label className="block text-sm">
+                        Your practice notes
+                        <textarea
+                          value={p.notes}
+                          onChange={(e) => change("notes", e.target.value)}
+                          maxLength={10000}
+                          className="input w-full min-h-40 mt-2"
+                        />
+                      </label>
+                    </div>
+                  ) : (
+                    <>
+                      <label className="sr-only" htmlFor="writing-draft">
+                        Edit your draft
+                      </label>
+                      <textarea
+                        id="writing-draft"
+                        disabled={busy}
+                        value={result.content}
+                        maxLength={50000}
+                        onChange={(e) => {
+                          w.setPayload((old) => ({
+                            ...old,
+                            result: { ...result, content: e.target.value },
+                          }));
+                          setChecked(false);
+                        }}
+                        className="input w-full min-h-[28rem] mt-5 text-sm leading-7"
+                      />
+                      <label className="flex gap-2 text-sm mt-4">
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={(e) => setChecked(e.target.checked)}
+                        />
+                        I checked that the facts and wording are accurate.
+                      </label>
+                    </>
+                  )}
+                  <ReportFeedback key={result.runId} runId={result.runId} />
+                  <div className="flex flex-wrap gap-3 mt-5">
+                    <button
+                      className="btn btn-primary"
+                      disabled={kind !== "interview" && !checked}
+                      onClick={() =>
+                        downloadText(
+                          kind === "interview"
+                            ? `${result.content}\n\n${result.questions?.map((q) => `${q.question}\n${q.modelAnswer}\n${q.tip}`).join("\n\n")}\n\nMy notes\n${p.notes}`
+                            : result.content,
+                          w.title,
+                        )
+                      }
+                    >
+                      Download text
+                    </button>
+                    <button
+                      className="btn btn-secondary"
+                      disabled={kind !== "interview" && !checked}
+                      onClick={() => void downloadDocx()}
+                    >
+                      Download DOCX
+                    </button>
+                    <button
+                      className="btn btn-secondary"
+                      disabled={kind !== "interview" && !checked}
+                      onClick={() => void copyDraft()}
+                    >
+                      Copy
+                    </button>
+                    {kind === "tailor" && (
+                      <button
+                        className="btn btn-secondary"
+                        disabled={!checked || busy || saved}
+                        onClick={() => void saveResume()}
+                      >
+                        {saved ? "Saved to My Resumes" : "Save to My Resumes"}
+                      </button>
+                    )}
+                  </div>
+                </>
+              )}
+            </section>
+          </div>
+          {kind === "interview" && canGenerate && (
+            <section className="card p-6 mt-6">
+              <h2 className="text-xl mb-3">Practice out loud</h2>
+              <p className="text-sm text-fg-muted mb-5">
+                Live follow-up questions use this job description. Recording
+                starts only when you choose to begin.
+              </p>
+              <AudioChat jobContext={p.job || undefined} />
+            </section>
+          )}
+        </PlanChecker>
+      </div>
+    </main>
+  );
+}

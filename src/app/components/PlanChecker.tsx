@@ -9,8 +9,17 @@ import { useRouter } from "next/navigation";
 interface PlanCheckerProps {
   children: React.ReactNode;
   requiredPlan?: "free" | "pro";
-  feature?: "resume_scan" | "cover_letter" | "job_match" | "interview_prep" | "resume_tailor";
+  feature?:
+    | "resume_scan"
+    | "cover_letter"
+    | "job_match"
+    | "interview_prep"
+    | "resume_tailor";
   onUpgradeClick?: () => void;
+  allowSavedWork?: boolean;
+  refreshToken?: string;
+  identity?: string | null;
+  onAccessChange?: (allowed: boolean) => void;
 }
 
 export default function PlanChecker({
@@ -18,6 +27,10 @@ export default function PlanChecker({
   requiredPlan = "free",
   feature,
   onUpgradeClick,
+  allowSavedWork = false,
+  refreshToken,
+  identity,
+  onAccessChange,
 }: PlanCheckerProps) {
   const [allowed, setAllowed] = useState<boolean>(true);
   const [loading, setLoading] = useState<boolean>(true);
@@ -26,17 +39,26 @@ export default function PlanChecker({
   const router = useRouter();
 
   useEffect(() => {
+    let active = true;
     async function checkAccess() {
+      onAccessChange?.(false);
+      setSignedOut(false);
+      setAccessError(null);
       if (!supabase) {
-        setAccessError("Account service is unavailable. Please try again later.");
+        setAccessError(
+          "Account service is unavailable. Please try again later.",
+        );
         setAllowed(false);
         setLoading(false);
         return;
       }
 
       try {
-        const { data: { user } } = await supabase.auth.getUser();
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
 
+        if (!active) return;
         if (!user) {
           setSignedOut(true);
           setAllowed(false);
@@ -45,46 +67,115 @@ export default function PlanChecker({
         }
 
         const res = await authFetch("/api/usage", { method: "POST" });
-        if (!res.ok) throw new Error("Could not load your plan. Please refresh and try again.");
+        if (!res.ok)
+          throw new Error(
+            "Could not load your plan. Please refresh and try again.",
+          );
         const usage = await res.json();
-        setAllowed(usage.plan === "pro" || (requiredPlan !== "pro" && (!feature || usage[USAGE_FIELDS[feature]] < FREE_LIMITS[feature])));
+        if (!active) return;
+        const access =
+          usage.plan === "pro" ||
+          (requiredPlan !== "pro" &&
+            (!feature || usage[USAGE_FIELDS[feature]] < FREE_LIMITS[feature]));
+        setAllowed(access);
+        onAccessChange?.(access);
       } catch {
-        setAccessError("Could not load your plan. Please refresh and try again.");
+        if (!active) return;
+        setAccessError(
+          "Could not load your plan. Please refresh and try again.",
+        );
         setAllowed(false);
       } finally {
-        setLoading(false);
+        if (active) setLoading(false);
       }
     }
 
-    checkAccess();
-  }, [requiredPlan, feature]);
+    void checkAccess();
+    return () => {
+      active = false;
+    };
+  }, [requiredPlan, feature, refreshToken, identity, onAccessChange]);
 
   if (loading) {
     return (
       <div className="flex items-center justify-center p-12">
-        <svg className="animate-spin h-6 w-6 text-fg-muted" fill="none" viewBox="0 0 24 24">
-          <circle className="opacity-20" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-          <path className="opacity-80" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+        <svg
+          className="animate-spin h-6 w-6 text-fg-muted"
+          fill="none"
+          viewBox="0 0 24 24"
+        >
+          <circle
+            className="opacity-20"
+            cx="12"
+            cy="12"
+            r="10"
+            stroke="currentColor"
+            strokeWidth="4"
+          />
+          <path
+            className="opacity-80"
+            fill="currentColor"
+            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+          />
         </svg>
       </div>
     );
   }
 
-  if (accessError || signedOut) return <div className="card p-8 text-center max-w-md mx-auto my-12">
-    <h3 className="text-lg font-semibold mb-3">{signedOut ? "Sign in to continue" : "Your plan is unavailable"}</h3>
-    <p className="text-sm text-fg-muted mb-5" role="status">{signedOut ? "Sign in or create a free account to use this tool." : accessError}</p>
-    <button className="btn btn-primary" onClick={() => signedOut ? router.push("/login") : window.location.reload()}>{signedOut ? "Sign in" : "Try again"}</button>
-  </div>;
+  if (allowSavedWork && !signedOut && (!allowed || accessError))
+    return (
+      <>
+        <p role="status" className="card p-4 mb-5 text-sm">
+          Your saved work is available to review, edit, and download.{" "}
+          {accessError || "New AI requests need an available allowance or Pro."}
+        </p>
+        {children}
+      </>
+    );
+
+  if (accessError || signedOut)
+    return (
+      <div className="card p-8 text-center max-w-md mx-auto my-12">
+        <h3 className="text-lg font-semibold mb-3">
+          {signedOut ? "Sign in to continue" : "Your plan is unavailable"}
+        </h3>
+        <p className="text-sm text-fg-muted mb-5" role="status">
+          {signedOut
+            ? "Sign in or create a free account to use this tool."
+            : accessError}
+        </p>
+        <button
+          className="btn btn-primary"
+          onClick={() =>
+            signedOut ? router.push("/login") : window.location.reload()
+          }
+        >
+          {signedOut ? "Sign in" : "Try again"}
+        </button>
+      </div>
+    );
 
   if (!allowed) {
     const featureLabel = feature?.replace(/_/g, " ") || "this feature";
 
     return (
-      <div className={`flex items-center justify-center ${requiredPlan === "pro" ? "min-h-[600px]" : "min-h-[300px]"}`}>
+      <div
+        className={`flex items-center justify-center ${requiredPlan === "pro" ? "min-h-[600px]" : "min-h-[300px]"}`}
+      >
         <div className="card p-8 text-center max-w-md w-full">
           <div className="mx-auto w-12 h-12 rounded-lg bg-surface-2 border border-border flex items-center justify-center mb-5">
-            <svg className="w-6 h-6 text-fg" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" />
+            <svg
+              className="w-6 h-6 text-fg"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth={1.5}
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z"
+              />
             </svg>
           </div>
 
@@ -99,7 +190,9 @@ export default function PlanChecker({
           </p>
 
           <div className="bg-surface-2 rounded-lg p-4 mb-6 text-left border border-border">
-            <p className="text-xs font-semibold text-fg mb-3 uppercase tracking-wider">Pro includes</p>
+            <p className="text-xs font-semibold text-fg mb-3 uppercase tracking-wider">
+              Pro includes
+            </p>
             <div className="space-y-2.5">
               {[
                 "Unlimited resume scans & tailoring",
@@ -108,8 +201,18 @@ export default function PlanChecker({
                 "Unlimited applications & 20 saved resumes",
               ].map((benefit) => (
                 <div key={benefit} className="flex items-center gap-2.5">
-                  <svg className="w-4 h-4 text-green shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                  <svg
+                    className="w-4 h-4 text-green shrink-0"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth={2.5}
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M5 13l4 4L19 7"
+                    />
                   </svg>
                   <span className="text-sm text-fg">{benefit}</span>
                 </div>
@@ -118,7 +221,9 @@ export default function PlanChecker({
           </div>
 
           <button
-            onClick={() => onUpgradeClick ? onUpgradeClick() : router.push("/checkout")}
+            onClick={() =>
+              onUpgradeClick ? onUpgradeClick() : router.push("/checkout")
+            }
             className="btn btn-primary w-full py-3 cursor-pointer"
           >
             Upgrade to Pro — $15/mo

@@ -1,0 +1,31 @@
+name: Bug report
+description: Report a reproducible product or development problem.
+title: "[Bug] "
+body:
+  - type: markdown
+    attributes:
+      value: "For private account/payment help, use https://www.screenme.dev/contact. Do not include credentials, payment details, or personal resumes. Report vulnerabilities privately using SECURITY.md."
+  - type: textarea
+    id: behavior
+    attributes:
+      label: What happened?
+      description: Describe the actual and expected behavior.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      description: Include the page/tool and a minimal synthetic example.
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Browser and device
+      placeholder: Safari on iPhone, Chrome on Windows, etc.
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Screenshots or error text
+      description: Remove personal information before sharing.

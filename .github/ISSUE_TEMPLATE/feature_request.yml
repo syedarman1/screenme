@@ -1,0 +1,17 @@
+name: Feature idea
+description: Suggest an improvement to the application workflow.
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What are you trying to accomplish?
+      description: Explain the current obstacle and who it affects.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What would make it better?
+      description: Describe the desired behavior and alternatives you considered.
+    validations:
+      required: true
