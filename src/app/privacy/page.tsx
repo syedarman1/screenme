@@ -11,7 +11,7 @@ export default function PolicyPage() {
           <p className="section-label mb-3">ScreenMe</p>
           <h1 className="text-3xl font-semibold mb-3">Privacy notice</h1>
           <p className="text-sm text-fg-muted mb-10">
-            Updated September 9, 2026
+            Updated September 26, 2026
           </p>
           <section className="mb-8">
             <h2 className="text-xl font-semibold mb-3">
@@ -44,7 +44,7 @@ export default function PolicyPage() {
             <h2 className="text-xl font-semibold mb-3">Service providers</h2>
             <p className="text-fg-muted leading-relaxed">
               ScreenMe uses Supabase for authentication and database storage,
-              OpenAI for AI processing, Vercel for hosting, and Stripe for
+              OpenAI for AI processing, Vercel for hosting and web analytics, and Stripe for
               payments and billing management. Each provider receives the
               information needed to provide its service. Stripe handles payment
               card entry; ScreenMe stores customer and subscription identifiers
@@ -65,6 +65,20 @@ export default function PolicyPage() {
               cost, and helpfulness votes. These monitoring records do not
               contain document text, prompts, or generated responses. Hashed
               identifiers are used to enforce request limits.
+            </p>
+          </section>
+          <section className="mb-8">
+            <h2 className="text-xl font-semibold mb-3">Website analytics</h2>
+            <p className="text-fg-muted leading-relaxed">
+              Vercel Web Analytics provides aggregate visitor and page-view
+              statistics, including referring sites, approximate location,
+              browser, and device type, without analytics cookies. We remove
+              query parameters and URL fragments and replace saved-record IDs
+              with generic page labels before sending page views. Password-reset
+              and operator pages are excluded. We do not send resume text,
+              generated documents, account emails, or payment details as analytics
+              events. Links from ScreenMe send only the site origin as referrer
+              information, rather than private page paths or query parameters.
             </p>
           </section>
           <section className="mb-8">

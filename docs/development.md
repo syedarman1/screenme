@@ -65,6 +65,16 @@ Supabase's site URL must be `https://www.screenme.dev`, with explicit redirect a
 
 ## Support and public policies
 
+Vercel Web Analytics is mounted once in the root layout through a client component.
+Enable Web Analytics for the Vercel project, then deploy to activate collection.
+The page-view filter removes all query parameters and fragments (including UTM
+parameters), groups saved-record detail pages under `/resumes/[id]` and
+`/applications/[id]`, and ignores password-reset, operator, and unknown routes.
+Custom events are disabled. New routes must be deliberately added to the filter.
+The `strict-origin` referrer policy prevents internal navigation from exposing
+document paths or query values as referrers. Local development uses the SDK's
+development mode. See [Vercel's setup guide](https://vercel.com/docs/analytics/quickstart).
+
 Contact submissions save to the private `contact_messages` table and return a reference. Operators configured by verified auth user ID in `SCREENME_OPERATOR_IDS` can use `/support` to review requests, open replies in their email app, mark handled, and reopen. The account page shows open requests. No operator access is granted from user-editable metadata. The queue refreshes when focused; operators must check it regularly. It does not send automatic notifications.
 
 The public contact form is the advertised support entry point. Outbound Resend/Supabase SMTP handles confirmation and recovery; it does not create an incoming mailbox. Do not advertise an unverified receiving address. Support replies can be sent from the operator's existing email app.

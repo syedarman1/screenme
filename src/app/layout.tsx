@@ -3,8 +3,10 @@ import type { Metadata } from "next";
 import "./globals.css";
 import DynamicNavbar from "./components/Navbar";
 import ThemeProvider from "./components/ThemeProvider";
+import WebAnalytics from "./components/WebAnalytics";
 
 export const metadata: Metadata = {
+  referrer: "strict-origin",
   title: "ScreenMe - AI-Powered Career Platform",
   description: "AI-powered resume optimization, cover letter generation, job matching, and interview preparation platform. Get your dream job with ScreenMe.",
 };
@@ -38,6 +40,7 @@ export default function RootLayout({
           <DynamicNavbar />
           {children}
         </ThemeProvider>
+        <WebAnalytics />
       </body>
     </html>
   );
